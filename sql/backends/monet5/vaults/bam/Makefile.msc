@@ -1,0 +1,66 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..\..\..
+srcdir = $(TOPDIR)\..\sql\backends\monet5\vaults\bam
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+INCLUDES = -I$(srcdir) "-I.." -I$(srcdir)\..\ "-I..\..\" -I$(srcdir)\..\..\ "-I..\..\..\..\include" -I$(srcdir)\..\..\..\..\include "-I..\..\..\..\common" -I$(srcdir)\..\..\..\..\common "-I..\..\..\..\storage" -I$(srcdir)\..\..\..\..\storage "-I..\..\..\..\server" -I$(srcdir)\..\..\..\..\server "-I..\..\..\..\..\monetdb5\modules\atoms" -I$(srcdir)\..\..\..\..\..\monetdb5\modules\atoms "-I..\..\..\..\..\monetdb5\modules\kernel" -I$(srcdir)\..\..\..\..\..\monetdb5\modules\kernel "-I..\..\..\..\..\monetdb5\mal" -I$(srcdir)\..\..\..\..\..\monetdb5\mal "-I..\..\..\..\..\monetdb5\modules\mal" -I$(srcdir)\..\..\..\..\..\monetdb5\modules\mal "-I..\..\..\..\..\monetdb5\optimizer" -I$(srcdir)\..\..\..\..\..\monetdb5\optimizer "-I..\..\..\..\..\common\options" -I$(srcdir)\..\..\..\..\..\common\options "-I..\..\..\..\..\common\stream" -I$(srcdir)\..\..\..\..\..\common\stream "-I..\..\..\..\..\gdk" -I$(srcdir)\..\..\..\..\..\gdk "-I..\..\..\..\..\tools\merovingian" -I$(srcdir)\..\..\..\..\..\tools\merovingian "-I..\..\..\..\..\tools\merovingian\daemon" -I$(srcdir)\..\..\..\..\..\tools\merovingian\daemon $(SAMTOOLS_CFLAGS)
+EXTRA_DIST_DIR =  Tests
+lib_bam.dll:  ..\..\..\..\..\monetdb5\tools\libmonetdb5.lib ..\..\..\..\..\gdk\libbat.lib
+lib_bam_LIBS = ..\..\..\..\..\monetdb5\tools\libmonetdb5.lib ..\..\..\..\..\gdk\libbat.lib $(SAMTOOLS_LIBS)
+lib_bam_OBJS = bam_loader.obj bam_wrapper.obj bam_db_interface.obj bam_globals.obj bam_lib.obj bam_export.obj
+lib_bam_DEPS = $(lib_bam_OBJS)
+lib_bam.lib: lib_bam.dll
+lib_bam.dll: $(lib_bam_DEPS) 
+	python "$(TOPDIR)\..\NT\wincompile.py" $(CC) $(CFLAGS) -LD -Felib_bam.dll @<< /link @<<
+$(lib_bam_OBJS)
+<<
+$(lib_bam_LIBS)
+<<
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;2
+	if not exist .libs $(MKDIR) .libs
+	$(INSTALL) "lib_bam.dll" ".libs\lib_bam.dll"
+
+bam_export.obj: "$(srcdir)\bam_export.c" "$(srcdir)\bam_globals.h" "$(srcdir)\..\..\..\..\..\gdk\gdk.h" "$(srcdir)\..\..\..\..\..\common\stream\stream.h" "$(srcdir)\bam_db_interface.h" "$(srcdir)\..\..\sql_scenario.h" "$(srcdir)\..\..\..\..\server\..\include\sql_mem.h" "$(srcdir)\..\..\..\..\server\..\..\gdk\gdk.h" "$(srcdir)\..\..\..\..\server\sql_scan.h" "$(srcdir)\..\..\..\..\server\..\include\sql_list.h" "$(srcdir)\..\..\..\..\server\..\..\common\stream\stream.h" "$(srcdir)\..\..\..\..\server\..\common\sql_types.h" "$(srcdir)\..\..\..\..\server\..\common\sql_backend.h" "$(srcdir)\..\..\..\..\server\..\include\sql_catalog.h" "$(srcdir)\..\..\..\..\server\..\include\sql_relation.h" "$(srcdir)\..\..\..\..\server\..\storage\sql_storage.h" "$(srcdir)\..\..\..\..\server\..\include\sql_keyword.h" "$(srcdir)\..\..\..\..\server\sql_atom.h" "$(srcdir)\..\..\..\..\server\..\include\sql_query.h" "$(srcdir)\..\..\..\..\server\sql_mvc.h" "$(srcdir)\bam_wrapper.h" "$(srcdir)\bam_export.h"
+	$(CC) $(CFLAGS) $(bam_export_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBBAM -Fo"bam_export.obj" -c "$(srcdir)\bam_export.c"
+bam_globals.obj: "$(srcdir)\bam_globals.c" "$(srcdir)\bam_globals.h" "$(srcdir)\..\..\..\..\..\gdk\gdk.h" "$(srcdir)\..\..\..\..\..\common\stream\stream.h"
+	$(CC) $(CFLAGS) $(bam_globals_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBBAM -Fo"bam_globals.obj" -c "$(srcdir)\bam_globals.c"
+bam_wrapper.obj: "$(srcdir)\bam_wrapper.c" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_instruction.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_type.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\..\..\gdk\gdk.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_stack.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_namespace.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_errors.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_exception.h" "$(srcdir)\..\..\..\..\..\common\stream\stream.h" "$(srcdir)\bam_globals.h" "$(srcdir)\..\..\..\..\..\gdk\gdk.h" "$(srcdir)\mykstring.h" "$(srcdir)\bam_wrapper.h"
+	$(CC) $(CFLAGS) $(bam_wrapper_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBBAM -Fo"bam_wrapper.obj" -c "$(srcdir)\bam_wrapper.c"
+bam_lib.obj: "$(srcdir)\bam_lib.c" "$(srcdir)\bam_lib.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_instruction.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_type.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\..\..\gdk\gdk.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_stack.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_namespace.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_errors.h" "$(srcdir)\..\..\..\..\..\monetdb5\mal\mal_exception.h"
+	$(CC) $(CFLAGS) $(bam_lib_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBBAM -Fo"bam_lib.obj" -c "$(srcdir)\bam_lib.c"
+bam_db_interface.obj: "$(srcdir)\bam_db_interface.c" "$(srcdir)\bam_globals.h" "$(srcdir)\..\..\..\..\..\gdk\gdk.h" "$(srcdir)\..\..\..\..\..\common\stream\stream.h" "$(srcdir)\bam_db_interface.h" "$(srcdir)\..\..\sql_scenario.h" "$(srcdir)\..\..\..\..\server\..\include\sql_mem.h" "$(srcdir)\..\..\..\..\server\..\..\gdk\gdk.h" "$(srcdir)\..\..\..\..\server\sql_scan.h" "$(srcdir)\..\..\..\..\server\..\include\sql_list.h" "$(srcdir)\..\..\..\..\server\..\..\common\stream\stream.h" "$(srcdir)\..\..\..\..\server\..\common\sql_types.h" "$(srcdir)\..\..\..\..\server\..\common\sql_backend.h" "$(srcdir)\..\..\..\..\server\..\include\sql_catalog.h" "$(srcdir)\..\..\..\..\server\..\include\sql_relation.h" "$(srcdir)\..\..\..\..\server\..\storage\sql_storage.h" "$(srcdir)\..\..\..\..\server\..\include\sql_keyword.h" "$(srcdir)\..\..\..\..\server\sql_atom.h" "$(srcdir)\..\..\..\..\server\..\include\sql_query.h" "$(srcdir)\..\..\..\..\server\sql_mvc.h" "$(srcdir)\bam_wrapper.h"
+	$(CC) $(CFLAGS) $(bam_db_interface_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBBAM -Fo"bam_db_interface.obj" -c "$(srcdir)\bam_db_interface.c"
+bam_loader.obj: "$(srcdir)\bam_loader.c" "$(srcdir)\bam_wrapper.h" "$(srcdir)\..\..\..\..\..\gdk\gdk.h" "$(srcdir)\bam_db_interface.h" "$(srcdir)\..\..\sql_scenario.h" "$(srcdir)\..\..\..\..\server\..\include\sql_mem.h" "$(srcdir)\..\..\..\..\server\..\..\gdk\gdk.h" "$(srcdir)\..\..\..\..\server\sql_scan.h" "$(srcdir)\..\..\..\..\server\..\include\sql_list.h" "$(srcdir)\..\..\..\..\server\..\..\common\stream\stream.h" "$(srcdir)\..\..\..\..\server\..\common\sql_types.h" "$(srcdir)\..\..\..\..\server\..\common\sql_backend.h" "$(srcdir)\..\..\..\..\server\..\include\sql_catalog.h" "$(srcdir)\..\..\..\..\server\..\include\sql_relation.h" "$(srcdir)\..\..\..\..\server\..\storage\sql_storage.h" "$(srcdir)\..\..\..\..\server\..\include\sql_keyword.h" "$(srcdir)\..\..\..\..\server\sql_atom.h" "$(srcdir)\..\..\..\..\server\..\include\sql_query.h" "$(srcdir)\..\..\..\..\server\sql_mvc.h" "$(srcdir)\bam_globals.h" "$(srcdir)\..\..\..\..\..\common\stream\stream.h" "$(srcdir)\bam_loader.h"
+	$(CC) $(CFLAGS) $(bam_loader_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBBAM -Fo"bam_loader.obj" -c "$(srcdir)\bam_loader.c"
+85_bam.mal: "$(srcdir)\85_bam.mal"
+	$(INSTALL) "$(srcdir)\85_bam.mal" "85_bam.mal"
+bam.mal: "$(srcdir)\bam.mal"
+	$(INSTALL) "$(srcdir)\bam.mal" "bam.mal"
+85_bam.sql: "$(srcdir)\85_bam.sql"
+	$(INSTALL) "$(srcdir)\85_bam.sql" "85_bam.sql"
+all-msc: "lib_bam.dll" "85_bam.mal" "bam.mal" "85_bam.sql"
+check-msc: all-msc "85_bam.sql" "85_bam.mal" "bam.mal" "lib_bam.dll"
+install-msc: install-exec install-data
+install-exec:  "install_85_bam.sql" "install_85_bam.mal" "install_bam.mal" "install_lib_bam" 
+install_85_bam.sql: "85_bam.sql" "$(libdir)\monetdb5\createdb"
+	$(INSTALL) "85_bam.sql" "$(libdir)\monetdb5\createdb\85_bam.sql"
+install_85_bam.mal: "85_bam.mal" "$(libdir)\monetdb5\autoload"
+	$(INSTALL) "85_bam.mal" "$(libdir)\monetdb5\autoload\85_bam.mal"
+install_bam.mal: "bam.mal" "$(libdir)\monetdb5"
+	$(INSTALL) "bam.mal" "$(libdir)\monetdb5\bam.mal"
+install_lib_bam: "lib_bam.dll" "$(libdir)\monetdb5"
+	$(INSTALL) "lib_bam.dll" "$(libdir)\monetdb5\lib_bam.dll"
+	$(INSTALL) "lib_bam.lib" "$(libdir)\monetdb5\lib_bam.lib"
+"$(libdir)\monetdb5\createdb":
+	if not exist "$(libdir)\monetdb5\createdb" $(MKDIR) "$(libdir)\monetdb5\createdb"
+"$(libdir)\monetdb5\autoload":
+	if not exist "$(libdir)\monetdb5\autoload" $(MKDIR) "$(libdir)\monetdb5\autoload"
+"$(libdir)\monetdb5":
+	if not exist "$(libdir)\monetdb5" $(MKDIR) "$(libdir)\monetdb5"
+install-data:

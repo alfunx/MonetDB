@@ -1,0 +1,68 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..
+srcdir = $(TOPDIR)\..\clients\perl
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: build-all
+check: check-recursive check-msc
+install: install-recursive install-msc
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+INCLUDES = -I$(srcdir)
+MonetDB-CLI-MapiPP-1-all: "MonetDB-CLI-MapiPP-1-dir" "MonetDB-CLI-MapiPP-1-Makefile"
+	$(CD) "MonetDB-CLI-MapiPP" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+MonetDB-CLI-MapiPP-1-dir: 
+	if not exist "MonetDB-CLI-MapiPP" $(MKDIR) "MonetDB-CLI-MapiPP"
+MonetDB-CLI-MapiPP-1-Makefile: "$(srcdir)\MonetDB-CLI-MapiPP\Makefile.msc"
+	$(INSTALL) "$(srcdir)\MonetDB-CLI-MapiPP\Makefile.msc" "MonetDB-CLI-MapiPP\Makefile"
+MonetDB-CLI-MapiPP-1-check:
+	$(CD) "MonetDB-CLI-MapiPP" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+MonetDB-CLI-MapiPP-1-install:
+	$(CD) "MonetDB-CLI-MapiPP" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+MonetDB-CLI-2-all: "MonetDB-CLI-2-dir" "MonetDB-CLI-2-Makefile"
+	$(CD) "MonetDB-CLI" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+MonetDB-CLI-2-dir: 
+	if not exist "MonetDB-CLI" $(MKDIR) "MonetDB-CLI"
+MonetDB-CLI-2-Makefile: "$(srcdir)\MonetDB-CLI\Makefile.msc"
+	$(INSTALL) "$(srcdir)\MonetDB-CLI\Makefile.msc" "MonetDB-CLI\Makefile"
+MonetDB-CLI-2-check:
+	$(CD) "MonetDB-CLI" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+MonetDB-CLI-2-install:
+	$(CD) "MonetDB-CLI" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+DBD-3-all: "DBD-3-dir" "DBD-3-Makefile"
+	$(CD) "DBD" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+DBD-3-dir: 
+	if not exist "DBD" $(MKDIR) "DBD"
+DBD-3-Makefile: "$(srcdir)\DBD\Makefile.msc"
+	$(INSTALL) "$(srcdir)\DBD\Makefile.msc" "DBD\Makefile"
+DBD-3-check:
+	$(CD) "DBD" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+DBD-3-install:
+	$(CD) "DBD" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+Tests-4-all: "Tests-4-dir" "Tests-4-Makefile"
+	$(CD) "Tests" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+Tests-4-dir: 
+	if not exist "Tests" $(MKDIR) "Tests"
+Tests-4-Makefile: "$(srcdir)\Tests\Makefile.msc"
+	$(INSTALL) "$(srcdir)\Tests\Makefile.msc" "Tests\Makefile"
+Tests-4-check:
+	$(CD) "Tests" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+Tests-4-install:
+	$(CD) "Tests" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+all-recursive: "MonetDB-CLI-MapiPP-1-all" "MonetDB-CLI-2-all" "DBD-3-all" "Tests-4-all" 
+check-recursive: "MonetDB-CLI-MapiPP-1-check" "MonetDB-CLI-2-check" "DBD-3-check" "Tests-4-check" 
+install-recursive: "MonetDB-CLI-MapiPP-1-install" "MonetDB-CLI-2-install" "DBD-3-install" "Tests-4-install" 
+Mapi.pm: "$(srcdir)\Mapi.pm"
+	$(INSTALL) "$(srcdir)\Mapi.pm" "Mapi.pm"
+build-all: $(BUILT_SOURCES) all-recursive all-msc
+all-msc: "Mapi.pm"
+check-msc: all-msc "Mapi.pm"
+install-msc: install-exec install-data
+install-exec:  "install_Mapi.pm" 
+install_Mapi.pm: "Mapi.pm" "$(prefix)\$(PERL_LIBDIR)"
+	$(INSTALL) "Mapi.pm" "$(prefix)\$(PERL_LIBDIR)\Mapi.pm"
+"$(prefix)\$(PERL_LIBDIR)":
+	if not exist "$(prefix)\$(PERL_LIBDIR)" $(MKDIR) "$(prefix)\$(PERL_LIBDIR)"
+install-data:

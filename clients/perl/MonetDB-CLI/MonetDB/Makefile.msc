@@ -1,0 +1,24 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..\..
+srcdir = $(TOPDIR)\..\clients\perl\MonetDB-CLI\MonetDB
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+INCLUDES = -I$(srcdir)
+CLI.pm: "$(srcdir)\CLI.pm"
+	$(INSTALL) "$(srcdir)\CLI.pm" "CLI.pm"
+all-msc: "CLI.pm"
+check-msc: all-msc "CLI.pm"
+install-msc: install-exec install-data
+install-exec:  "install_CLI.pm" 
+install_CLI.pm: "CLI.pm" "$(prefix)\$(PERL_LIBDIR)\MonetDB"
+	$(INSTALL) "CLI.pm" "$(prefix)\$(PERL_LIBDIR)\MonetDB\CLI.pm"
+"$(prefix)\$(PERL_LIBDIR)\MonetDB":
+	if not exist "$(prefix)\$(PERL_LIBDIR)\MonetDB" $(MKDIR) "$(prefix)\$(PERL_LIBDIR)\MonetDB"
+install-data:

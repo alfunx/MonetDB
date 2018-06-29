@@ -1,0 +1,28 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..
+srcdir = $(TOPDIR)\..\clients\php\lib
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+INCLUDES = -I$(srcdir)
+php_mapi.inc: "$(srcdir)\php_mapi.inc"
+	$(INSTALL) "$(srcdir)\php_mapi.inc" "php_mapi.inc"
+php_monetdb.php: "$(srcdir)\php_monetdb.php"
+	$(INSTALL) "$(srcdir)\php_monetdb.php" "php_monetdb.php"
+all-msc: "php_mapi.inc" "php_monetdb.php"
+check-msc: all-msc "php_mapi.inc" "php_monetdb.php"
+install-msc: install-exec install-data
+install-exec:  "install_php_mapi.inc" "install_php_monetdb.php" 
+install_php_mapi.inc: "php_mapi.inc" "$(datadir)\php\monetdb"
+	$(INSTALL) "php_mapi.inc" "$(datadir)\php\monetdb\php_mapi.inc"
+install_php_monetdb.php: "php_monetdb.php" "$(datadir)\php\monetdb"
+	$(INSTALL) "php_monetdb.php" "$(datadir)\php\monetdb\php_monetdb.php"
+"$(datadir)\php\monetdb":
+	if not exist "$(datadir)\php\monetdb" $(MKDIR) "$(datadir)\php\monetdb"
+install-data:

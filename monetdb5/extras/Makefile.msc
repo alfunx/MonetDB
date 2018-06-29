@@ -1,0 +1,63 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..
+srcdir = $(TOPDIR)\..\monetdb5\extras
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: build-all
+check: check-recursive check-msc
+install: install-recursive install-msc
+INCLUDES = -I$(srcdir)
+!IFDEF HAVE_SPHINXCLIENT
+HAVE_SPHINXCLIENT-1-all: "HAVE_SPHINXCLIENT-1-dir" "HAVE_SPHINXCLIENT-1-Makefile"
+	$(CD) "sphinx" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+HAVE_SPHINXCLIENT-1-dir: 
+	if not exist "sphinx" $(MKDIR) "sphinx"
+HAVE_SPHINXCLIENT-1-Makefile: "$(srcdir)\sphinx\Makefile.msc"
+	$(INSTALL) "$(srcdir)\sphinx\Makefile.msc" "sphinx\Makefile"
+HAVE_SPHINXCLIENT-1-check:
+	$(CD) "sphinx" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+HAVE_SPHINXCLIENT-1-install:
+	$(CD) "sphinx" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+!ELSE
+HAVE_SPHINXCLIENT-1-all:
+HAVE_SPHINXCLIENT-1-check:
+HAVE_SPHINXCLIENT-1-install:
+!ENDIF
+mal_optimizer_template-2-all: "mal_optimizer_template-2-dir" "mal_optimizer_template-2-Makefile"
+	$(CD) "mal_optimizer_template" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+mal_optimizer_template-2-dir: 
+	if not exist "mal_optimizer_template" $(MKDIR) "mal_optimizer_template"
+mal_optimizer_template-2-Makefile: "$(srcdir)\mal_optimizer_template\Makefile.msc"
+	$(INSTALL) "$(srcdir)\mal_optimizer_template\Makefile.msc" "mal_optimizer_template\Makefile"
+mal_optimizer_template-2-check:
+	$(CD) "mal_optimizer_template" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+mal_optimizer_template-2-install:
+	$(CD) "mal_optimizer_template" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+!IFDEF HAVE_LIBR
+HAVE_LIBR-3-all: "HAVE_LIBR-3-dir" "HAVE_LIBR-3-Makefile"
+	$(CD) "rapi" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+HAVE_LIBR-3-dir: 
+	if not exist "rapi" $(MKDIR) "rapi"
+HAVE_LIBR-3-Makefile: "$(srcdir)\rapi\Makefile.msc"
+	$(INSTALL) "$(srcdir)\rapi\Makefile.msc" "rapi\Makefile"
+HAVE_LIBR-3-check:
+	$(CD) "rapi" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+HAVE_LIBR-3-install:
+	$(CD) "rapi" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+!ELSE
+HAVE_LIBR-3-all:
+HAVE_LIBR-3-check:
+HAVE_LIBR-3-install:
+!ENDIF
+all-recursive: "HAVE_SPHINXCLIENT-1-all" "mal_optimizer_template-2-all" "HAVE_LIBR-3-all" 
+check-recursive: "HAVE_SPHINXCLIENT-1-check" "mal_optimizer_template-2-check" "HAVE_LIBR-3-check" 
+install-recursive: "HAVE_SPHINXCLIENT-1-install" "mal_optimizer_template-2-install" "HAVE_LIBR-3-install" 
+build-all: $(BUILT_SOURCES) all-recursive all-msc
+all-msc:
+check-msc: all-msc
+install-msc: install-exec install-data
+install-exec:  
+install-data:

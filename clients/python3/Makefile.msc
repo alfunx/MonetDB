@@ -1,0 +1,32 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..
+srcdir = $(TOPDIR)\..\clients\python3
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+INCLUDES = -I$(srcdir)
+EXTRA_DIST_DIR =  monetdb test
+target_python_setup.py: monetdb monetdb\sql README.rst setup.py
+	$(PYTHON3) setup.py build
+monetdb: "$(srcdir)\monetdb"
+	if not exist "monetdb" $(MKDIR) "monetdb"
+	$(INSTALL) "$(srcdir)\monetdb"\*.py "monetdb"
+monetdb\sql: "$(srcdir)\monetdb\sql"
+	if not exist "monetdb\sql" $(MKDIR) "monetdb\sql"
+	$(INSTALL) "$(srcdir)\monetdb\sql"\*.py "monetdb\sql"
+setup.py: "$(srcdir)\setup.py"
+	$(INSTALL) "$(srcdir)\setup.py" "setup.py"
+README.rst: "$(srcdir)\README.rst"
+	$(INSTALL) "$(srcdir)\README.rst" "README.rst"
+install_setup.py:
+	$(PYTHON3) setup.py install --prefix "$(prefix)" --install-lib "$(prefix)\lib\python3
+all-msc: "target_python_setup.py"
+check-msc: all-msc "setup.py"
+install-msc: install-exec install-data
+install-exec:  "install_setup.py" 
+install-data:

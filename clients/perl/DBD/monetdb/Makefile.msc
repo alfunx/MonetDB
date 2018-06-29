@@ -1,0 +1,28 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..\..
+srcdir = $(TOPDIR)\..\clients\perl\DBD\monetdb
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+INCLUDES = -I$(srcdir)
+GetInfo.pm: "$(srcdir)\GetInfo.pm"
+	$(INSTALL) "$(srcdir)\GetInfo.pm" "GetInfo.pm"
+TypeInfo.pm: "$(srcdir)\TypeInfo.pm"
+	$(INSTALL) "$(srcdir)\TypeInfo.pm" "TypeInfo.pm"
+all-msc: "GetInfo.pm" "TypeInfo.pm"
+check-msc: all-msc "GetInfo.pm" "TypeInfo.pm"
+install-msc: install-exec install-data
+install-exec:  "install_GetInfo.pm" "install_TypeInfo.pm" 
+install_GetInfo.pm: "GetInfo.pm" "$(prefix)\$(PERL_LIBDIR)\DBD\monetdb"
+	$(INSTALL) "GetInfo.pm" "$(prefix)\$(PERL_LIBDIR)\DBD\monetdb\GetInfo.pm"
+install_TypeInfo.pm: "TypeInfo.pm" "$(prefix)\$(PERL_LIBDIR)\DBD\monetdb"
+	$(INSTALL) "TypeInfo.pm" "$(prefix)\$(PERL_LIBDIR)\DBD\monetdb\TypeInfo.pm"
+"$(prefix)\$(PERL_LIBDIR)\DBD\monetdb":
+	if not exist "$(prefix)\$(PERL_LIBDIR)\DBD\monetdb" $(MKDIR) "$(prefix)\$(PERL_LIBDIR)\DBD\monetdb"
+install-data:

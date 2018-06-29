@@ -1,0 +1,52 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..
+srcdir = $(TOPDIR)\..\monetdb5\scheduler
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+EXTRA_DIST_DIR =  Tests
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+INCLUDES = -I$(srcdir) "-I..\mal" -I$(srcdir)\..\mal "-I..\optimizer" -I$(srcdir)\..\optimizer "-I..\modules\atoms" -I$(srcdir)\..\modules\atoms "-I..\modules\mal" -I$(srcdir)\..\modules\mal "-I..\modules\kernel" -I$(srcdir)\..\modules\kernel "-I..\..\clients\mapilib" -I$(srcdir)\..\..\clients\mapilib "-I..\..\common\options" -I$(srcdir)\..\..\common\options "-I..\..\common\stream" -I$(srcdir)\..\..\common\stream "-I..\..\common\utils" -I$(srcdir)\..\..\common\utils "-I..\..\gdk" -I$(srcdir)\..\..\gdk
+libscheduler_OBJS = run_adder.obj run_isolate.obj run_memo.obj srvpool.obj run_pipeline.obj
+libscheduler_DEPS = $(libscheduler_OBJS)
+libscheduler.lib: $(libscheduler_DEPS)
+	$(ARCHIVER) /out:"libscheduler.lib" $(libscheduler_OBJS) $(libscheduler_LIBS)
+
+run_pipeline.obj: "$(srcdir)\run_pipeline.c" "$(srcdir)\run_pipeline.h" "$(srcdir)\..\mal\..\..\gdk\gdk.h" "$(srcdir)\..\mal\mal.h" "$(srcdir)\..\mal\mal_type.h" "$(srcdir)\..\mal\mal_stack.h" "$(srcdir)\..\mal\mal_namespace.h" "$(srcdir)\..\mal\mal_instruction.h" "$(srcdir)\..\mal\mal_resolve.h" "$(srcdir)\..\mal\mal_profiler.h" "$(srcdir)\..\mal\mal_client.h" "$(srcdir)\..\mal\mal_interpreter.h" "$(srcdir)\..\optimizer\opt_support.h" "$(srcdir)\..\optimizer\..\mal\mal.h" "$(srcdir)\..\optimizer\..\mal\mal_function.h" "$(srcdir)\..\optimizer\..\mal\mal_scenario.h" "$(srcdir)\..\optimizer\..\mal\mal_builder.h" "$(srcdir)\..\optimizer\opt_prelude.h" "$(srcdir)\..\optimizer\opt_macro.h"
+	$(CC) $(CFLAGS) $(run_pipeline_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBSCHEDULER -Fo"run_pipeline.obj" -c "$(srcdir)\run_pipeline.c"
+srvpool.obj: "$(srcdir)\srvpool.c" "$(srcdir)\..\mal\mal_interpreter.h" "$(srcdir)\..\mal\mal_dataflow.h" "$(srcdir)\..\modules\mal\mat.h" "$(srcdir)\srvpool.h" "$(srcdir)\..\mal\..\..\gdk\gdk.h" "$(srcdir)\..\mal\mal.h" "$(srcdir)\..\mal\mal_type.h" "$(srcdir)\..\mal\mal_stack.h" "$(srcdir)\..\mal\mal_namespace.h" "$(srcdir)\..\mal\mal_instruction.h" "$(srcdir)\..\mal\mal_resolve.h" "$(srcdir)\..\mal\mal_profiler.h" "$(srcdir)\..\mal\mal_client.h" "$(srcdir)\..\optimizer\..\mal\mal_interpreter.h" "$(srcdir)\..\optimizer\..\mal\mal_scenario.h" "$(srcdir)\..\optimizer\..\mal\mal_namespace.h" "$(srcdir)\..\optimizer\opt_support.h" "$(srcdir)\..\optimizer\..\mal\mal.h" "$(srcdir)\..\optimizer\..\mal\mal_function.h" "$(srcdir)\..\optimizer\..\mal\mal_builder.h" "$(srcdir)\..\optimizer\opt_prelude.h" "$(srcdir)\..\optimizer\optimizer.h" "$(srcdir)\..\..\clients\mapilib\mapi.h" "$(srcdir)\..\modules\mal\remote.h" "$(srcdir)\..\mal\mal_sabaoth.h"
+	$(CC) $(CFLAGS) $(srvpool_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBSCHEDULER -Fo"srvpool.obj" -c "$(srcdir)\srvpool.c"
+run_memo.obj: "$(srcdir)\run_memo.c" "$(srcdir)\run_memo.h" "$(srcdir)\..\mal\..\..\gdk\gdk.h" "$(srcdir)\..\mal\mal.h" "$(srcdir)\..\mal\mal_interpreter.h" "$(srcdir)\..\mal\mal_linker.h" "$(srcdir)\..\mal\mal_resolve.h" "$(srcdir)\..\mal\mal_profiler.h" "$(srcdir)\..\mal\mal_client.h" "$(srcdir)\..\mal\mal_runtime.h"
+	$(CC) $(CFLAGS) $(run_memo_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBSCHEDULER -Fo"run_memo.obj" -c "$(srcdir)\run_memo.c"
+run_adder.obj: "$(srcdir)\run_adder.c" "$(srcdir)\..\mal\mal_builder.h" "$(srcdir)\..\optimizer\opt_support.h" "$(srcdir)\..\optimizer\..\mal\mal.h" "$(srcdir)\..\optimizer\..\mal\mal_function.h" "$(srcdir)\..\optimizer\..\mal\mal_scenario.h" "$(srcdir)\..\optimizer\..\mal\mal_builder.h" "$(srcdir)\..\optimizer\opt_prelude.h" "$(srcdir)\run_adder.h" "$(srcdir)\..\mal\..\..\gdk\gdk.h" "$(srcdir)\..\mal\mal.h" "$(srcdir)\..\mal\mal_interpreter.h" "$(srcdir)\..\mal\mal_linker.h" "$(srcdir)\..\mal\mal_resolve.h" "$(srcdir)\..\mal\mal_profiler.h" "$(srcdir)\..\mal\mal_client.h"
+	$(CC) $(CFLAGS) $(run_adder_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBSCHEDULER -Fo"run_adder.obj" -c "$(srcdir)\run_adder.c"
+run_isolate.obj: "$(srcdir)\run_isolate.c" "$(srcdir)\run_isolate.h" "$(srcdir)\..\mal\..\..\gdk\gdk.h" "$(srcdir)\..\mal\mal.h" "$(srcdir)\..\mal\mal_type.h" "$(srcdir)\..\mal\mal_stack.h" "$(srcdir)\..\mal\mal_namespace.h" "$(srcdir)\..\mal\mal_instruction.h" "$(srcdir)\..\mal\mal_resolve.h" "$(srcdir)\..\mal\mal_profiler.h" "$(srcdir)\..\mal\mal_client.h"
+	$(CC) $(CFLAGS) $(run_isolate_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBSCHEDULER -Fo"run_isolate.obj" -c "$(srcdir)\run_isolate.c"
+run_memo.mal: "$(srcdir)\run_memo.mal"
+	$(INSTALL) "$(srcdir)\run_memo.mal" "run_memo.mal"
+srvpool.mal: "$(srcdir)\srvpool.mal"
+	$(INSTALL) "$(srcdir)\srvpool.mal" "srvpool.mal"
+run_adder.mal: "$(srcdir)\run_adder.mal"
+	$(INSTALL) "$(srcdir)\run_adder.mal" "run_adder.mal"
+run_isolate.mal: "$(srcdir)\run_isolate.mal"
+	$(INSTALL) "$(srcdir)\run_isolate.mal" "run_isolate.mal"
+all-msc: "libscheduler.lib" "run_memo.mal" "srvpool.mal" "run_adder.mal" "run_isolate.mal"
+check-msc: all-msc "run_memo.mal" "srvpool.mal" "run_adder.mal" "run_isolate.mal"
+install-msc: install-exec install-data
+install-exec:  "install_run_memo.mal" "install_srvpool.mal" "install_run_adder.mal" "install_run_isolate.mal" 
+install_run_memo.mal: "run_memo.mal" "$(libdir)\monetdb5"
+	$(INSTALL) "run_memo.mal" "$(libdir)\monetdb5\run_memo.mal"
+install_srvpool.mal: "srvpool.mal" "$(libdir)\monetdb5"
+	$(INSTALL) "srvpool.mal" "$(libdir)\monetdb5\srvpool.mal"
+install_run_adder.mal: "run_adder.mal" "$(libdir)\monetdb5"
+	$(INSTALL) "run_adder.mal" "$(libdir)\monetdb5\run_adder.mal"
+install_run_isolate.mal: "run_isolate.mal" "$(libdir)\monetdb5"
+	$(INSTALL) "run_isolate.mal" "$(libdir)\monetdb5\run_isolate.mal"
+"$(libdir)\monetdb5":
+	if not exist "$(libdir)\monetdb5" $(MKDIR) "$(libdir)\monetdb5"
+install-data:

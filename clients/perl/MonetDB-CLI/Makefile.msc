@@ -1,0 +1,31 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..
+srcdir = $(TOPDIR)\..\clients\perl\MonetDB-CLI
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: build-all
+check: check-recursive check-msc
+install: install-recursive install-msc
+INCLUDES = -I$(srcdir)
+MonetDB-1-all: "MonetDB-1-dir" "MonetDB-1-Makefile"
+	$(CD) "MonetDB" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+MonetDB-1-dir: 
+	if not exist "MonetDB" $(MKDIR) "MonetDB"
+MonetDB-1-Makefile: "$(srcdir)\MonetDB\Makefile.msc"
+	$(INSTALL) "$(srcdir)\MonetDB\Makefile.msc" "MonetDB\Makefile"
+MonetDB-1-check:
+	$(CD) "MonetDB" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+MonetDB-1-install:
+	$(CD) "MonetDB" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+all-recursive: "MonetDB-1-all" 
+check-recursive: "MonetDB-1-check" 
+install-recursive: "MonetDB-1-install" 
+build-all: $(BUILT_SOURCES) all-recursive all-msc
+all-msc:
+check-msc: all-msc
+install-msc: install-exec install-data
+install-exec:  
+install-data:

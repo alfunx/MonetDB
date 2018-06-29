@@ -1,0 +1,49 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..
+srcdir = $(TOPDIR)\..\monetdb5\extras\sphinx
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+INCLUDES = -I$(srcdir) "-I..\..\mal" -I$(srcdir)\..\..\mal "-I..\..\..\common\options" -I$(srcdir)\..\..\..\common\options "-I..\..\..\common\stream" -I$(srcdir)\..\..\..\common\stream "-I..\..\..\gdk" -I$(srcdir)\..\..\..\gdk $(SPHINXCLIENT_CFLAGS)
+30_sphinx.mal: "$(srcdir)\30_sphinx.mal"
+	$(INSTALL) "$(srcdir)\30_sphinx.mal" "30_sphinx.mal"
+sphinx.mal: "$(srcdir)\sphinx.mal"
+	$(INSTALL) "$(srcdir)\sphinx.mal" "sphinx.mal"
+lib_sphinx.dll:  ..\..\tools\libmonetdb5.lib
+lib_sphinx_LIBS = ..\..\tools\libmonetdb5.lib $(SPHINXCLIENT_LIBS)
+lib_sphinx_OBJS = sphinx.obj
+lib_sphinx_DEPS = $(lib_sphinx_OBJS)
+lib_sphinx.lib: lib_sphinx.dll
+lib_sphinx.dll: $(lib_sphinx_DEPS) 
+	python "$(TOPDIR)\..\NT\wincompile.py" $(CC) $(CFLAGS) -LD -Felib_sphinx.dll @<< /link @<<
+$(lib_sphinx_OBJS)
+<<
+$(lib_sphinx_LIBS)
+<<
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;2
+	if not exist .libs $(MKDIR) .libs
+	$(INSTALL) "lib_sphinx.dll" ".libs\lib_sphinx.dll"
+
+sphinx.obj: "$(srcdir)\sphinx.c" "$(srcdir)\sphinx.h" "$(srcdir)\..\..\..\gdk\gdk.h" "$(srcdir)\..\..\mal\mal.h" "$(srcdir)\..\..\mal\..\..\gdk\gdk.h" "$(srcdir)\..\..\mal\mal_resolve.h" "$(srcdir)\..\..\mal\mal_profiler.h" "$(srcdir)\..\..\mal\mal_client.h" "$(srcdir)\..\..\mal\mal_interpreter.h" "$(srcdir)\..\..\mal\mal_instruction.h" "$(srcdir)\..\..\mal\mal_type.h" "$(srcdir)\..\..\mal\mal_stack.h" "$(srcdir)\..\..\mal\mal_namespace.h" "$(srcdir)\..\..\mal\mal_errors.h" "$(srcdir)\..\..\mal\mal_exception.h"
+	$(CC) $(CFLAGS) $(sphinx_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBSPHINX -Fo"sphinx.obj" -c "$(srcdir)\sphinx.c"
+all-msc: "lib_sphinx.dll" "30_sphinx.mal" "sphinx.mal"
+check-msc: all-msc "lib_sphinx.dll" "sphinx.mal" "30_sphinx.mal"
+install-msc: install-exec install-data
+install-exec:  "install_lib_sphinx" "install_sphinx.mal" "install_30_sphinx.mal" 
+install_lib_sphinx: "lib_sphinx.dll" "$(libdir)\monetdb5"
+	$(INSTALL) "lib_sphinx.dll" "$(libdir)\monetdb5\lib_sphinx.dll"
+	$(INSTALL) "lib_sphinx.lib" "$(libdir)\monetdb5\lib_sphinx.lib"
+install_sphinx.mal: "sphinx.mal" "$(libdir)\monetdb5"
+	$(INSTALL) "sphinx.mal" "$(libdir)\monetdb5\sphinx.mal"
+install_30_sphinx.mal: "30_sphinx.mal" "$(libdir)\monetdb5\autoload"
+	$(INSTALL) "30_sphinx.mal" "$(libdir)\monetdb5\autoload\30_sphinx.mal"
+"$(libdir)\monetdb5":
+	if not exist "$(libdir)\monetdb5" $(MKDIR) "$(libdir)\monetdb5"
+"$(libdir)\monetdb5\autoload":
+	if not exist "$(libdir)\monetdb5\autoload" $(MKDIR) "$(libdir)\monetdb5\autoload"
+install-data:

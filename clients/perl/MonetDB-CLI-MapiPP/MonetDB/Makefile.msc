@@ -1,0 +1,31 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..\..
+srcdir = $(TOPDIR)\..\clients\perl\MonetDB-CLI-MapiPP\MonetDB
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: build-all
+check: check-recursive check-msc
+install: install-recursive install-msc
+INCLUDES = -I$(srcdir)
+CLI-1-all: "CLI-1-dir" "CLI-1-Makefile"
+	$(CD) "CLI" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+CLI-1-dir: 
+	if not exist "CLI" $(MKDIR) "CLI"
+CLI-1-Makefile: "$(srcdir)\CLI\Makefile.msc"
+	$(INSTALL) "$(srcdir)\CLI\Makefile.msc" "CLI\Makefile"
+CLI-1-check:
+	$(CD) "CLI" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+CLI-1-install:
+	$(CD) "CLI" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+all-recursive: "CLI-1-all" 
+check-recursive: "CLI-1-check" 
+install-recursive: "CLI-1-install" 
+build-all: $(BUILT_SOURCES) all-recursive all-msc
+all-msc:
+check-msc: all-msc
+install-msc: install-exec install-data
+install-exec:  
+install-data:

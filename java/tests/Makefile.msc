@@ -1,0 +1,44 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..
+srcdir = $(TOPDIR)\..\java\tests
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+INCLUDES = -I$(srcdir)
+
+!IF defined(HAVE_JAVA)
+
+callant2.bat:
+	echo @set thisdir=%~dp0>callant2.bat
+	echo @set thisdir=%thisdir:~0,-1%>>callant2.bat
+	echo @$(ANT) -f $(srcdir)\build.xml "-Dbuilddir=%thisdir%\jar_jdbctests" "-Djardir=%thisdir%" jar_jdbctests>>callant2.bat
+jar_jdbctests_ant_target: callant2.bat
+	callant2.bat
+jdbctests.jar: jar_jdbctests_ant_target
+
+!ELSE
+
+jdbctests.jar:
+install_jdbctests.jar:
+jar_jdbctests_ant_target:
+
+!ENDIF #defined(HAVE_JAVA)
+
+all-msc: "jar_jdbctests_ant_target"
+check-msc: all-msc "jdbctests.jar"
+install-msc: install-exec install-data
+install-exec:  "install_jdbctests.jar" 
+!IF defined(HAVE_JAVA)
+install_jdbctests.jar: "jdbctests.jar" "$(datadir)\monetdb\lib"
+	$(INSTALL) "jdbctests.jar" "$(datadir)\monetdb\lib\jdbctests.jar"
+!ELSE
+install_jdbctests.jar:
+!ENDIF
+"$(datadir)\monetdb\lib":
+	if not exist "$(datadir)\monetdb\lib" $(MKDIR) "$(datadir)\monetdb\lib"
+install-data:

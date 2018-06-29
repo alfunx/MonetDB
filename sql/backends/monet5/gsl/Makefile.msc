@@ -1,0 +1,56 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..\..
+srcdir = $(TOPDIR)\..\sql\backends\monet5\gsl
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+INCLUDES = -I$(srcdir) "-I..\..\..\..\monetdb5\mal" -I$(srcdir)\..\..\..\..\monetdb5\mal "-I..\..\..\..\common\options" -I$(srcdir)\..\..\..\..\common\options "-I..\..\..\..\common\stream" -I$(srcdir)\..\..\..\..\common\stream "-I..\..\..\..\common\utils" -I$(srcdir)\..\..\..\..\common\utils "-I..\..\..\..\gdk" -I$(srcdir)\..\..\..\..\gdk
+EXTRA_DIST_DIR =  Tests
+lib_gsl.dll: 
+lib_gsl_LIBS = $(gsl_LIBS)
+lib_gsl_OBJS = gsl.obj
+lib_gsl_DEPS = $(lib_gsl_OBJS)
+lib_gsl.lib: lib_gsl.dll
+lib_gsl.dll: $(lib_gsl_DEPS) 
+	python "$(TOPDIR)\..\NT\wincompile.py" $(CC) $(CFLAGS) -LD -Felib_gsl.dll @<< /link @<<
+$(lib_gsl_OBJS)
+<<
+$(lib_gsl_LIBS)
+<<
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;2
+	if not exist .libs $(MKDIR) .libs
+	$(INSTALL) "lib_gsl.dll" ".libs\lib_gsl.dll"
+
+gsl.obj: "$(srcdir)\gsl.c" "$(srcdir)\..\..\..\..\monetdb5\mal\..\..\gdk\gdk.h" "$(srcdir)\..\..\..\..\monetdb5\mal\mal.h" "$(srcdir)\..\..\..\..\monetdb5\mal\mal_instruction.h" "$(srcdir)\..\..\..\..\monetdb5\mal\mal_type.h" "$(srcdir)\..\..\..\..\monetdb5\mal\mal_stack.h" "$(srcdir)\..\..\..\..\monetdb5\mal\mal_namespace.h" "$(srcdir)\..\..\..\..\monetdb5\mal\mal_errors.h" "$(srcdir)\..\..\..\..\monetdb5\mal\mal_exception.h"
+	$(CC) $(CFLAGS) $(gsl_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBGSL -Fo"gsl.obj" -c "$(srcdir)\gsl.c"
+46_gsl.sql: "$(srcdir)\46_gsl.sql"
+	$(INSTALL) "$(srcdir)\46_gsl.sql" "46_gsl.sql"
+73_gsl.mal: "$(srcdir)\73_gsl.mal"
+	$(INSTALL) "$(srcdir)\73_gsl.mal" "73_gsl.mal"
+gsl.mal: "$(srcdir)\gsl.mal"
+	$(INSTALL) "$(srcdir)\gsl.mal" "gsl.mal"
+all-msc: "lib_gsl.dll" "46_gsl.sql" "73_gsl.mal" "gsl.mal"
+check-msc: all-msc "lib_gsl.dll" "73_gsl.mal" "gsl.mal" "46_gsl.sql"
+install-msc: install-exec install-data
+install-exec:  "install_lib_gsl" "install_73_gsl.mal" "install_gsl.mal" "install_46_gsl.sql" 
+install_lib_gsl: "lib_gsl.dll" "$(libdir)\monetdb5"
+	$(INSTALL) "lib_gsl.dll" "$(libdir)\monetdb5\lib_gsl.dll"
+	$(INSTALL) "lib_gsl.lib" "$(libdir)\monetdb5\lib_gsl.lib"
+install_73_gsl.mal: "73_gsl.mal" "$(libdir)\monetdb5\autoload"
+	$(INSTALL) "73_gsl.mal" "$(libdir)\monetdb5\autoload\73_gsl.mal"
+install_gsl.mal: "gsl.mal" "$(libdir)\monetdb5"
+	$(INSTALL) "gsl.mal" "$(libdir)\monetdb5\gsl.mal"
+install_46_gsl.sql: "46_gsl.sql" "$(libdir)\monetdb5\createdb"
+	$(INSTALL) "46_gsl.sql" "$(libdir)\monetdb5\createdb\46_gsl.sql"
+"$(libdir)\monetdb5":
+	if not exist "$(libdir)\monetdb5" $(MKDIR) "$(libdir)\monetdb5"
+"$(libdir)\monetdb5\autoload":
+	if not exist "$(libdir)\monetdb5\autoload" $(MKDIR) "$(libdir)\monetdb5\autoload"
+"$(libdir)\monetdb5\createdb":
+	if not exist "$(libdir)\monetdb5\createdb" $(MKDIR) "$(libdir)\monetdb5\createdb"
+install-data:

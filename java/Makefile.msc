@@ -1,0 +1,105 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..
+srcdir = $(TOPDIR)\..\java
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: build-all
+check: check-recursive check-msc
+install: install-recursive install-msc
+INCLUDES = -I$(srcdir)
+!IFDEF HAVE_JAVAJDBC
+HAVE_JAVAJDBC-1-all: "HAVE_JAVAJDBC-1-dir" "HAVE_JAVAJDBC-1-Makefile"
+	$(CD) "tests" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+HAVE_JAVAJDBC-1-dir: 
+	if not exist "tests" $(MKDIR) "tests"
+HAVE_JAVAJDBC-1-Makefile: "$(srcdir)\tests\Makefile.msc"
+	$(INSTALL) "$(srcdir)\tests\Makefile.msc" "tests\Makefile"
+HAVE_JAVAJDBC-1-check:
+	$(CD) "tests" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+HAVE_JAVAJDBC-1-install:
+	$(CD) "tests" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+!ELSE
+HAVE_JAVAJDBC-1-all:
+HAVE_JAVAJDBC-1-check:
+HAVE_JAVAJDBC-1-install:
+!ENDIF
+all-recursive: "HAVE_JAVAJDBC-1-all" 
+check-recursive: "HAVE_JAVAJDBC-1-check" 
+install-recursive: "HAVE_JAVAJDBC-1-install" 
+EXTRA_DIST_DIR =  src example
+JAVA_HOME =  @JAVA_HOME@
+
+!IF defined(HAVE_JAVA) && defined(HAVE_JAVAJDBC)
+
+callant0.bat:
+	echo @set thisdir=%~dp0>callant0.bat
+	echo @set thisdir=%thisdir:~0,-1%>>callant0.bat
+	echo @$(ANT) -f $(srcdir)\build.xml "-Dbuilddir=%thisdir%\distjdbc" "-Djardir=%thisdir%" distjdbc>>callant0.bat
+distjdbc_ant_target: callant0.bat
+	callant0.bat
+monetdb-mcl-1.13.jar: distjdbc_ant_target
+monetdb-jdbc-2.23.jar: distjdbc_ant_target
+jdbcclient.jar: distjdbc_ant_target
+
+!ELSE
+
+jdbcclient.jar:
+install_jdbcclient.jar:
+distjdbc_ant_target:
+
+!ENDIF #defined(HAVE_JAVA) && defined(HAVE_JAVAJDBC)
+
+
+!IF defined(HAVE_JAVA) && defined(HAVE_JAVAMEROCONTROL)
+
+callant1.bat:
+	echo @set thisdir=%~dp0>callant1.bat
+	echo @set thisdir=%thisdir:~0,-1%>>callant1.bat
+	echo @$(ANT) -f $(srcdir)\build.xml "-Dbuilddir=%thisdir%\distmerocontrol" "-Djardir=%thisdir%" distmerocontrol>>callant1.bat
+distmerocontrol_ant_target: callant1.bat
+	callant1.bat
+merocontrol.jar: distmerocontrol_ant_target
+
+!ELSE
+
+merocontrol.jar:
+install_merocontrol.jar:
+distmerocontrol_ant_target:
+
+!ENDIF #defined(HAVE_JAVA) && defined(HAVE_JAVAMEROCONTROL)
+
+build-all: $(BUILT_SOURCES) all-recursive all-msc
+all-msc: "distjdbc_ant_target" "distmerocontrol_ant_target"
+check-msc: all-msc "monetdb-mcl-1.13.jar" "merocontrol.jar" "jdbcclient.jar" "monetdb-jdbc-2.23.jar"
+install-msc: install-exec install-data
+install-exec:  "install_monetdb-mcl-1.13.jar" "install_merocontrol.jar" "install_jdbcclient.jar" "install_monetdb-jdbc-2.23.jar" 
+!IF defined(HAVE_JAVA) && defined(HAVE_JAVAJDBC)
+install_monetdb-mcl-1.13.jar: "monetdb-mcl-1.13.jar" "$(datadir)\monetdb\lib"
+	$(INSTALL) "monetdb-mcl-1.13.jar" "$(datadir)\monetdb\lib\monetdb-mcl-1.13.jar"
+!ELSE
+install_monetdb-mcl-1.13.jar:
+!ENDIF
+!IF defined(HAVE_JAVA) && defined(HAVE_JAVAMEROCONTROL)
+install_merocontrol.jar: "merocontrol.jar" "$(datadir)\monetdb\lib"
+	$(INSTALL) "merocontrol.jar" "$(datadir)\monetdb\lib\merocontrol.jar"
+!ELSE
+install_merocontrol.jar:
+!ENDIF
+!IF defined(HAVE_JAVA) && defined(HAVE_JAVAJDBC)
+install_jdbcclient.jar: "jdbcclient.jar" "$(datadir)\monetdb\lib"
+	$(INSTALL) "jdbcclient.jar" "$(datadir)\monetdb\lib\jdbcclient.jar"
+!ELSE
+install_jdbcclient.jar:
+!ENDIF
+!IF defined(HAVE_JAVA) && defined(HAVE_JAVAJDBC)
+install_monetdb-jdbc-2.23.jar: "monetdb-jdbc-2.23.jar" "$(datadir)\monetdb\lib"
+	$(INSTALL) "monetdb-jdbc-2.23.jar" "$(datadir)\monetdb\lib\monetdb-jdbc-2.23.jar"
+!ELSE
+install_monetdb-jdbc-2.23.jar:
+!ENDIF
+"$(datadir)\monetdb\lib":
+	if not exist "$(datadir)\monetdb\lib" $(MKDIR) "$(datadir)\monetdb\lib"
+install-data:

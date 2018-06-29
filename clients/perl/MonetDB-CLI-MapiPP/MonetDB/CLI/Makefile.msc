@@ -1,0 +1,24 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..\..\..
+srcdir = $(TOPDIR)\..\clients\perl\MonetDB-CLI-MapiPP\MonetDB\CLI
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+INCLUDES = -I$(srcdir)
+MapiPP.pm: "$(srcdir)\MapiPP.pm"
+	$(INSTALL) "$(srcdir)\MapiPP.pm" "MapiPP.pm"
+all-msc: "MapiPP.pm"
+check-msc: all-msc "MapiPP.pm"
+install-msc: install-exec install-data
+install-exec:  "install_MapiPP.pm" 
+install_MapiPP.pm: "MapiPP.pm" "$(prefix)\$(PERL_LIBDIR)\MonetDB\CLI"
+	$(INSTALL) "MapiPP.pm" "$(prefix)\$(PERL_LIBDIR)\MonetDB\CLI\MapiPP.pm"
+"$(prefix)\$(PERL_LIBDIR)\MonetDB\CLI":
+	if not exist "$(prefix)\$(PERL_LIBDIR)\MonetDB\CLI" $(MKDIR) "$(prefix)\$(PERL_LIBDIR)\MonetDB\CLI"
+install-data:

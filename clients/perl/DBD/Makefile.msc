@@ -1,0 +1,38 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..
+srcdir = $(TOPDIR)\..\clients\perl\DBD
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: build-all
+check: check-recursive check-msc
+install: install-recursive install-msc
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+INCLUDES = -I$(srcdir)
+monetdb-1-all: "monetdb-1-dir" "monetdb-1-Makefile"
+	$(CD) "monetdb" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+monetdb-1-dir: 
+	if not exist "monetdb" $(MKDIR) "monetdb"
+monetdb-1-Makefile: "$(srcdir)\monetdb\Makefile.msc"
+	$(INSTALL) "$(srcdir)\monetdb\Makefile.msc" "monetdb\Makefile"
+monetdb-1-check:
+	$(CD) "monetdb" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+monetdb-1-install:
+	$(CD) "monetdb" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+all-recursive: "monetdb-1-all" 
+check-recursive: "monetdb-1-check" 
+install-recursive: "monetdb-1-install" 
+monetdb.pm: "$(srcdir)\monetdb.pm"
+	$(INSTALL) "$(srcdir)\monetdb.pm" "monetdb.pm"
+build-all: $(BUILT_SOURCES) all-recursive all-msc
+all-msc: "monetdb.pm"
+check-msc: all-msc "monetdb.pm"
+install-msc: install-exec install-data
+install-exec:  "install_monetdb.pm" 
+install_monetdb.pm: "monetdb.pm" "$(prefix)\$(PERL_LIBDIR)\DBD"
+	$(INSTALL) "monetdb.pm" "$(prefix)\$(PERL_LIBDIR)\DBD\monetdb.pm"
+"$(prefix)\$(PERL_LIBDIR)\DBD":
+	if not exist "$(prefix)\$(PERL_LIBDIR)\DBD" $(MKDIR) "$(prefix)\$(PERL_LIBDIR)\DBD"
+install-data:

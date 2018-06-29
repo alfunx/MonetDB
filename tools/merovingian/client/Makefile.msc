@@ -1,0 +1,31 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..\..
+srcdir = $(TOPDIR)\..\tools\merovingian\client
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+man_MANS =  monetdb.1
+INCLUDES = -I$(srcdir) "-I..\..\..\common\stream" -I$(srcdir)\..\..\..\common\stream "-I..\..\..\common\utils" -I$(srcdir)\..\..\..\common\utils "-I..\utils" -I$(srcdir)\..\utils
+monetdbdir = $(bindir)
+monetdb.exe:  ..\utils\libmeroutil.lib ..\..\..\common\stream\libstream.lib ..\..\..\common\utils\libmcrypt.lib ..\..\..\common\utils\libmsabaoth.lib ..\..\..\common\utils\libmuuid.lib ..\..\..\common\utils\libmutils.lib
+monetdb_LIBS = ..\utils\libmeroutil.lib ..\..\..\common\stream\libstream.lib ..\..\..\common\utils\libmcrypt.lib ..\..\..\common\utils\libmsabaoth.lib ..\..\..\common\utils\libmuuid.lib ..\..\..\common\utils\libmutils.lib $(UUID_LIBS) $(openssl_LIBS) $(curl_LIBS) $(SOCKET_LIBS) $(MALLOC_LIBS)
+monetdb_OBJS = monetdb.obj
+monetdb.exe: $(monetdb_OBJS)
+	$(CC) $(CFLAGS) -Femonetdb.exe $(monetdb_OBJS) /link $(monetdb_LIBS) /subsystem:console /NODEFAULTLIB:LIBC
+	$(EDITBIN) $@ /HEAP:1048576,1048576 /LARGEADDRESSAWARE
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;1
+
+monetdb.obj: "$(srcdir)\monetdb.c" "$(srcdir)\..\utils\utils.h" "$(srcdir)\..\utils\properties.h" "$(srcdir)\..\utils\glob.h" "$(srcdir)\..\utils\control.h" "$(srcdir)\..\..\..\common\utils\msabaoth.h" "$(srcdir)\..\..\..\common\utils\mutils.h"
+all-msc: "monetdb.exe"
+check-msc: all-msc
+install-msc: install-exec install-data
+install-exec: "install_bin_monetdb"  
+install_bin_monetdb: "monetdb.exe"
+	if not exist "$(monetdbdir)" $(MKDIR) "$(monetdbdir)"
+	$(INSTALL) "monetdb.exe" "$(monetdbdir)"
+install-data:

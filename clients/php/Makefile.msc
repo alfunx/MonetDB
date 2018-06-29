@@ -1,0 +1,33 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..
+srcdir = $(TOPDIR)\..\clients\php
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: build-all
+check: check-recursive check-msc
+install: install-recursive install-msc
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+EXTRA_DIST_DIR =  doc examples
+INCLUDES = -I$(srcdir)
+lib-1-all: "lib-1-dir" "lib-1-Makefile"
+	$(CD) "lib" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" all 
+lib-1-dir: 
+	if not exist "lib" $(MKDIR) "lib"
+lib-1-Makefile: "$(srcdir)\lib\Makefile.msc"
+	$(INSTALL) "$(srcdir)\lib\Makefile.msc" "lib\Makefile"
+lib-1-check:
+	$(CD) "lib" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" check
+lib-1-install:
+	$(CD) "lib" && $(MAKE) /nologo $(MAKEDEBUG) "prefix=$(prefix)" "bits=$(bits)" install
+all-recursive: "lib-1-all" 
+check-recursive: "lib-1-check" 
+install-recursive: "lib-1-install" 
+build-all: $(BUILT_SOURCES) all-recursive all-msc
+all-msc:
+check-msc: all-msc
+install-msc: install-exec install-data
+install-exec:  
+install-data:

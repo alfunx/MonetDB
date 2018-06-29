@@ -1,0 +1,51 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..
+srcdir = $(TOPDIR)\..\tools\mserver
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+INCLUDES = -I$(srcdir) "-I..\..\monetdb5\mal" -I$(srcdir)\..\..\monetdb5\mal "-I..\..\gdk" -I$(srcdir)\..\..\gdk "-I..\..\common\stream" -I$(srcdir)\..\..\common\stream "-I..\..\common\utils" -I$(srcdir)\..\..\common\utils "-I..\..\common\options" -I$(srcdir)\..\..\common\options $(openssl_CFLAGS) $(pcre_CFLAGS) $(libxml2_CFLAGS)
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+man_MANS =  mserver5.1
+monetdblogo.png: "$(srcdir)\monetdblogo.png"
+	$(INSTALL) "$(srcdir)\monetdblogo.png" "monetdblogo.png"
+mserver5dir = $(bindir)
+mserver5.exe:  ..\..\monetdb5\tools\libmonetdb5.lib ..\..\gdk\libbat.lib ..\..\common\stream\libstream.lib
+mserver5_LIBS = ..\..\monetdb5\tools\libmonetdb5.lib ..\..\gdk\libbat.lib ..\..\common\stream\libstream.lib $(curl_LIBS) $(pcre_LIBS) $(openssl_LIBS) $(PSAPILIB) $(SOCKET_LIBS) $(MALLOC_LIBS) $(DL_LIBS) $(PTHREAD_LIBS)
+mserver5_OBJS = mserver5.obj monet_version.obj
+mserver5.exe: $(mserver5_OBJS)
+	$(CC) $(CFLAGS) -Femserver5.exe $(mserver5_OBJS) /link $(mserver5_LIBS) /subsystem:console /NODEFAULTLIB:LIBC
+	$(EDITBIN) $@ /HEAP:1048576,1048576 /LARGEADDRESSAWARE
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;1
+
+mserver5.obj: "$(srcdir)\mserver5.c" "$(srcdir)\..\..\common\options\monet_options.h" "$(srcdir)\..\..\monetdb5\mal\..\..\gdk\gdk.h" "$(srcdir)\..\..\monetdb5\mal\mal.h" "$(srcdir)\..\..\monetdb5\mal\mal_scenario.h" "$(srcdir)\..\..\monetdb5\mal\mal_import.h" "$(srcdir)\..\..\monetdb5\mal\mal_session.h" "$(srcdir)\..\..\monetdb5\mal\mal_resolve.h" "$(srcdir)\..\..\monetdb5\mal\mal_profiler.h" "$(srcdir)\..\..\monetdb5\mal\mal_client.h" "$(srcdir)\..\..\monetdb5\mal\mal_function.h" "$(srcdir)\monet_version.h" "$(srcdir)\..\..\monetdb5\mal\mal_authorize.h" "$(srcdir)\..\..\common\utils\msabaoth.h" "$(srcdir)\..\..\common\utils\mutils.h" "$(srcdir)\..\..\common\options\monet_getopt.h"
+monet_version.obj: "monet_version.c" "$(srcdir)\..\..\monetdb5\mal\..\..\gdk\gdk.h" "$(srcdir)\..\..\monetdb5\mal\mal.h" "$(srcdir)\monet_version.h"
+monet_version.c: "$(TOPDIR)\winconfig_conds.py" "$(srcdir)\monet_version.c.in"
+	$(CONFIGURE) "$(srcdir)\monet_version.c.in" > "monet_version.c"
+tomographintro.docx: "$(srcdir)\tomographintro.docx"
+	$(INSTALL) "$(srcdir)\tomographintro.docx" "tomographintro.docx"
+tomographintro.pdf: "$(srcdir)\tomographintro.pdf"
+	$(INSTALL) "$(srcdir)\tomographintro.pdf" "tomographintro.pdf"
+all-msc: "mserver5.exe" "monetdblogo.png" "tomographintro.docx" "tomographintro.pdf"
+check-msc: all-msc "tomographintro.pdf" "tomographintro.docx" "monetdblogo.png"
+install-msc: install-exec install-data
+install-exec: "install_bin_mserver5"  "install_tomographintro.pdf" "install_tomographintro.docx" "install_monetdblogo.png" 
+install_bin_mserver5: "mserver5.exe"
+	if not exist "$(mserver5dir)" $(MKDIR) "$(mserver5dir)"
+	$(INSTALL) "mserver5.exe" "$(mserver5dir)"
+install_tomographintro.pdf: "tomographintro.pdf" "$(datadir)\doc\MonetDB-client-tools"
+	$(INSTALL) "tomographintro.pdf" "$(datadir)\doc\MonetDB-client-tools\tomographintro.pdf"
+install_tomographintro.docx: "tomographintro.docx" "$(datadir)\doc\MonetDB-client-tools"
+	$(INSTALL) "tomographintro.docx" "$(datadir)\doc\MonetDB-client-tools\tomographintro.docx"
+install_monetdblogo.png: "monetdblogo.png" "$(datadir)\doc\MonetDB"
+	$(INSTALL) "monetdblogo.png" "$(datadir)\doc\MonetDB\monetdblogo.png"
+"$(datadir)\doc\MonetDB-client-tools":
+	if not exist "$(datadir)\doc\MonetDB-client-tools" $(MKDIR) "$(datadir)\doc\MonetDB-client-tools"
+"$(datadir)\doc\MonetDB":
+	if not exist "$(datadir)\doc\MonetDB" $(MKDIR) "$(datadir)\doc\MonetDB"
+install-data:

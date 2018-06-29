@@ -1,0 +1,97 @@
+
+## Use: nmake -f makefile.msc install
+
+# Nothing much configurable below
+
+TOPDIR = .\..\..
+srcdir = $(TOPDIR)\..\clients\mapiclient
+!INCLUDE $(TOPDIR)\..\NT\rules.msc
+all: all-msc
+check: check-msc
+install: install-msc
+INCLUDES = -I$(srcdir) "-I..\mapilib" -I$(srcdir)\..\mapilib "-I..\..\common\options" -I$(srcdir)\..\..\common\options "-I..\..\common\stream" -I$(srcdir)\..\..\common\stream "-I..\..\common\utils" -I$(srcdir)\..\..\common\utils $(READLINE_INCS)
+CFLAGS=$(CFLAGS) $(thread_safe_flag_spec)
+man_MANS =  mclient.1 msqldump.1
+EXTRA_DIST_DIR =  Tests
+mclientdir = $(bindir)
+mclient.exe:  libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib
+mclient_LIBS = libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib $(READLINE_LIBS) $(curl_LIBS) $(LTLIBICONV) $(PTHREAD_LIBS) $(MATH_LIBS) $(SOCKET_LIBS)
+mclient_OBJS = mclient.obj ReadlineTools.obj
+mclient.exe: $(mclient_OBJS)
+	$(CC) $(CFLAGS) -Femclient.exe $(mclient_OBJS) /link $(mclient_LIBS) /subsystem:console /NODEFAULTLIB:LIBC
+	$(EDITBIN) $@ /HEAP:1048576,1048576 /LARGEADDRESSAWARE
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;1
+
+eventparser.obj: "$(srcdir)\eventparser.c" "$(srcdir)\eventparser.h" "$(srcdir)\..\mapilib\mapi.h" "$(srcdir)\..\..\common\stream\stream.h"
+	$(CC) $(CFLAGS) $(eventparser_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBMCUTIL -Fo"eventparser.obj" -c "$(srcdir)\eventparser.c"
+mclient.obj: "$(srcdir)\mclient.c" "$(srcdir)\..\..\common\options\monet_getopt.h" "$(srcdir)\..\mapilib\mapi.h" "$(srcdir)\ReadlineTools.h" "$(srcdir)\..\..\common\stream\stream.h" "$(srcdir)\msqldump.h" "$(srcdir)\..\..\common\utils\mprompt.h" "$(srcdir)\dotmonetdb.h"
+msqldump.obj: "$(srcdir)\msqldump.c" "$(srcdir)\..\..\common\options\monet_getopt.h" "$(srcdir)\..\mapilib\mapi.h" "$(srcdir)\..\..\common\stream\stream.h" "$(srcdir)\msqldump.h" "$(srcdir)\..\..\common\utils\mprompt.h" "$(srcdir)\dotmonetdb.h"
+tomograph.obj: "$(srcdir)\tomograph.c" "$(srcdir)\..\..\common\options\monet_options.h" "$(srcdir)\..\..\common\stream\stream.h" "$(srcdir)\..\..\common\stream\stream_socket.h" "$(srcdir)\..\mapilib\mapi.h" "$(srcdir)\..\..\common\utils\mprompt.h" "$(srcdir)\dotmonetdb.h" "$(srcdir)\eventparser.h" "$(srcdir)\..\..\common\options\monet_getopt.h"
+tachograph.obj: "$(srcdir)\tachograph.c" "$(srcdir)\..\..\common\options\monet_options.h" "$(srcdir)\..\..\common\stream\stream.h" "$(srcdir)\..\..\common\stream\stream_socket.h" "$(srcdir)\..\mapilib\mapi.h" "$(srcdir)\..\..\common\utils\mprompt.h" "$(srcdir)\dotmonetdb.h" "$(srcdir)\eventparser.h" "$(srcdir)\..\..\common\options\monet_getopt.h"
+dump.obj: "$(srcdir)\dump.c" "$(srcdir)\..\..\common\options\monet_options.h" "$(srcdir)\..\mapilib\mapi.h" "$(srcdir)\..\..\common\stream\stream.h" "$(srcdir)\msqldump.h"
+	$(CC) $(CFLAGS) $(dump_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBMCUTIL -Fo"dump.obj" -c "$(srcdir)\dump.c"
+ReadlineTools.obj: "$(srcdir)\ReadlineTools.c" "$(srcdir)\..\..\common\options\monet_options.h" "$(srcdir)\ReadlineTools.h" "$(srcdir)\..\mapilib\mapi.h"
+stethoscope.obj: "$(srcdir)\stethoscope.c" "$(srcdir)\..\..\common\options\monet_options.h" "$(srcdir)\..\..\common\stream\stream.h" "$(srcdir)\..\..\common\stream\stream_socket.h" "$(srcdir)\..\mapilib\mapi.h" "$(srcdir)\..\..\common\utils\mprompt.h" "$(srcdir)\dotmonetdb.h" "$(srcdir)\eventparser.h" "$(srcdir)\..\..\common\options\monet_getopt.h"
+dotmonetdb.obj: "$(srcdir)\dotmonetdb.c" "$(srcdir)\dotmonetdb.h"
+	$(CC) $(CFLAGS) $(dotmonetdb_CFLAGS) $(GENDLL) -D_CRT_SECURE_NO_WARNINGS -DLIBMCUTIL -Fo"dotmonetdb.obj" -c "$(srcdir)\dotmonetdb.c"
+libmcutil_OBJS = dump.obj dotmonetdb.obj eventparser.obj
+libmcutil_DEPS = $(libmcutil_OBJS)
+libmcutil.lib: $(libmcutil_DEPS)
+	$(ARCHIVER) /out:"libmcutil.lib" $(libmcutil_OBJS) $(libmcutil_LIBS)
+
+stethoscopedir = $(bindir)
+stethoscope.exe:  libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib
+stethoscope_LIBS = libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib $(curl_LIBS) $(MALLOC_LIBS) $(PTHREAD_LIBS) $(SOCKET_LIBS)
+stethoscope_OBJS = stethoscope.obj
+stethoscope.exe: $(stethoscope_OBJS)
+	$(CC) $(CFLAGS) -Festethoscope.exe $(stethoscope_OBJS) /link $(stethoscope_LIBS) /subsystem:console /NODEFAULTLIB:LIBC
+	$(EDITBIN) $@ /HEAP:1048576,1048576 /LARGEADDRESSAWARE
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;1
+
+tomographdir = $(bindir)
+tomograph.exe:  libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib
+tomograph_LIBS = libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib $(curl_LIBS) $(MALLOC_LIBS) $(PTHREAD_LIBS) $(SOCKET_LIBS)
+tomograph_OBJS = tomograph.obj
+tomograph.exe: $(tomograph_OBJS)
+	$(CC) $(CFLAGS) -Fetomograph.exe $(tomograph_OBJS) /link $(tomograph_LIBS) /subsystem:console /NODEFAULTLIB:LIBC
+	$(EDITBIN) $@ /HEAP:1048576,1048576 /LARGEADDRESSAWARE
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;1
+
+msqldumpdir = $(bindir)
+msqldump.exe:  libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib
+msqldump_LIBS = libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib $(curl_LIBS)
+msqldump_OBJS = msqldump.obj
+msqldump.exe: $(msqldump_OBJS)
+	$(CC) $(CFLAGS) -Femsqldump.exe $(msqldump_OBJS) /link $(msqldump_LIBS) /subsystem:console /NODEFAULTLIB:LIBC
+	$(EDITBIN) $@ /HEAP:1048576,1048576 /LARGEADDRESSAWARE
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;1
+
+tachographdir = $(bindir)
+tachograph.exe:  libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib
+tachograph_LIBS = libmcutil.lib ..\mapilib\libmapi.lib ..\..\common\stream\libstream.lib ..\..\common\utils\libmutils.lib $(curl_LIBS) $(MALLOC_LIBS) $(PTHREAD_LIBS) $(SOCKET_LIBS)
+tachograph_OBJS = tachograph.obj
+tachograph.exe: $(tachograph_OBJS)
+	$(CC) $(CFLAGS) -Fetachograph.exe $(tachograph_OBJS) /link $(tachograph_LIBS) /subsystem:console /NODEFAULTLIB:LIBC
+	$(EDITBIN) $@ /HEAP:1048576,1048576 /LARGEADDRESSAWARE
+	if exist $@.manifest $(MT) -manifest $@.manifest -outputresource:$@;1
+
+all-msc: "libmcutil.lib" "mclient.exe" "stethoscope.exe" "tomograph.exe" "msqldump.exe" "tachograph.exe"
+check-msc: all-msc
+install-msc: install-exec install-data
+install-exec: "install_bin_mclient" "install_bin_stethoscope" "install_bin_tomograph" "install_bin_msqldump" "install_bin_tachograph"  
+install_bin_mclient: "mclient.exe"
+	if not exist "$(mclientdir)" $(MKDIR) "$(mclientdir)"
+	$(INSTALL) "mclient.exe" "$(mclientdir)"
+install_bin_stethoscope: "stethoscope.exe"
+	if not exist "$(stethoscopedir)" $(MKDIR) "$(stethoscopedir)"
+	$(INSTALL) "stethoscope.exe" "$(stethoscopedir)"
+install_bin_tomograph: "tomograph.exe"
+	if not exist "$(tomographdir)" $(MKDIR) "$(tomographdir)"
+	$(INSTALL) "tomograph.exe" "$(tomographdir)"
+install_bin_msqldump: "msqldump.exe"
+	if not exist "$(msqldumpdir)" $(MKDIR) "$(msqldumpdir)"
+	$(INSTALL) "msqldump.exe" "$(msqldumpdir)"
+install_bin_tachograph: "tachograph.exe"
+	if not exist "$(tachographdir)" $(MKDIR) "$(tachographdir)"
+	$(INSTALL) "tachograph.exe" "$(tachographdir)"
+install-data:

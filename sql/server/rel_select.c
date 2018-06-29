@@ -76,6 +76,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_except:
 	case op_inter:
 	case op_project:
+	case op_matrixadd:
 		if (!is_processed(rel) && level == 0)
 			return rel_table_projections( sql, rel->l, tname, level+1);
 		/* fall through */
@@ -212,6 +213,7 @@ static sql_rel * rel_setquery(mvc *sql, sql_rel *rel, symbol *sq);
 static sql_rel * rel_joinquery(mvc *sql, sql_rel *rel, symbol *sq);
 static sql_rel * rel_crossquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *sq);
+static sql_rel * rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q);
 
 static sql_rel *
 rel_table_optname(mvc *sql, sql_rel *sq, symbol *optname)
@@ -348,6 +350,15 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_UNIONJOIN:
 	{
 		sql_rel *tq = rel_unionjoinquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXADD:
+	{
+		sql_rel *tq = rel_matrixaddquery(sql, r, q);
+		fprintf(stderr, "SQL_MATRIXADD\n");
 
 		if (!tq)
 			return NULL;
@@ -3675,6 +3686,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_select:
 	case op_topn:
 	case op_sample:
+	case op_matrixadd:
 		return rel_projections_(sql, rel->l);
 	default:
 		return NULL;
@@ -5070,6 +5082,79 @@ rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *q)
 	rel->exps = rel_projections(sql, rel, NULL, 0, 1);
 	if (!all)
 		rel = rel_distinct(rel);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *it;
+	//dnode *it1;
+	sql_rel *inner;
+	dnode *n = q->data.lval->h;
+
+	list *obe = NULL;
+	list *obe1 = NULL;
+
+	symbol *tab1 = n->data.sym;
+	symbol *tab2 = n->next->data.sym;
+	dlist *tab3 = n->next->next->data.lval;
+
+	symbol *tab4 = n->next->next->next->data.sym;
+	symbol *tab5 = n->next->next->next->next->data.sym;
+	//dlist *tab6 = n->next->next->next->next->next->data.lval;
+
+	sql_rel *t1 = NULL;
+	sql_rel *t2 = NULL;
+	fprintf(stderr, "rel_addquery 1\n");
+	t1 = table_ref(sql, rel, tab1);
+	t2 = table_ref(sql, rel, tab4);
+	fprintf(stderr, "rel_addquery 2\n");
+	rel = rel_matrixadd(sql->sa, t1, t2, new_exp_list(sql->sa) ,new_exp_list(sql->sa) );
+
+	obe = rel_order_by(sql, &rel, tab2, 0);
+	t1 = rel->l;
+	t2 = rel->r;
+	rel->l = t2;
+	rel->r = t1;
+	obe1 = rel_order_by(sql, &rel, tab5, 0);
+	t1 = rel->l;
+	t2 = rel->r;
+	rel->l = t2;
+	rel->r = t1;
+	fprintf(stderr, "rel_addquery 3\n");
+
+	it = tab3->h;
+	//it1 = tab6->h;
+	inner = rel;
+	fprintf(stderr, "rel_addquery 4\n");
+	for (; it; it = it->next) {
+		sql_exp *ce = rel_column_exp(sql, &inner,it->data.sym, sql_sel);
+		fprintf(stderr, "rel_addquery 5\n");
+		append(inner->exps1, ce);		
+		rel = inner;
+	}
+
+	/*inner = rel;
+	fprintf(stderr, "rel_addquery 6\n");
+	for (; it1; it1 = it1->next) {
+		
+		sql_exp *ce = rel_column_exp(sql, &inner,it1->data.sym, sql_sel);
+
+		append(inner->exps, ce);		
+		rel = inner;
+	}*/
+	fprintf(stderr, "rel_addquery 8\n");
+	rel->lord = obe;
+	rel->rord = obe1;
+	fprintf(stderr, "rel_addquery 9\n");
+	//if (!obe){
+	//	fprintf(stderr, " NO ORDER BY STMT \n");
+	//}
+
+	if (!t1 || !t2)
+		return NULL;
+	
 	return rel;
 }
 

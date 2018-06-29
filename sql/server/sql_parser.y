@@ -573,6 +573,7 @@ int yydebug=1;
 %left <operation> '*' '/'
 %left <operation> '%'
 %left <operation> '~'
+%left <operation> ADD
 
 %left <operatio> GEOM_OVERLAP GEOM_OVERLAP_OR_ABOVE GEOM_OVERLAP_OR_BELOW GEOM_OVERLAP_OR_LEFT 
 %left <operatio> GEOM_OVERLAP_OR_RIGHT GEOM_BELOW GEOM_ABOVE GEOM_DIST
@@ -2794,11 +2795,21 @@ joined_table:
    '(' joined_table ')'
 	{ $$ = $2; }
  |  table_ref CROSS JOIN table_ref
-
 	{ dlist *l = L();
 	  append_symbol(l, $1);
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_CROSS, l); }
+
+ | '(' table_ref ON selection opt_order_by_clause ')' ADD '(' table_ref ON selection opt_order_by_clause ')'
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_symbol(l, $5);
+	  append_list(l, $4);
+	  append_symbol(l, $9);
+	  append_symbol(l, $12);
+	  append_list(l, $11);
+	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
+
  |  table_ref UNIONJOIN table_ref join_spec
 	{ dlist *l = L();
 	  append_symbol(l, $1);

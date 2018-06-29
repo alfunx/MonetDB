@@ -125,6 +125,7 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 	case op_anti:
 	case op_project:
 	case op_select:
+	case op_matrixadd:
 	default:
 		if (i->l)
 			rel->l = rel_copy(sa, i->l);
@@ -219,6 +220,7 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_select:
 	case op_topn:
 	case op_sample:
+	case op_matrixadd:
 		*p = rel;
 		if (rel->l)
 			return rel_bind_column_(sql, p, rel->l, cname);
@@ -373,6 +375,21 @@ rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join)
 }
 
 sql_rel *
+rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r, list *e, list *e1)
+{
+	sql_rel *rel = rel_create(sa);
+
+	rel->l = l;
+	rel->r = r;
+	rel->exps = e;
+	rel->exps1 = e1;
+	rel->op = op_matrixadd;
+	rel->card = CARD_MULTI;
+	rel->nrcols = l->nrcols;
+	return rel;
+}
+
+sql_rel *
 rel_topn(sql_allocator *sa, sql_rel *l, list *exps )
 {
 	sql_rel *rel = rel_create(sa);
@@ -443,6 +460,9 @@ void
 rel_project_add_exp( mvc *sql, sql_rel *rel, sql_exp *e)
 {
 	assert(is_project(rel->op));
+
+	if (rel->op == op_matrixadd)
+		fprintf(stderr, "rel_project_add_exp check if\n");
 
 	if (!e->rname) 
 		exp_setrelname(sql->sa, e, sql->label);
@@ -793,6 +813,7 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_select:
 	case op_topn:
 	case op_sample:
+	case op_matrixadd:
 		return rel_projections(sql, rel->l, tname, settname, intern );
 	default:
 		return NULL;
@@ -825,6 +846,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_select:
 	case op_topn:
 	case op_sample:
+	case op_matrixadd:
 		found = rel_bind_path_(rel->l, e, path);
 		break;
 

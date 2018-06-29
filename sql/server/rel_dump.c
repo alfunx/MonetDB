@@ -284,6 +284,8 @@ op2string(operator_type op)
 		return "topn";
 	case op_sample:
 		return "sample";
+	case op_matrixadd:
+		return "matrix add";
 	case op_insert: 
 	case op_update: 
 	case op_delete: 
@@ -387,6 +389,7 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 	case op_union: 
 	case op_inter: 
 	case op_except: 
+	case op_matrixadd: 
 		r = "join";
 		if (rel->op == op_left)
 			r = "left outer join";
@@ -417,6 +420,8 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 			r = "except";
 		else if (!rel->exps && rel->op == op_join)
 			r = "crossproduct";
+		else if (rel->op == op_matrixadd)
+			r = "matrix add";
 		print_indent(sql, fout, depth, decorate);
 		if (need_distinct(rel))
 			mnstr_printf(fout, "distinct ");
@@ -555,6 +560,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 	case op_groupby: 
 	case op_topn: 
 	case op_sample: 
+	case op_matrixadd: 
 		rel_print_refs(sql, fout, rel->l, depth, refs, decorate);
 		if (rel->l && rel_is_ref(rel->l) && !find_ref(refs, rel->l)) {
 			rel_print_(sql, fout, rel->l, depth, refs, decorate);

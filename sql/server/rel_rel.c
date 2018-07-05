@@ -813,8 +813,14 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_select:
 	case op_topn:
 	case op_sample:
-	case op_matrixadd:
 		return rel_projections(sql, rel->l, tname, settname, intern );
+
+	case op_matrixadd:
+		exps = rel_projections(sql, rel->l, tname, settname, intern);
+		rexps = rel_projections(sql, rel->r, tname, settname, intern);
+		exps = list_merge(exps, rexps, (fdup)NULL);
+		return exps;
+
 	default:
 		return NULL;
 	}

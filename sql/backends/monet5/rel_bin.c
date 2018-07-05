@@ -1370,6 +1370,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 		args = rel2bin_args(sql, rel->r, args);
 		break;
 	case op_matrixadd:
+		fprintf(stderr, ">>> rel_bin: rel2bin_args\n");
 		args = rel2bin_args(sql, rel->r, args);
 		break;
 	}
@@ -1855,204 +1856,173 @@ rel2bin_join( mvc *sql, sql_rel *rel, list *refs)
 	return stmt_list(sql->sa, l);
 }
 
+static void
+split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
+{
+	node *n, *en;
+
+	for (n = p->op4.lval->h; n; n = n->next) {
+		stmt *c = n->data;
+		stmt *s;
+		bool desc = true;
+		const char *rnme = table_name(sql->sa, c);
+		const char *nme = column_name(sql->sa, c);
+
+		fprintf(stderr, "testing: %c.%c \n", *rnme, *nme);
+
+		for (en = exps->h; en; en = en->next) {
+			sql_exp *exp = en->data;
+
+			if (exp->l && exp->r) {
+				char *rname = exp->l;
+				char *name = exp->r;
+
+				fprintf(stderr, "    exps: %c \n", *name);
+
+				if (rnme && nme && strcmp(nme, name) == 0) {
+					fprintf(stderr, "        -> match!\n");
+
+					s = column(sql->sa, c);
+					s = stmt_alias(sql->sa, s, rnme, nme);
+
+					list_append(*a, s);
+					desc = false;
+					break;
+				}
+			}
+		}
+
+		if (desc) {
+			fprintf(stderr, "        -> is descriptive\n");
+			s = column(sql->sa, c);
+			s = stmt_alias(sql->sa, s, rnme, nme);
+			list_append(*d, s);
+		}
+	}
+	fprintf(stderr, ">>> [split_exps_appl_desc]\n");
+}
+
+static stmt *
+gen_orderby_ids(mvc *sql, stmt *s, list *ord)
+{
+	if (!ord)
+		return NULL;
+
+	node *n;
+	list *p;
+	stmt *psub = NULL;
+	stmt *orderby_ids = NULL;
+	stmt *orderby_grp = NULL;
+
+	p = sa_list(sql->sa);
+	p->expected_cnt = list_length(s->op4.lval);
+	psub = stmt_list(sql->sa, p);
+
+	stmt_set_nrcols(psub);
+
+	// ordering of the order specification columns to know the final order of OIDs for
+	for (n = ord->h; n; n = n->next) {
+		stmt *orderby = NULL;
+		sql_exp *orderbycole = n->data;
+		stmt *orderbycolstmt = exp_bin(sql, orderbycole, s, psub, NULL, NULL, NULL, NULL);
+
+		if (!orderbycolstmt) {
+			assert(0);
+			return NULL;
+		}
+		/* single values don't need sorting */
+		if (orderbycolstmt->nrcols == 0) {
+			orderby_ids = NULL;
+			break;
+		}
+		if (orderby_ids)
+			orderby = stmt_reorder(sql->sa, orderbycolstmt, is_ascending(orderbycole), orderby_ids, orderby_grp);
+		else
+			orderby = stmt_order(sql->sa, orderbycolstmt, is_ascending(orderbycole));
+		orderby_ids = stmt_result(sql->sa, orderby, 1);
+		orderby_grp = stmt_result(sql->sa, orderby, 2);
+	}
+
+	return orderby_ids;
+}
+
+static void
+align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
+{
+	node *n;
+
+	for(n = l->h; n; n = n->next) {
+		stmt *c = n->data;
+		stmt *s;
+
+		const char *tname = table_name(sql->sa, c);
+		const char *cname = column_name(sql->sa, c);
+
+		if (orderby_ids)
+			s = stmt_project(sql->sa, orderby_ids, c);
+		else
+			s = column(sql->sa, c);
+		s = stmt_alias(sql->sa, s, tname, cname);
+
+		list_append(*ol, s);
+	}
+}
+
 static stmt *
 rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 {
-	list *test; // list of all statements (result)
-	list *ll; //list of left attributes
-	list *lr;  //list of right attributes
+	// list of all statements (result)
+	list *l;
 
-	list *oll; //list of left attributes
-	list *olr;  //list of right attributes
+	// application part and description part columns
+	list *al, *ar, *dl, *dr;
 
-	list *pl;  
-	list *pr;  
+	// ordered application part columns (desc part is directly appended to l)
+	list *oal, *oar;
 
-	node *nl, *nr;
-	node *n; //iterators
+	// iterators
+	node *n, *en;
 
 	stmt *left = NULL;
 	stmt *right = NULL;
-
-	stmt *psubl = NULL;
-	stmt *psubr = NULL;
-
 	stmt *orderby_idsl = NULL;
-	stmt *orderby_grpl = NULL;
 	stmt *orderby_idsr = NULL;
-	stmt *orderby_grpr = NULL;
 
-	if (rel->l) 
-		left = subrel_bin(sql, rel->l, refs);
-	assert(left);
-	if (rel->r) 
-		right = subrel_bin(sql, rel->r, refs);
-	assert(right);
-	/* construct list of statements */
-	test = sa_list(sql->sa);
-	ll = sa_list(sql->sa);
-	lr = sa_list(sql->sa);
-	oll = sa_list(sql->sa);
-	olr = sa_list(sql->sa);
+	left = subrel_bin(sql, rel->l, refs);
+	right = subrel_bin(sql, rel->r, refs);
+	assert(left && right);
 
-	fprintf(stderr, "in rel2bin_add \n");
+	// construct list of statements
+	l = sa_list(sql->sa);
+	al = sa_list(sql->sa);
+	ar = sa_list(sql->sa);
+	dl = sa_list(sql->sa);
+	dr = sa_list(sql->sa);
+	oal = sa_list(sql->sa);
+	oar = sa_list(sql->sa);
 
-	assert (rel->exps && rel->exps1);
-	assert (rel->lord && rel->rord);
+	assert(rel->exps && rel->exps1);
+	split_exps_appl_desc(sql, left, rel->exps, &al, &dl);
+	split_exps_appl_desc(sql, right, rel->exps1, &ar, &dr);
 
-	for (n = left->op4.lval->h; n; n = n->next) {
-		stmt *c1 = n->data;
-		stmt *s;
-		char *rnme = table_name(sql->sa, c1);
-		char *nme = column_name(sql->sa, c1);
+	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
-		fprintf(stderr, "%c \n", *rnme);
-		fprintf(stderr, "%c \n", *nme);
-
-		s = column(sql->sa, c1);
-		s = stmt_alias(sql->sa,s,rnme,nme);	
-		list_append(ll, s);
-		//s = stmt_rename(sql, rel, exp, s);
-		//column_name(sql->sa, s); /* save column name */
-		//list_append(pl, s);
-	}
-	fprintf(stderr, "in rel2bin_add1 \n");
-
-	for (n = right->op4.lval->h; n; n = n->next) {
-		stmt *c1 = n->data;
-		stmt *s;
-		char *rnme = table_name(sql->sa, c1);
-		char *nme = column_name(sql->sa, c1);
-
-		fprintf(stderr, "%c \n", *rnme);
-		fprintf(stderr, "%c \n", *nme);
-
-		s = column(sql->sa, c1);
-		s = stmt_alias(sql->sa,s,rnme,nme);	
-		list_append(lr, s);
-
-		//s = stmt_rename(sql, rel, exp, s);
-		//column_name(sql->sa, s); /* save column name */
-		//list_append(pl, s);
-	}
-
-	pl = sa_list(sql->sa);
-	if (left)
-		pl->expected_cnt = list_length(left->op4.lval);
-	psubl = stmt_list(sql->sa, pl);
-
-	stmt_set_nrcols(psubl);
-
-	//ordering of the order specification columns to know the final order of OIDs for left relation
-	if (rel->lord) {
-		list *oexps = rel->lord;
-
-		for (n = oexps->h; n; n = n->next) {
-			stmt *orderby = NULL;
-			sql_exp *orderbycole = n->data; 
-			stmt *orderbycolstmt = exp_bin(sql, orderbycole, left, psubl, NULL, NULL, NULL, NULL); 
-
-			if (!orderbycolstmt) {
-				assert(0);
-				return NULL;
-			}
-			/* single values don't need sorting */
-			if (orderbycolstmt->nrcols == 0) {
-				orderby_idsl = NULL;
-				break;
-			}
-			if (orderby_idsl)
-				orderby = stmt_reorder(sql->sa, orderbycolstmt, is_ascending(orderbycole), orderby_idsl, orderby_grpl);
-			else
-				orderby = stmt_order(sql->sa, orderbycolstmt, is_ascending(orderbycole));
-			orderby_idsl = stmt_result(sql->sa, orderby, 1);
-			orderby_grpl = stmt_result(sql->sa, orderby, 2);
-		}
-	}
-
-	pr = sa_list(sql->sa);
-	if (right)
-		pr->expected_cnt = list_length(right->op4.lval);
-	psubr = stmt_list(sql->sa, pr);
-
-	stmt_set_nrcols(psubr);
-
-	//ordering of the order specification columns to know the final order of OIDs for right relation
-	if (rel->rord) {
-		list *oexps = rel->rord;
-
-		for (n = oexps->h; n; n = n->next) {
-			stmt *orderby = NULL;
-			sql_exp *orderbycole = n->data; 
-			stmt *orderbycolstmt = exp_bin(sql, orderbycole, right, psubr, NULL, NULL, NULL, NULL); 
-
-			if (!orderbycolstmt) {
-				assert(0);
-				return NULL;
-			}
-			/* single values don't need sorting */
-			if (orderbycolstmt->nrcols == 0) {
-				orderby_idsr = NULL;
-				break;
-			}
-			if (orderby_idsr)
-				orderby = stmt_reorder(sql->sa, orderbycolstmt, is_ascending(orderbycole), orderby_idsr, orderby_grpr);
-			else
-				orderby = stmt_order(sql->sa, orderbycolstmt, is_ascending(orderbycole));
-			orderby_idsr = stmt_result(sql->sa, orderby, 1);
-			orderby_grpr = stmt_result(sql->sa, orderby, 2);
-		}
-	}
-
-	//ordering left relation
-	if (orderby_idsl) {
-		for(n = ll->h; n; n = n->next)
-		{
-			stmt *c = n->data;
-			stmt *s;
-
-			char *cname = column_name(sql->sa, c);
-			char *tname = table_name(sql->sa, c);
-
-			s = stmt_project(sql->sa, orderby_idsl, c);
-			s = stmt_alias(sql->sa, s, tname, cname );
-
-			list_append(oll, s);
-		}
-	}
-
-	//ordering right relation
-	if (orderby_idsr) {
-		for(n = lr->h; n; n = n->next)
-		{
-			stmt *c = n->data;
-			stmt *s;
-
-			char *cname = column_name(sql->sa, c);
-			char *tname = table_name(sql->sa, c);
-
-			s = stmt_project(sql->sa, orderby_idsr, c);
-			s = stmt_alias(sql->sa, s, tname, cname );
-
-			list_append(olr, s);
-		}
-	}
-	fprintf(stderr, "in rel2bin_add2 \n");
+	align_by_ids(sql, orderby_idsl, dl, &l);
+	align_by_ids(sql, orderby_idsr, dr, &l);
+	align_by_ids(sql, orderby_idsl, al, &oal);
+	align_by_ids(sql, orderby_idsr, ar, &oar);
 
 	// addition between two lists of ordered BATs
-	for(nl = oll->h,nr = olr->h; nl&&nr; nl = nl->next, nr = nr->next)
+	for(n = oal->h, en = oar->h; n && en; n = n->next, en = en->next)
 	{
-		stmt *c1, *c2;
-		stmt *s;
-		c1 = nl->data;
-		c2 = nr->data;
-		s = stmt_matrixadd(sql->sa, c1,c2);
-		list_append(test, s);
+		stmt *s = stmt_matrixadd(sql->sa, n->data, en->data);
+		list_append(l, s);
+		fprintf(stderr, "    create matrixadd stmt\n");
 	}
-	fprintf(stderr, "in rel2bin_add3 \n");
+	fprintf(stderr, "in rel2bin_add4 \n");
 
-	return stmt_list(sql->sa, test);
-	//return stmt_list(sql->sa, l);
+	return stmt_list(sql->sa, l);
 }
 
 static stmt *
@@ -4834,8 +4804,9 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		s = rel2bin_ddl(sql, rel, refs);
 		break;
 	case op_matrixadd:
+		fprintf(stderr, ">>> rel_bin: subrel_bin\n");
 		s = rel2bin_matrixadd(sql, rel, refs);
-		fprintf(stderr, "after rel2bin_matrixadd \n");
+		fprintf(stderr, "after rel2bin_matrixadd\n");
 		break;
 	}
 	if (s && rel_is_ref(rel)) {

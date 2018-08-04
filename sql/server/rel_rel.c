@@ -116,6 +116,11 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 		if (i->r)
 			rel->r = (i->r)?list_dup(i->r, (fdup)NULL):NULL;
 		break;
+	case op_matrixadd:
+		rel->exps1 = (i->exps1)?list_dup(i->exps1, (fdup)NULL):NULL;
+		rel->lord = i->lord;
+		rel->rord = i->rord;
+		// fallthrough
 	case op_join:
 	case op_left:
 	case op_right:
@@ -125,7 +130,6 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 	case op_anti:
 	case op_project:
 	case op_select:
-	case op_matrixadd:
 	default:
 		if (i->l)
 			rel->l = rel_copy(sa, i->l);
@@ -220,10 +224,29 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_select:
 	case op_topn:
 	case op_sample:
-	case op_matrixadd:
 		*p = rel;
 		if (rel->l)
 			return rel_bind_column_(sql, p, rel->l, cname);
+
+	case op_matrixadd:
+		// TODO: matrixadd
+		if (rel->exps && exps_bind_column(rel->exps, cname, &ambiguous))
+			return rel;
+		if (rel->exps1 && exps_bind_column(rel->exps1, cname, &ambiguous))
+			return rel;
+		if (ambiguous) {
+			(void) sql_error(sql, ERR_AMBIGUOUS, "SELECT: identifier '%s' ambiguous", cname);
+			return NULL;
+		}
+		*p = rel;
+		if (is_processed(rel))
+			return NULL;
+		if (rel->l && !(is_base(rel->op)))
+			return rel_bind_column_(sql, p, rel->l, cname);
+		if (rel->r && !(is_base(rel->op)))
+			return rel_bind_column_(sql, p, rel->r, cname);
+		break;
+
 	default:
 		return NULL;
 	}
@@ -816,6 +839,7 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 		return rel_projections(sql, rel->l, tname, settname, intern );
 
 	case op_matrixadd:
+		// TODO: matrixadd
 		exps = rel_projections(sql, rel->l, tname, settname, intern);
 		rexps = rel_projections(sql, rel->r, tname, settname, intern);
 		exps = list_merge(exps, rexps, (fdup)NULL);

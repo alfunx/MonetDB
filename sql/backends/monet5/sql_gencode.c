@@ -1937,7 +1937,6 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 		}
 		case st_matrixadd:{
 			int  l, r;
-			//fprintf(stderr, "in gencode, st_add \n");
 
 			l = _dumpstmt(sql, mb, s->op1);
 			r = _dumpstmt(sql, mb, s->op2);

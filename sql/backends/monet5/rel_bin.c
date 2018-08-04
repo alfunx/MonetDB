@@ -1899,7 +1899,7 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 			list_append(*d, s);
 		}
 	}
-	fprintf(stderr, ">>> [split_exps_appl_desc]\n");
+	fprintf(stderr, ">>> END: [split_exps_appl_desc]\n");
 }
 
 static stmt *
@@ -1930,20 +1930,24 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord)
 			assert(0);
 			return NULL;
 		}
+
 		/* single values don't need sorting */
 		if (orderbycolstmt->nrcols == 0) {
 			orderby_ids = NULL;
 			break;
 		}
+
 		if (orderby_ids)
 			orderby = stmt_reorder(sql->sa, orderbycolstmt, is_ascending(orderbycole), orderby_ids, orderby_grp);
 		else
 			orderby = stmt_order(sql->sa, orderbycolstmt, is_ascending(orderbycole));
+
 		orderby_ids = stmt_result(sql->sa, orderby, 1);
 		orderby_grp = stmt_result(sql->sa, orderby, 2);
 	}
 
 	return orderby_ids;
+	fprintf(stderr, ">>> END: [gen_orderby_ids]\n");
 }
 
 static void
@@ -1964,8 +1968,11 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 			s = column(sql->sa, c);
 		s = stmt_alias(sql->sa, s, tname, cname);
 
+		fprintf(stderr, ">>> END: ordering: %s.%s\n", tname, cname);
+
 		list_append(*ol, s);
 	}
+	fprintf(stderr, ">>> END: [align_by_ids]\n");
 }
 
 static stmt *

@@ -5098,11 +5098,12 @@ append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
 
 	for (n = exps->h; n; n = n->next) {
 		sql_exp *te = n->data;
+		const char *rnm = te->rname;
 		const char *nm = te->name;
-		sql_exp *e = exps_bind_column(ap, nm, NULL);
+		sql_exp *e = exps_bind_column2(ap, rnm, nm);
 
 		if (!e) {
-			fprintf(stderr, ">>> [append_desc_part] column: %s\n", nm);
+			fprintf(stderr, ">>> [append_desc_part] column: %s.%s\n", rnm, nm);
 			append(*outexps, te);
 		}
 	}
@@ -5117,17 +5118,17 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 		return NULL;
 
 	int nr = ++sql->label;
-	char name[16], *nme;
-	nme = number2name(name, 16, nr);
+	char name[16], *rnm;
+	rnm = number2name(name, 16, nr);
 	node *n, *en;
 
 	// append only min(list_length(exps), list_length(exps1)) expressions
 	for (n = apl->h, en = apr->h; n && en; n = n->next, en = en->next) {
 		sql_exp *te = n->data;
 		const char *nm = te->name;
-		fprintf(stderr, ">>> [append_appl_part] column: %s\n", nm);
+		fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
 
-		exp_setname(sql->sa, te, nme, sa_strdup(sql->sa, nm));
+		exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
 		append(*outexps, te);
 	}
 
@@ -5137,8 +5138,8 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 static sql_rel *
 rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 {
-	dnode *it;
 	dnode *n = q->data.lval->h;
+	dnode *en;
 
 	list *obe = NULL;
 	list *obe1 = NULL;
@@ -5153,6 +5154,7 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	sql_rel *t1 = NULL;
 	sql_rel *t2 = NULL;
+
 	t1 = table_ref(sql, rel, tab1);
 	t2 = table_ref(sql, rel, tab4);
 	if (!t1 || !t2)
@@ -5183,20 +5185,25 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 		fprintf(stderr, ">>> [rel_matrixaddquery] no order by on right relation\n");
 	}
 
+	rel->lord = obe;
+	rel->rord = obe1;
+
+	t1 = table_ref(sql, rel, tab1);
+	t2 = table_ref(sql, rel, tab4);
 	if (!t1 || !t2)
 		return NULL;
 
-	for (it = tab3->h; it; it = it->next, lnrcols++) {
+	for (en = tab3->h; en; en = en->next, lnrcols++) {
 		fprintf(stderr, ">>> [rel_matrixaddquery] left application part\n");
-		sql_exp *ce = rel_column_exp(sql, &rel, it->data.sym, sql_sel);
+		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
 
 		if (ce)
 			append(rel->exps, ce);
 	}
 
-	for (it = tab6->h; it; it = it->next, rnrcols++) {
+	for (en = tab6->h; en; en = en->next, rnrcols++) {
 		fprintf(stderr, ">>> [rel_matrixaddquery] right application part\n");
-		sql_exp *ce = rel_column_exp(sql, &rel, it->data.sym, sql_sel);
+		sql_exp *ce = rel_column_exp(sql, &t2, en->data.sym, sql_sel);
 
 		if (ce)
 			append(rel->exps1, ce);
@@ -5207,9 +5214,6 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 		rel_destroy(rel);
 		return NULL;
 	}
-
-	rel->lord = obe;
-	rel->rord = obe1;
 
 	rel->nrcols = t1->nrcols + t2->nrcols - lnrcols;
 	fprintf(stderr, ">>> [rel_matrixaddquery] nrcols: %d\n", rel->nrcols);

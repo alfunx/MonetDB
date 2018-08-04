@@ -153,7 +153,6 @@ name_find_column( sql_rel *rel, char *rname, char *name, int pnr, sql_rel **bt )
 	case op_insert:
 	case op_update:
 	case op_delete:
-	case op_matrixadd:
 		break;
 	}
 	if (alias) { /* we found an expression with the correct name, but
@@ -247,7 +246,6 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_topn:
 	case op_sample:
 	case op_ddl:
-	case op_matrixadd:
 		if (rel->l)
 			rel_properties(sql, gp, rel->l);
 		break;
@@ -284,7 +282,6 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_topn:
 	case op_sample:
 	case op_select:
-	case op_matrixadd:
 		break;
 
 	case op_insert:
@@ -5397,7 +5394,6 @@ rel_mark_used(mvc *sql, sql_rel *rel, int proj)
 		break;
 
 	case op_select:
-	case op_matrixadd:
 		if (rel->l) {
 			exps_mark_used(sql->sa, rel, rel->l);
 			rel_mark_used(sql, rel->l, 0);
@@ -5500,7 +5496,6 @@ rel_remove_unused(mvc *sql, sql_rel *rel)
 
 	case op_topn:
 	case op_sample:
-	case op_matrixadd:
 
 		if (rel->l)
 			rel->l = rel_remove_unused(sql, rel->l);
@@ -5593,7 +5588,6 @@ rel_dce_down(mvc *sql, sql_rel *rel, int skip_proj)
 	case op_sample: 
 	case op_project:
 	case op_groupby: 
-	case op_matrixadd:
 
 		if (skip_proj && rel->l)
 			rel->l = rel_dce_down(sql, rel->l, is_topn(rel->op) || is_sample(rel->op));
@@ -5707,7 +5701,6 @@ rel_add_projects(mvc *sql, sql_rel *rel)
 	case op_project:
 	case op_groupby: 
 	case op_select: 
-	case op_matrixadd:
 		if (rel->l)
 			rel->l = rel_add_projects(sql, rel->l);
 		return rel;
@@ -7147,7 +7140,6 @@ rel_uses_exps(sql_rel *rel, list *exps )
 	case op_groupby: 
 	case op_topn: 
 	case op_sample: 
-	case op_matrixadd:
 		return (rel_uses_exps(rel->l, exps)); 
 	case op_ddl: 
 		if (rel_uses_exps(rel->l, exps))
@@ -7300,7 +7292,6 @@ rel_rename(mvc *sql, sql_rel *rel, list *aliases)
 	case op_select: 
 	case op_topn: 
 	case op_sample: 
-	case op_matrixadd:
 		nrel->l = rel_rename(sql, rel->l, aliases);
 		nrel->exps = exps_rename_up(sql, rel->exps, aliases);
 		return nrel;
@@ -7368,7 +7359,6 @@ rel_apply_rename(mvc *sql, sql_rel *rel)
 	case op_groupby: 
 	case op_topn: 
 	case op_sample: 
-	case op_matrixadd: 
 		rel->l = rel_apply_rename(sql, rel->l);
 		return rel;
 	case op_ddl: 
@@ -7751,7 +7741,6 @@ rewrite(mvc *sql, sql_rel *rel, rewrite_fptr rewriter, int *has_changes)
 	case op_groupby: 
 	case op_topn: 
 	case op_sample: 
-	case op_matrixadd: 
 		rel->l = rewrite(sql, rel->l, rewriter, has_changes);
 		break;
 	case op_ddl: 
@@ -7809,7 +7798,6 @@ rewrite_topdown(mvc *sql, sql_rel *rel, rewrite_fptr rewriter, int *has_changes)
 	case op_groupby: 
 	case op_topn: 
 	case op_sample: 
-	case op_matrixadd: 
 		rel->l = rewrite_topdown(sql, rel->l, rewriter, has_changes);
 		break;
 	case op_ddl: 

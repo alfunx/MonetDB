@@ -389,7 +389,6 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 	case op_union: 
 	case op_inter: 
 	case op_except: 
-	case op_matrixadd: 
 		r = "join";
 		if (rel->op == op_left)
 			r = "left outer join";
@@ -420,8 +419,6 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 			r = "except";
 		else if (!rel->exps && rel->op == op_join)
 			r = "crossproduct";
-		else if (rel->op == op_matrixadd)
-			r = "matrix add";
 		print_indent(sql, fout, depth, decorate);
 		if (need_distinct(rel))
 			mnstr_printf(fout, "distinct ");
@@ -443,6 +440,35 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 		mnstr_printf(fout, ")");
 		exps_print(sql, fout, rel->exps, depth, 1, 0);
 		break;
+
+	case op_matrixadd: 
+		if (rel->op == op_matrixadd)
+			r = "matrix add";
+		print_indent(sql, fout, depth, decorate);
+		if (need_distinct(rel))
+			mnstr_printf(fout, "distinct ");
+		mnstr_printf(fout, "%s (", r);
+		if (rel_is_ref(rel->l)) {
+			int nr = find_ref(refs, rel->l);
+			print_indent(sql, fout, depth+1, decorate);
+			mnstr_printf(fout, "& REF %d ", nr);
+		} else
+			rel_print_(sql, fout, rel->l, depth+1, refs, decorate);
+		mnstr_printf(fout, ",");
+		if (rel_is_ref(rel->r)) {
+			int nr = find_ref(refs, rel->r);
+			print_indent(sql, fout, depth+1, decorate);
+			mnstr_printf(fout, "& REF %d  ", nr);
+		} else
+			rel_print_(sql, fout, rel->r, depth+1, refs, decorate);
+		print_indent(sql, fout, depth, decorate);
+		mnstr_printf(fout, ")");
+		exps_print(sql, fout, rel->exps, depth, 1, 0);
+		exps_print(sql, fout, rel->exps1, depth, 1, 0);
+		exps_print(sql, fout, rel->lord, depth, 1, 0);
+		exps_print(sql, fout, rel->rord, depth, 1, 0);
+		break;
+
 	case op_project:
 	case op_select: 
 	case op_groupby: 
@@ -544,6 +570,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 	case op_union: 
 	case op_inter: 
 	case op_except: 
+	case op_matrixadd: 
 		rel_print_refs(sql, fout, rel->l, depth, refs, decorate);
 		rel_print_refs(sql, fout, rel->r, depth, refs, decorate);
 		if (rel_is_ref(rel->l) && !find_ref(refs, rel->l)) {
@@ -560,7 +587,6 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 	case op_groupby: 
 	case op_topn: 
 	case op_sample: 
-	case op_matrixadd: 
 		rel_print_refs(sql, fout, rel->l, depth, refs, decorate);
 		if (rel->l && rel_is_ref(rel->l) && !find_ref(refs, rel->l)) {
 			rel_print_(sql, fout, rel->l, depth, refs, decorate);

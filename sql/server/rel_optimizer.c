@@ -5003,19 +5003,40 @@ rel_remove_join(int *changes, mvc *sql, sql_rel *rel)
 	return rel;
 }
 
-int
-exp_match_one_col_exps( sql_exp *e, list *l)
+/* forward ref */
+int exp_match_one_col_exp(sql_exp *exp, list *l);
+
+int exps_match_one_col_exp(list *exps, list *l)
 {
 	node *n;
 
-	for(n=l->h; n; n = n->next) {
-		sql_exp *re = n->data;
+	for (n = exps->h; n; n = n->next) {
+		sql_exp *e = n->data;
+		sql_exp *el = e->l;
+		sql_exp *er = e->r;
 
-		if (re->type == e_cmp && re->flag == cmp_or)
-			return exp_match_one_col_exps(e, re->l) &&
-			       exp_match_one_col_exps(e, re->r);
+		if (e->type == e_cmp && e->flag == cmp_or)
+			return exps_match_one_col_exp(e->l, l) ||
+			       exps_match_one_col_exp(e->r, l);
 
-		if (exp_match_exp(e, re))
+		if (el->type == e_column && exp_match_one_col_exp(el, l))
+			return 1;
+		if (er->type == e_column && exp_match_one_col_exp(er, l))
+			return 1;
+	}
+	return 0;
+
+}
+
+int
+exp_match_one_col_exp(sql_exp *exp, list *l)
+{
+	node *n;
+
+	for (n = l->h; n; n = n->next) {
+		sql_exp *e = n->data;
+
+		if (exp_match_exp(exp, e))
 			return 1;
 	}
 	return 0;
@@ -5074,32 +5095,34 @@ rel_push_select_down_matrix(int *changes, mvc *sql, sql_rel *rel)
 		sql_exp *l = e->l;
 		sql_exp *r = e->r;
 
-		/* Don't push OR down (TODO)
-		 * To push down OR, make sure ALL expressions only contain
-		 * attributes from descriptive part.
-		 */
-		if (e->flag == cmp_or)
-			continue;
-		/* Don't push down if no comparison */
-		if (e->type != e_cmp)
-			continue;
-		/* Don't push down if not column or atom */
-		if (l->type != e_column && l->type != e_atom)
-			continue;
-		if (r->type != e_column && r->type != e_atom)
-			continue;
-		/* Don't push down if column not part of descriptive part */
-		if (l->type == e_column && !exp_match_one_col_exps(l, desc))
-			continue;
-		if (r->type == e_column && !exp_match_one_col_exps(r, desc))
-			continue;
+		// TODO
+		switch (e->type) {
+			case e_func:
+			case e_aggr:
+			case e_psm:
+				continue;
+		}
+
+		if (e->type == e_cmp && e->flag == cmp_or) {
+			if (!exps_match_one_col_exp(e->l, desc))
+				continue;
+			if (!exps_match_one_col_exp(e->r, desc))
+				continue;
+		} else {
+			if (l->type == e_convert)
+				l = l->l;
+			if (r->type == e_convert)
+				r = r->l;
+			if (l->type == e_column && !exp_match_one_col_exp(l, desc))
+				continue;
+			if (r->type == e_column && !exp_match_one_col_exp(r, desc))
+				continue;
+		}
 
 		list_append(p->exps2, e);
 		list_remove_node(rel->exps, n);
 	}
 
-	/* p->exps2 = rel->exps; */
-	/* rel->exps = NULL; */
 	return rel;
 }
 

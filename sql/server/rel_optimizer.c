@@ -229,6 +229,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_left: 
 	case op_right: 
 	case op_full: 
+	case op_matrixadd: 
 
 	case op_apply: 
 	case op_semi: 
@@ -267,6 +268,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_left: 
 	case op_right: 
 	case op_full: 
+	case op_matrixadd: 
 
 	case op_apply: 
 	case op_semi: 
@@ -5001,6 +5003,106 @@ rel_remove_join(int *changes, mvc *sql, sql_rel *rel)
 	return rel;
 }
 
+int
+exp_match_one_col_exps( sql_exp *e, list *l)
+{
+	node *n;
+
+	for(n=l->h; n; n = n->next) {
+		sql_exp *re = n->data;
+
+		if (re->type == e_cmp && re->flag == cmp_or)
+			return exp_match_one_col_exps(e, re->l) &&
+			       exp_match_one_col_exps(e, re->r);
+
+		if (exp_match_exp(e, re))
+			return 1;
+	}
+	return 0;
+}
+
+// TODO: correctly import from rel_select.c / move code to appropriate place
+static list *
+append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
+{
+	if (!*outexps)
+		return NULL;
+
+	list *exps = rel_projections(sql, t, NULL, 1, 0);
+	if (!exps)
+		return NULL;
+
+	node *n;
+
+	for (n = exps->h; n; n = n->next) {
+		sql_exp *te = n->data;
+		const char *rnm = te->rname;
+		const char *nm = te->name;
+		sql_exp *e = exps_bind_column(ap, nm, NULL);
+
+		if (!e) {
+			fprintf(stderr, ">>> [append_desc_part (rel_optimizer)] column: %s.%s\n", rnm, nm);
+			append(*outexps, te);
+		}
+	}
+
+	return *outexps;
+}
+
+static sql_rel *
+rel_push_select_down_matrix(int *changes, mvc *sql, sql_rel *rel)
+{
+	if (!is_select(rel->op))
+		return rel;
+	assert(is_select(rel->op));
+
+	sql_rel *p = rel->l;
+	list *exps = rel->exps;
+	node *n;
+
+	if (!p || !is_matrixadd(p->op))
+		return rel;
+	assert(p && is_matrixadd(p->op));
+
+	/* Descriptive part */
+	list *desc = new_exp_list(sql->sa);
+	append_desc_part(sql, p->l, p->exps, &desc);
+	append_desc_part(sql, p->r, p->exps1, &desc);
+
+	for (n = exps->h; n; n = n->next) {
+		sql_exp *e = n->data;
+		sql_exp *l = e->l;
+		sql_exp *r = e->r;
+
+		/* Don't push OR down (TODO)
+		 * To push down OR, make sure ALL expressions only contain
+		 * attributes from descriptive part.
+		 */
+		if (e->flag == cmp_or)
+			continue;
+		/* Don't push down if no comparison */
+		if (e->type != e_cmp)
+			continue;
+		/* Don't push down if not column or atom */
+		if (l->type != e_column && l->type != e_atom)
+			continue;
+		if (r->type != e_column && r->type != e_atom)
+			continue;
+		/* Don't push down if column not part of descriptive part */
+		if (l->type == e_column && !exp_match_one_col_exps(l, desc))
+			continue;
+		if (r->type == e_column && !exp_match_one_col_exps(r, desc))
+			continue;
+
+		list_append(p->exps2, e);
+		list_remove_node(rel->exps, n);
+	}
+
+	/* p->exps2 = rel->exps; */
+	/* rel->exps = NULL; */
+	return rel;
+}
+
 /* Pushing projects up the tree. Done very early in the optimizer.
  * Makes later steps easier. 
  */
@@ -5025,6 +5127,12 @@ rel_push_project_up(int *changes, mvc *sql, sql_rel *rel)
 		   (is_join(rel->op) && (is_subquery(r) ||
 		    (r->op == op_project && (!r->l || r->r || project_unsafe(r))))))) 
 			return rel;
+
+		/* Don't rewrite projection of matrixadd */
+		if (is_project(l->op) && l->l && is_matrixadd(((sql_rel*)l->l)->op)) {
+			fprintf(stderr, ">>> [rel_push_project_up] no action\n");
+			return rel;
+		}
 
 		if (l->op == op_project && l->l) {
 			/* Go through the list of project expressions.
@@ -7954,6 +8062,9 @@ _rel_optimizer(mvc *sql, sql_rel *rel, int level)
 
 	if (gp.cnt[op_project]) 
 		rel = rewrite_topdown(sql, rel, &rel_push_project_down_union, &changes);
+
+	if (gp.cnt[op_select])
+		rel = rewrite(sql, rel, &rel_push_select_down_matrix, &changes);
 
 	/* Remove unused expressions */
 	if (level <= 0)

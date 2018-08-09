@@ -467,6 +467,7 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 		exps_print(sql, fout, rel->exps1, depth, 1, 0);
 		exps_print(sql, fout, rel->lord, depth, 1, 0);
 		exps_print(sql, fout, rel->rord, depth, 1, 0);
+		exps_print(sql, fout, rel->exps2, depth, 1, 0);
 		break;
 
 	case op_project:

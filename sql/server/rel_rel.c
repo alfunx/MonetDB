@@ -398,14 +398,15 @@ rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join)
 }
 
 sql_rel *
-rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r, list *e, list *e1)
+rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r)
 {
 	sql_rel *rel = rel_create(sa);
 
 	rel->l = l;
 	rel->r = r;
-	rel->exps = e;
-	rel->exps1 = e1;
+	rel->exps = new_exp_list(sa);
+	rel->exps1 = new_exp_list(sa);
+	rel->exps2 = new_exp_list(sa);
 	rel->op = op_matrixadd;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;

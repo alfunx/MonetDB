@@ -287,6 +287,7 @@ typedef struct relation {
 	void *rord;
 	list *exps; 
 	list *exps1; 
+	list *exps2; 
 	int nrcols;	/* nr of cols */	
 	char flag;	/* EXP_DISTINCT */ 
 	char card;	/* 0, 1 (row), 2 aggr, 3 */

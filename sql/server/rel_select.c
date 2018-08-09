@@ -5100,7 +5100,7 @@ append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
 		sql_exp *te = n->data;
 		const char *rnm = te->rname;
 		const char *nm = te->name;
-		sql_exp *e = exps_bind_column2(ap, rnm, nm);
+		sql_exp *e = exps_bind_column(ap, nm, NULL);
 
 		if (!e) {
 			fprintf(stderr, ">>> [append_desc_part] column: %s.%s\n", rnm, nm);
@@ -5160,7 +5160,7 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 	if (!t1 || !t2)
 		return NULL;
 
-	rel = rel_matrixadd(sql->sa, t1, t2, new_exp_list(sql->sa), new_exp_list(sql->sa));
+	rel = rel_matrixadd(sql->sa, t1, t2);
 
 	int lnrcols = 0;
 	int rnrcols = 0;

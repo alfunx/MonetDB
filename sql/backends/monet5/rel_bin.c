@@ -1877,15 +1877,16 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 				char *rname = exp->l;
 				char *name = exp->r;
 
-				fprintf(stderr, "    exps: %c \n", *name);
+				fprintf(stderr, "    exps: %c.%c \n", *rname, *name);
 
-				if (rnme && nme && strcmp(nme, name) == 0) {
+				if (rnme && nme && strcmp(nme, name) == 0 && strcmp(rnme, rname) == 0) {
 					fprintf(stderr, "        -> match!\n");
 
 					s = column(sql->sa, c);
 					s = stmt_alias(sql->sa, s, rnme, nme);
 
-					list_append(*a, s);
+					if (a)
+						list_append(*a, s);
 					desc = false;
 					break;
 				}
@@ -1896,7 +1897,8 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 			fprintf(stderr, "        -> is descriptive\n");
 			s = column(sql->sa, c);
 			s = stmt_alias(sql->sa, s, rnme, nme);
-			list_append(*d, s);
+			if (d)
+				list_append(*d, s);
 		}
 	}
 	fprintf(stderr, ">>> END: [split_exps_appl_desc]\n");
@@ -1975,6 +1977,80 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 	fprintf(stderr, ">>> END: [align_by_ids]\n");
 }
 
+/* forward ref */
+static stmt * rel2bin_predicate(mvc *sql);
+
+static stmt *
+select_on_matrixadd(mvc *sql, stmt *sub, list *exps, list *refs)
+{
+	list *l;
+	node *en, *n;
+	stmt *sel = NULL;
+	stmt *predicate = NULL;
+
+	if (!sub)
+		return NULL;
+	sub = row2cols(sql, sub);
+	if (!sub && !predicate)
+		predicate = rel2bin_predicate(sql);
+	else if (!predicate)
+		predicate = stmt_const(sql->sa, bin_first_column(sql->sa, sub), stmt_bool(sql->sa, 1));
+	if (!exps || !exps->h) {
+		if (sub)
+			return sub;
+		return predicate;
+	}
+	if (!sub && predicate) {
+		list *l = sa_list(sql->sa);
+		append(l, predicate);
+		sub = stmt_list(sql->sa, l);
+	}
+	// TODO
+	// /* handle possible index lookups */
+	// /* expressions are in index order ! */
+	// if (sub && (en = exps->h) != NULL) {
+	// 	sql_exp *e = en->data;
+	// 	prop *p;
+	//
+	// 	if ((p=find_prop(e->p, PROP_HASHCOL)) != NULL) {
+	// 		sql_idx *i = p->value;
+	//
+	// 		sel = rel2bin_hash_lookup(sql, rel, sub, NULL, i, en);
+	// 	}
+	// }
+	for( en = exps->h; en; en = en->next ) {
+		sql_exp *e = en->data;
+		stmt *s = exp_bin(sql, e, sub, NULL, NULL, NULL, NULL, sel);
+
+		if (!s) {
+			assert(0);
+			return NULL;
+		}
+		if (s->nrcols == 0){
+			sel = stmt_uselect(sql->sa, predicate, s, cmp_equal, sel);
+		} else if (e->type != e_cmp) {
+			sel = stmt_uselect(sql->sa, s, stmt_bool(sql->sa, 1), cmp_equal, NULL);
+		} else {
+			sel = s;
+		}
+	}
+
+	/* construct relation */
+	l = sa_list(sql->sa);
+	if (sub && sel) {
+		for( n = sub->op4.lval->h; n; n = n->next ) {
+			stmt *col = n->data;
+
+			if (col->nrcols == 0) /* constant */
+				col = stmt_const(sql->sa, sel, col);
+			else
+				col = stmt_project(sql->sa, sel, col);
+			list_append(l, col);
+		}
+	}
+	return stmt_list(sql->sa, l);
+}
+
 static stmt *
 rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 {
@@ -2020,9 +2096,44 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, al, &oal);
 	align_by_ids(sql, orderby_idsr, ar, &oar);
 
+	fprintf(stderr, ">>> [rel2bin_matrixadd] l   list length: %d\n", list_length(l));
+	fprintf(stderr, ">>> [rel2bin_matrixadd] oal list length: %d\n", list_length(oal));
+	fprintf(stderr, ">>> [rel2bin_matrixadd] oar list length: %d\n", list_length(oar));
+
+	if (rel->exps2 && rel->exps2->h) {
+		list *old_l = l;
+		list *old_oal = oal;
+		list *old_oar = oar;
+
+		l = sa_list(sql->sa);
+		oal = sa_list(sql->sa);
+		oar = sa_list(sql->sa);
+		list *sel_l = sa_list(sql->sa);
+
+		for(n = old_l->h; n; n = n->next) {
+			stmt *s = n->data;
+			list_append(sel_l, s);
+		}
+		for(n = old_oal->h; n; n = n->next) {
+			stmt *s = n->data;
+			list_append(sel_l, s);
+		}
+		for(n = old_oar->h; n; n = n->next) {
+			stmt *s = n->data;
+			list_append(sel_l, s);
+		}
+
+		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, sel_l), rel->exps2, refs);
+		split_exps_appl_desc(sql, sel, rel->exps, &oal, &l);
+		split_exps_appl_desc(sql, sel, rel->exps1, &oar, NULL);
+
+		fprintf(stderr, ">>> [rel2bin_matrixadd] l   list length: %d\n", list_length(l));
+		fprintf(stderr, ">>> [rel2bin_matrixadd] oal list length: %d\n", list_length(oal));
+		fprintf(stderr, ">>> [rel2bin_matrixadd] oar list length: %d\n", list_length(oar));
+	}
+
 	// addition between two lists of ordered BATs
-	for(n = oal->h, en = oar->h; n && en; n = n->next, en = en->next)
-	{
+	for(n = oal->h, en = oar->h; n && en; n = n->next, en = en->next) {
 		stmt *s = stmt_matrixadd(sql->sa, n->data, en->data);
 		list_append(l, s);
 		fprintf(stderr, "    create matrixadd stmt\n");

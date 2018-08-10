@@ -2018,7 +2018,7 @@ select_on_matrixadd(mvc *sql, stmt *sub, list *exps, list *refs)
 	// 		sel = rel2bin_hash_lookup(sql, rel, sub, NULL, i, en);
 	// 	}
 	// }
-	for( en = exps->h; en; en = en->next ) {
+	for (en = exps->h; en; en = en->next) {
 		sql_exp *e = en->data;
 		stmt *s = exp_bin(sql, e, sub, NULL, NULL, NULL, NULL, sel);
 
@@ -2038,7 +2038,7 @@ select_on_matrixadd(mvc *sql, stmt *sub, list *exps, list *refs)
 	/* construct relation */
 	l = sa_list(sql->sa);
 	if (sub && sel) {
-		for( n = sub->op4.lval->h; n; n = n->next ) {
+		for ( n = sub->op4.lval->h; n; n = n->next ) {
 			stmt *col = n->data;
 
 			if (col->nrcols == 0) /* constant */
@@ -2110,15 +2110,15 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 		oar = sa_list(sql->sa);
 		list *sel_l = sa_list(sql->sa);
 
-		for(n = old_l->h; n; n = n->next) {
+		for (n = old_l->h; n; n = n->next) {
 			stmt *s = n->data;
 			list_append(sel_l, s);
 		}
-		for(n = old_oal->h; n; n = n->next) {
+		for (n = old_oal->h; n; n = n->next) {
 			stmt *s = n->data;
 			list_append(sel_l, s);
 		}
-		for(n = old_oar->h; n; n = n->next) {
+		for (n = old_oar->h; n; n = n->next) {
 			stmt *s = n->data;
 			list_append(sel_l, s);
 		}
@@ -2133,7 +2133,7 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	}
 
 	// addition between two lists of ordered BATs
-	for(n = oal->h, en = oar->h; n && en; n = n->next, en = en->next) {
+	for (n = oal->h, en = oar->h; n && en; n = n->next, en = en->next) {
 		stmt *s = stmt_matrixadd(sql->sa, n->data, en->data);
 		list_append(l, s);
 		fprintf(stderr, "    create matrixadd stmt\n");

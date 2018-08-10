@@ -5006,7 +5006,8 @@ rel_remove_join(int *changes, mvc *sql, sql_rel *rel)
 /* forward ref */
 int exp_match_one_col_exp(sql_exp *exp, list *l);
 
-int exps_match_one_col_exp(list *exps, list *l)
+int
+exps_match_one_col_exp(list *exps, list *l)
 {
 	node *n;
 
@@ -5015,13 +5016,28 @@ int exps_match_one_col_exp(list *exps, list *l)
 		sql_exp *el = e->l;
 		sql_exp *er = e->r;
 
-		if (e->type == e_cmp && e->flag == cmp_or)
-			return exps_match_one_col_exp(e->l, l) ||
-			       exps_match_one_col_exp(e->r, l);
+		// TODO
+		switch (e->type) {
+			case e_func:
+			case e_aggr:
+			case e_psm:
+				return 1;
+		}
 
-		if (el->type == e_column && exp_match_one_col_exp(el, l))
+		if (e->type == e_cmp && e->flag == cmp_or &&
+		    (exps_match_one_col_exp(e->l, l) ||
+		     exps_match_one_col_exp(e->r, l)))
+				return 1;
+
+		if (er->type == e_convert)
+			el = el->l;
+		if (el->type == e_convert)
+			er = er->l;
+		if (el->type == e_column &&
+		    exp_match_one_col_exp(el, l))
 			return 1;
-		if (er->type == e_column && exp_match_one_col_exp(er, l))
+		if (er->type == e_column &&
+		    exp_match_one_col_exp(er, l))
 			return 1;
 	}
 	return 0;
@@ -5042,34 +5058,6 @@ exp_match_one_col_exp(sql_exp *exp, list *l)
 	return 0;
 }
 
-// TODO: correctly import from rel_select.c / move code to appropriate place
-static list *
-append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
-{
-	if (!*outexps)
-		return NULL;
-
-	list *exps = rel_projections(sql, t, NULL, 1, 0);
-	if (!exps)
-		return NULL;
-
-	node *n;
-
-	for (n = exps->h; n; n = n->next) {
-		sql_exp *te = n->data;
-		const char *rnm = te->rname;
-		const char *nm = te->name;
-		sql_exp *e = exps_bind_column(ap, nm, NULL);
-
-		if (!e) {
-			fprintf(stderr, ">>> [append_desc_part (rel_optimizer)] column: %s.%s\n", rnm, nm);
-			append(*outexps, te);
-		}
-	}
-
-	return *outexps;
-}
-
 static sql_rel *
 rel_push_select_down_matrix(int *changes, mvc *sql, sql_rel *rel)
 {
@@ -5085,11 +5073,6 @@ rel_push_select_down_matrix(int *changes, mvc *sql, sql_rel *rel)
 		return rel;
 	assert(p && is_matrixadd(p->op));
 
-	/* Descriptive part */
-	list *desc = new_exp_list(sql->sa);
-	append_desc_part(sql, p->l, p->exps, &desc);
-	append_desc_part(sql, p->r, p->exps1, &desc);
-
 	for (n = exps->h; n; n = n->next) {
 		sql_exp *e = n->data;
 		sql_exp *l = e->l;
@@ -5104,18 +5087,24 @@ rel_push_select_down_matrix(int *changes, mvc *sql, sql_rel *rel)
 		}
 
 		if (e->type == e_cmp && e->flag == cmp_or) {
-			if (!exps_match_one_col_exp(e->l, desc))
+			if (exps_match_one_col_exp(e->l, p->exps) ||
+			    exps_match_one_col_exp(e->l, p->exps1))
 				continue;
-			if (!exps_match_one_col_exp(e->r, desc))
+			if (exps_match_one_col_exp(e->r, p->exps) ||
+			    exps_match_one_col_exp(e->r, p->exps1))
 				continue;
 		} else {
 			if (l->type == e_convert)
 				l = l->l;
 			if (r->type == e_convert)
 				r = r->l;
-			if (l->type == e_column && !exp_match_one_col_exp(l, desc))
+			if (l->type == e_column &&
+			    (exp_match_one_col_exp(l, p->exps) ||
+			     exp_match_one_col_exp(l, p->exps1)))
 				continue;
-			if (r->type == e_column && !exp_match_one_col_exp(r, desc))
+			if (r->type == e_column &&
+			    (exp_match_one_col_exp(r, p->exps) ||
+			     exp_match_one_col_exp(r, p->exps1)))
 				continue;
 		}
 

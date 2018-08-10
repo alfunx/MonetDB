@@ -2101,27 +2101,14 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	fprintf(stderr, ">>> [rel2bin_matrixadd] oar list length: %d\n", list_length(oar));
 
 	if (rel->exps2 && rel->exps2->h) {
-		list *old_l = l;
-		list *old_oal = oal;
-		list *old_oar = oar;
+		list *sel_l = sa_list(sql->sa);
+		list_merge_destroy(sel_l, l, NULL);
+		list_merge_destroy(sel_l, oal, NULL);
+		list_merge_destroy(sel_l, oar, NULL);
 
 		l = sa_list(sql->sa);
 		oal = sa_list(sql->sa);
 		oar = sa_list(sql->sa);
-		list *sel_l = sa_list(sql->sa);
-
-		for (n = old_l->h; n; n = n->next) {
-			stmt *s = n->data;
-			list_append(sel_l, s);
-		}
-		for (n = old_oal->h; n; n = n->next) {
-			stmt *s = n->data;
-			list_append(sel_l, s);
-		}
-		for (n = old_oar->h; n; n = n->next) {
-			stmt *s = n->data;
-			list_append(sel_l, s);
-		}
 
 		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, sel_l), rel->exps2, refs);
 		split_exps_appl_desc(sql, sel, rel->exps, &oal, &l);

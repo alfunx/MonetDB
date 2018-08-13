@@ -117,7 +117,8 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 			rel->r = (i->r)?list_dup(i->r, (fdup)NULL):NULL;
 		break;
 	case op_matrixadd:
-		rel->exps1 = (i->exps1)?list_dup(i->exps1, (fdup)NULL):NULL;
+		rel->lexps = (i->lexps)?list_dup(i->lexps, (fdup)NULL):NULL;
+		rel->rexps = (i->rexps)?list_dup(i->rexps, (fdup)NULL):NULL;
 		rel->lord = i->lord;
 		rel->rord = i->rord;
 		// fallthrough
@@ -232,7 +233,9 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 		// TODO: matrixadd
 		if (rel->exps && exps_bind_column(rel->exps, cname, &ambiguous))
 			return rel;
-		if (rel->exps1 && exps_bind_column(rel->exps1, cname, &ambiguous))
+		if (rel->lexps && exps_bind_column(rel->lexps, cname, &ambiguous))
+			return rel;
+		if (rel->rexps && exps_bind_column(rel->rexps, cname, &ambiguous))
 			return rel;
 		if (ambiguous) {
 			(void) sql_error(sql, ERR_AMBIGUOUS, "SELECT: identifier '%s' ambiguous", cname);
@@ -405,8 +408,8 @@ rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r)
 	rel->l = l;
 	rel->r = r;
 	rel->exps = new_exp_list(sa);
-	rel->exps1 = new_exp_list(sa);
-	rel->exps2 = new_exp_list(sa);
+	rel->lexps = new_exp_list(sa);
+	rel->rexps = new_exp_list(sa);
 	rel->op = op_matrixadd;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;

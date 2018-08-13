@@ -5087,11 +5087,11 @@ rel_push_select_down_matrix(int *changes, mvc *sql, sql_rel *rel)
 		}
 
 		if (e->type == e_cmp && e->flag == cmp_or) {
-			if (exps_match_one_col_exp(e->l, p->exps) ||
-			    exps_match_one_col_exp(e->l, p->exps1))
+			if (exps_match_one_col_exp(e->l, p->lexps) ||
+			    exps_match_one_col_exp(e->l, p->rexps))
 				continue;
-			if (exps_match_one_col_exp(e->r, p->exps) ||
-			    exps_match_one_col_exp(e->r, p->exps1))
+			if (exps_match_one_col_exp(e->r, p->lexps) ||
+			    exps_match_one_col_exp(e->r, p->rexps))
 				continue;
 		} else {
 			if (l->type == e_convert)
@@ -5099,16 +5099,16 @@ rel_push_select_down_matrix(int *changes, mvc *sql, sql_rel *rel)
 			if (r->type == e_convert)
 				r = r->l;
 			if (l->type == e_column &&
-			    (exp_match_one_col_exp(l, p->exps) ||
-			     exp_match_one_col_exp(l, p->exps1)))
+			    (exp_match_one_col_exp(l, p->lexps) ||
+			     exp_match_one_col_exp(l, p->rexps)))
 				continue;
 			if (r->type == e_column &&
-			    (exp_match_one_col_exp(r, p->exps) ||
-			     exp_match_one_col_exp(r, p->exps1)))
+			    (exp_match_one_col_exp(r, p->lexps) ||
+			     exp_match_one_col_exp(r, p->rexps)))
 				continue;
 		}
 
-		list_append(p->exps2, e);
+		list_append(p->exps, e);
 		list_remove_node(rel->exps, n);
 	}
 

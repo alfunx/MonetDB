@@ -2084,9 +2084,9 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	oal = sa_list(sql->sa);
 	oar = sa_list(sql->sa);
 
-	assert(rel->exps && rel->exps1);
-	split_exps_appl_desc(sql, left, rel->exps, &al, &dl);
-	split_exps_appl_desc(sql, right, rel->exps1, &ar, &dr);
+	assert(rel->lexps && rel->rexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &al, &dl);
+	split_exps_appl_desc(sql, right, rel->rexps, &ar, &dr);
 
 	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
@@ -2100,7 +2100,7 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	fprintf(stderr, ">>> [rel2bin_matrixadd] oal list length: %d\n", list_length(oal));
 	fprintf(stderr, ">>> [rel2bin_matrixadd] oar list length: %d\n", list_length(oar));
 
-	if (rel->exps2 && rel->exps2->h) {
+	if (rel->exps && rel->exps->h) {
 		list *sel_l = sa_list(sql->sa);
 		list_merge_destroy(sel_l, l, NULL);
 		list_merge_destroy(sel_l, oal, NULL);
@@ -2110,9 +2110,9 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 		oal = sa_list(sql->sa);
 		oar = sa_list(sql->sa);
 
-		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, sel_l), rel->exps2, refs);
-		split_exps_appl_desc(sql, sel, rel->exps, &oal, &l);
-		split_exps_appl_desc(sql, sel, rel->exps1, &oar, NULL);
+		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, sel_l), rel->exps, refs);
+		split_exps_appl_desc(sql, sel, rel->lexps, &oal, &l);
+		split_exps_appl_desc(sql, sel, rel->rexps, &oar, NULL);
 
 		fprintf(stderr, ">>> [rel2bin_matrixadd] l   list length: %d\n", list_length(l));
 		fprintf(stderr, ">>> [rel2bin_matrixadd] oal list length: %d\n", list_length(oal));

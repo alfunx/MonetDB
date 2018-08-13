@@ -91,6 +91,7 @@ st_type2string(st_type type)
 		ST(join);
 		ST(join2);
 		ST(joinN);
+		ST(matrixadd);
 
 		ST(export);
 		ST(append);

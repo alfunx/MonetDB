@@ -1337,6 +1337,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_left: 
 	case op_right: 
 	case op_full: 
+	case op_matrixadd:
 
 	case op_apply: 
 	case op_semi: 
@@ -1367,10 +1368,6 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_insert:
 	case op_update:
 	case op_delete:
-		args = rel2bin_args(sql, rel->r, args);
-		break;
-	case op_matrixadd:
-		fprintf(stderr, ">>> rel_bin: rel2bin_args\n");
 		args = rel2bin_args(sql, rel->r, args);
 		break;
 	}
@@ -1944,6 +1941,10 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord)
 		else
 			orderby = stmt_order(sql->sa, orderbycolstmt, is_ascending(orderbycole));
 
+		const char *tname = table_name(sql->sa, orderbycolstmt);
+		const char *cname = column_name(sql->sa, orderbycolstmt);
+		fprintf(stderr, ">>> [gen_orderby_ids] ordering: %s.%s\n", tname, cname);
+
 		orderby_ids = stmt_result(sql->sa, orderby, 1);
 		orderby_grp = stmt_result(sql->sa, orderby, 2);
 	}
@@ -1970,7 +1971,7 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 			s = column(sql->sa, c);
 		s = stmt_alias(sql->sa, s, tname, cname);
 
-		fprintf(stderr, ">>> END: ordering: %s.%s\n", tname, cname);
+		fprintf(stderr, ">>> [align_by_ids] ordering: %s.%s\n", tname, cname);
 
 		list_append(*ol, s);
 	}

@@ -5152,6 +5152,7 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 	symbol *tab5 = n->next->next->next->next->data.sym;
 	dlist  *tab6 = n->next->next->next->next->next->data.lval;
 
+	sql_rel *t = NULL;
 	sql_rel *t1 = NULL;
 	sql_rel *t2 = NULL;
 
@@ -5172,26 +5173,19 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 	}
 
 	if (tab5) {
-		t1 = rel->l;
-		t2 = rel->r;
-		rel->l = t2;
-		rel->r = t1;
+		t = rel->l;
+		rel->l = rel->r;
+		rel->r = t;
 		obe1 = rel_order_by(sql, &rel, tab5, 0);
-		t1 = rel->l;
-		t2 = rel->r;
-		rel->l = t2;
-		rel->r = t1;
+		t = rel->l;
+		rel->l = rel->r;
+		rel->r = t;
 	} else {
 		fprintf(stderr, ">>> [rel_matrixaddquery] no order by on right relation\n");
 	}
 
 	rel->lord = obe;
 	rel->rord = obe1;
-
-	t1 = table_ref(sql, rel, tab1);
-	t2 = table_ref(sql, rel, tab4);
-	if (!t1 || !t2)
-		return NULL;
 
 	for (en = tab3->h; en; en = en->next, lnrcols++) {
 		fprintf(stderr, ">>> [rel_matrixaddquery] left application part\n");

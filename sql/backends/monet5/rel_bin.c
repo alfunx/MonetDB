@@ -1858,14 +1858,13 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 {
 	node *n, *en;
 
+	fprintf(stderr, ">>> [split_exps_appl_desc]\n");
 	for (n = p->op4.lval->h; n; n = n->next) {
 		stmt *c = n->data;
 		stmt *s;
 		bool desc = true;
 		const char *rnme = table_name(sql->sa, c);
 		const char *nme = column_name(sql->sa, c);
-
-		fprintf(stderr, "testing: %c.%c \n", *rnme, *nme);
 
 		for (en = exps->h; en; en = en->next) {
 			sql_exp *exp = en->data;
@@ -1874,10 +1873,8 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 				char *rname = exp->l;
 				char *name = exp->r;
 
-				fprintf(stderr, "    exps: %c.%c \n", *rname, *name);
-
 				if (rnme && nme && strcmp(nme, name) == 0 && strcmp(rnme, rname) == 0) {
-					fprintf(stderr, "        -> match!\n");
+					fprintf(stderr, "    %c.%c: application\n", *rnme, *nme);
 
 					s = column(sql->sa, c);
 					s = stmt_alias(sql->sa, s, rnme, nme);
@@ -1891,14 +1888,13 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 		}
 
 		if (desc) {
-			fprintf(stderr, "        -> is descriptive\n");
+			fprintf(stderr, "    %c.%c: descriptive\n", *rnme, *nme);
 			s = column(sql->sa, c);
 			s = stmt_alias(sql->sa, s, rnme, nme);
 			if (d)
 				list_append(*d, s);
 		}
 	}
-	fprintf(stderr, ">>> END: [split_exps_appl_desc]\n");
 }
 
 static stmt *
@@ -1948,9 +1944,7 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord)
 		orderby_ids = stmt_result(sql->sa, orderby, 1);
 		orderby_grp = stmt_result(sql->sa, orderby, 2);
 	}
-
 	return orderby_ids;
-	fprintf(stderr, ">>> END: [gen_orderby_ids]\n");
 }
 
 static void
@@ -1973,9 +1967,9 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 
 		fprintf(stderr, ">>> [align_by_ids] ordering: %s.%s\n", tname, cname);
 
-		list_append(*ol, s);
+		if (ol)
+			list_append(*ol, s);
 	}
-	fprintf(stderr, ">>> END: [align_by_ids]\n");
 }
 
 /* forward ref */
@@ -2097,10 +2091,6 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, al, &oal);
 	align_by_ids(sql, orderby_idsr, ar, &oar);
 
-	fprintf(stderr, ">>> [rel2bin_matrixadd] l   list length: %d\n", list_length(l));
-	fprintf(stderr, ">>> [rel2bin_matrixadd] oal list length: %d\n", list_length(oal));
-	fprintf(stderr, ">>> [rel2bin_matrixadd] oar list length: %d\n", list_length(oar));
-
 	if (rel->exps && rel->exps->h) {
 		list *sel_l = sa_list(sql->sa);
 		list_merge_destroy(sel_l, l, NULL);
@@ -2112,21 +2102,17 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 		oar = sa_list(sql->sa);
 
 		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, sel_l), rel->exps, refs);
+
+		// application part of right relation will be in l
 		split_exps_appl_desc(sql, sel, rel->lexps, &oal, &l);
 		split_exps_appl_desc(sql, sel, rel->rexps, &oar, NULL);
-
-		fprintf(stderr, ">>> [rel2bin_matrixadd] l   list length: %d\n", list_length(l));
-		fprintf(stderr, ">>> [rel2bin_matrixadd] oal list length: %d\n", list_length(oal));
-		fprintf(stderr, ">>> [rel2bin_matrixadd] oar list length: %d\n", list_length(oar));
 	}
 
 	// addition between two lists of ordered BATs
 	for (n = oal->h, en = oar->h; n && en; n = n->next, en = en->next) {
 		stmt *s = stmt_matrixadd(sql->sa, n->data, en->data);
 		list_append(l, s);
-		fprintf(stderr, "    create matrixadd stmt\n");
 	}
-	fprintf(stderr, "in rel2bin_add4 \n");
 
 	return stmt_list(sql->sa, l);
 }
@@ -4910,9 +4896,9 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		s = rel2bin_ddl(sql, rel, refs);
 		break;
 	case op_matrixadd:
-		fprintf(stderr, ">>> rel_bin: subrel_bin\n");
+		fprintf(stderr, ">>> [subrel_bin]\n");
 		s = rel2bin_matrixadd(sql, rel, refs);
-		fprintf(stderr, "after rel2bin_matrixadd\n");
+		fprintf(stderr, ">>> END: [subrel_bin]\n");
 		break;
 	}
 	if (s && rel_is_ref(rel)) {

@@ -238,6 +238,7 @@ int yydebug=1;
 	ordering_spec
 	simple_table
 	table_ref
+	matrix_ref
 	opt_limit
 	opt_offset
 	opt_sample
@@ -2789,6 +2790,15 @@ opt_where_clause:
  |  WHERE search_condition	{ $$ = $2; }
  ;
 
+matrix_ref:
+   '(' table_ref ON selection opt_order_by_clause ')'
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_symbol(l, $5);
+	  append_list(l, $4);
+	  $$ = _symbol_create_list( SQL_MATRIX, l); }
+ ;
+
 	/* query expressions */
 
 joined_table:
@@ -2800,14 +2810,10 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_CROSS, l); }
 
- | '(' table_ref ON selection opt_order_by_clause ')' ADD '(' table_ref ON selection opt_order_by_clause ')'
+ |  matrix_ref ADD matrix_ref
 	{ dlist *l = L();
-	  append_symbol(l, $2);
-	  append_symbol(l, $5);
-	  append_list(l, $4);
-	  append_symbol(l, $9);
-	  append_symbol(l, $12);
-	  append_list(l, $11);
+	  append_symbol(l, $1);
+	  append_symbol(l, $3);
 	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
 
  |  table_ref UNIONJOIN table_ref join_spec

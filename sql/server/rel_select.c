@@ -5141,12 +5141,12 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 	dnode *en, *n = q->data.lval->h;
 
 	// read data from symbol tree
-	symbol *tab1 = n->data.sym;
-	symbol *tab2 = n->next->data.sym;
-	dlist  *tab3 = n->next->next->data.lval;
-	symbol *tab4 = n->next->next->next->data.sym;
-	symbol *tab5 = n->next->next->next->next->data.sym;
-	dlist  *tab6 = n->next->next->next->next->next->data.lval;
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
+	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
 
 	// resolve table refs
 	sql_rel *t1 = table_ref(sql, rel, tab1);

@@ -117,6 +117,7 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 			rel->r = (i->r)?list_dup(i->r, (fdup)NULL):NULL;
 		break;
 	case op_matrixadd:
+		rel->exps = (i->exps)?list_dup(i->exps, (fdup)NULL):NULL;
 		rel->lexps = (i->lexps)?list_dup(i->lexps, (fdup)NULL):NULL;
 		rel->rexps = (i->rexps)?list_dup(i->rexps, (fdup)NULL):NULL;
 		rel->lord = i->lord;
@@ -487,9 +488,6 @@ void
 rel_project_add_exp( mvc *sql, sql_rel *rel, sql_exp *e)
 {
 	assert(is_project(rel->op));
-
-	if (rel->op == op_matrixadd)
-		fprintf(stderr, "rel_project_add_exp check if\n");
 
 	if (!e->rname) 
 		exp_setrelname(sql->sa, e, sql->label);

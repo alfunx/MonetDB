@@ -5138,50 +5138,49 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 static sql_rel *
 rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 {
-	dnode *n = q->data.lval->h;
-	dnode *en;
+	dnode *en, *n = q->data.lval->h;
 
-	list *obe = NULL;
-	list *obe1 = NULL;
-
+	// read data from symbol tree
 	symbol *tab1 = n->data.sym;
 	symbol *tab2 = n->next->data.sym;
 	dlist  *tab3 = n->next->next->data.lval;
-
 	symbol *tab4 = n->next->next->next->data.sym;
 	symbol *tab5 = n->next->next->next->next->data.sym;
 	dlist  *tab6 = n->next->next->next->next->next->data.lval;
 
-	sql_rel *t1 = NULL;
-	sql_rel *t2 = NULL;
-
-	t1 = table_ref(sql, rel, tab1);
-	t2 = table_ref(sql, rel, tab4);
+	// resolve table refs
+	sql_rel *t1 = table_ref(sql, rel, tab1);
+	sql_rel *t2 = table_ref(sql, rel, tab4);
 	if (!t1 || !t2)
 		return NULL;
 
 	rel = rel_matrixadd(sql->sa, t1, t2);
 
+	list *lobe = NULL;
+	list *robe = NULL;
 	int lnrcols = 0;
 	int rnrcols = 0;
 
+	// set orderby for left relation
 	if (tab2) {
-		obe = rel_order_by(sql, &rel, tab2, 0);
+		lobe = rel_order_by(sql, &rel, tab2, 0);
 	}
 
+	// set orderby for right relation
 	if (tab5) {
 		sql_rel *t = rel->l;
 		rel->l = rel->r;
 		rel->r = t;
-		obe1 = rel_order_by(sql, &rel, tab5, 0);
+		robe = rel_order_by(sql, &rel, tab5, 0);
 		t = rel->l;
 		rel->l = rel->r;
 		rel->r = t;
 	}
 
-	rel->lord = obe;
-	rel->rord = obe1;
+	rel->lord = lobe;
+	rel->rord = robe;
 
+	// set application part of left relation
 	for (en = tab3->h; en; en = en->next, lnrcols++) {
 		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
 
@@ -5189,6 +5188,7 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 			append(rel->lexps, ce);
 	}
 
+	// set application part of right relation
 	for (en = tab6->h; en; en = en->next, rnrcols++) {
 		sql_exp *ce = rel_column_exp(sql, &t2, en->data.sym, sql_sel);
 
@@ -5202,9 +5202,11 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 		return NULL;
 	}
 
+	// set number of attributes in the result relation
 	rel->nrcols = t1->nrcols + t2->nrcols - lnrcols;
 	fprintf(stderr, ">>> [rel_matrixaddquery] nrcols: %d\n", rel->nrcols);
 
+	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append_desc_part(sql, t1, rel->lexps, &exps);
 	append_desc_part(sql, t2, rel->rexps, &exps);

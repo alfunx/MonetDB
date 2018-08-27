@@ -5016,7 +5016,6 @@ exps_match_one_col_exp(list *exps, list *l)
 		sql_exp *el = e->l;
 		sql_exp *er = e->r;
 
-		// TODO
 		switch (e->type) {
 			case e_func:
 			case e_aggr:
@@ -5059,11 +5058,10 @@ exp_match_one_col_exp(sql_exp *exp, list *l)
 }
 
 static sql_rel *
-rel_push_select_down_matrix(int *changes, mvc *sql, sql_rel *rel)
+push_select_exps_to_matrix(int *changes, mvc *sql, sql_rel *rel)
 {
 	if (!is_select(rel->op))
 		return rel;
-	assert(is_select(rel->op));
 
 	sql_rel *p = rel->l;
 	list *exps = rel->exps;
@@ -5071,14 +5069,12 @@ rel_push_select_down_matrix(int *changes, mvc *sql, sql_rel *rel)
 
 	if (!p || !is_matrixadd(p->op))
 		return rel;
-	assert(p && is_matrixadd(p->op));
 
 	for (n = exps->h; n; n = n->next) {
 		sql_exp *e = n->data;
 		sql_exp *l = e->l;
 		sql_exp *r = e->r;
 
-		// TODO
 		switch (e->type) {
 			case e_func:
 			case e_aggr:
@@ -8076,7 +8072,7 @@ _rel_optimizer(mvc *sql, sql_rel *rel, int level)
 		rel = rewrite_topdown(sql, rel, &rel_push_project_down_union, &changes);
 
 	if (gp.cnt[op_select])
-		rel = rewrite(sql, rel, &rel_push_select_down_matrix, &changes);
+		rel = rewrite(sql, rel, &push_select_exps_to_matrix, &changes);
 
 	/* Remove unused expressions */
 	if (level <= 0)

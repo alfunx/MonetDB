@@ -2079,36 +2079,40 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	oal = sa_list(sql->sa);
 	oar = sa_list(sql->sa);
 
+	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
 	split_exps_appl_desc(sql, left, rel->lexps, &al, &dl);
 	split_exps_appl_desc(sql, right, rel->rexps, &ar, &dr);
 
+	// generate the orderby ids
 	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
+	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, dl, &l);
 	align_by_ids(sql, orderby_idsr, dr, &l);
 	align_by_ids(sql, orderby_idsl, al, &oal);
 	align_by_ids(sql, orderby_idsr, ar, &oar);
 
+	// perform selection on concatenated matrices
 	if (rel->exps && rel->exps->h) {
-		list *sel_l = sa_list(sql->sa);
-		list_merge_destroy(sel_l, l, NULL);
-		list_merge_destroy(sel_l, oal, NULL);
-		list_merge_destroy(sel_l, oar, NULL);
+		list *sl = sa_list(sql->sa);
+		list_merge_destroy(sl, l, NULL);
+		list_merge_destroy(sl, oal, NULL);
+		list_merge_destroy(sl, oar, NULL);
 
 		l = sa_list(sql->sa);
 		oal = sa_list(sql->sa);
 		oar = sa_list(sql->sa);
 
-		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, sel_l), rel->exps, refs);
+		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, sl), rel->exps, refs);
 
 		// application part of right relation will be in l
 		split_exps_appl_desc(sql, sel, rel->lexps, &oal, &l);
 		split_exps_appl_desc(sql, sel, rel->rexps, &oar, NULL);
 	}
 
-	// addition between two lists of ordered BATs
+	// create matrixadd stmts, which perform addition between two stmts each
 	for (n = oal->h, en = oar->h; n && en; n = n->next, en = en->next) {
 		stmt *s = stmt_matrixadd(sql->sa, n->data, en->data);
 		list_append(l, s);

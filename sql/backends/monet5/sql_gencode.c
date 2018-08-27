@@ -1944,7 +1944,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 
 			q = newStmt(mb, batcalcRef, "+");
 
-			q = pushArgument(mb, q, l); 
+			q = pushArgument(mb, q, l);
 			q = pushArgument(mb, q, r);
 
 			s->nr = getDestVar(q);

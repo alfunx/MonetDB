@@ -505,6 +505,8 @@ int yydebug=1;
 	opt_asc_desc
 	tz
 
+	opt_no_optimize
+
 %right <sval> STRING
 %right <sval> X_BODY
 
@@ -587,6 +589,7 @@ SQLCODE SQLERROR UNDER WHENEVER
 
 %token TEMP TEMPORARY STREAM MERGE REMOTE REPLICA
 %token<sval> ASC DESC AUTHORIZATION
+%token NOOPTIMIZE OPTIMIZE
 %token CHECK CONSTRAINT CREATE
 %token TYPE PROCEDURE FUNCTION AGGREGATE RETURNS EXTERNAL sqlNAME DECLARE
 %token CALL LANGUAGE 
@@ -2801,6 +2804,12 @@ matrix_ref:
 
 	/* query expressions */
 
+opt_no_optimize:
+    /* empty */ 	{ $$ = FALSE; }
+ |  OPTIMIZE		{ $$ = FALSE; }
+ |  NOOPTIMIZE		{ $$ = TRUE; }
+ ;
+
 joined_table:
    '(' joined_table ')'
 	{ $$ = $2; }
@@ -2810,10 +2819,11 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_CROSS, l); }
 
- |  matrix_ref ADD matrix_ref
+ |  matrix_ref ADD matrix_ref opt_no_optimize
 	{ dlist *l = L();
 	  append_symbol(l, $1);
 	  append_symbol(l, $3);
+	  append_int(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
 
  |  table_ref UNIONJOIN table_ref join_spec

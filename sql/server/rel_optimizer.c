@@ -5070,6 +5070,11 @@ push_select_exps_to_matrix(int *changes, mvc *sql, sql_rel *rel)
 	if (!p || !is_matrixadd(p->op))
 		return rel;
 
+	if (p->noopt) {
+		fprintf(stderr, ">>> [push_select_exps_to_matrix] no-optimization flag is set\n");
+		return rel;
+	}
+
 	for (n = exps->h; n; n = n->next) {
 		sql_exp *e = n->data;
 		sql_exp *l = e->l;

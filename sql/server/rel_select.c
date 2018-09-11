@@ -5156,6 +5156,9 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	rel = rel_matrixadd(sql->sa, t1, t2);
 
+	// set no-optimization flag
+	rel->noopt = n->next->next->data.i_val;
+
 	list *lobe = NULL;
 	list *robe = NULL;
 	int lnrcols = 0;

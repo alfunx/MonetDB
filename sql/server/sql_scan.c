@@ -106,7 +106,6 @@ scanner_init_keywords(void)
 	keywords_insert("COUNT", AGGR);
 
 	keywords_insert("NOOPTIMIZE", NOOPTIMIZE);
-	keywords_insert("OPTIMIZE", OPTIMIZE);
 
 	keywords_insert("LAG", AGGR);
 	keywords_insert("LEAD", AGGR);

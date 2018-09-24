@@ -2046,6 +2046,45 @@ select_on_matrixadd(mvc *sql, stmt *sub, list *exps, list *refs)
 	return stmt_list(sql->sa, l);
 }
 
+static int
+exp_in_predicate(sql_exp *exp, list *l)
+{
+	node *n;
+
+	for (n = l->h; n; n = n->next) {
+		sql_exp *e = n->data;
+		sql_exp *le = e->l;
+		sql_exp *re = e->r;
+
+		switch (e->type) {
+			case e_func:
+			case e_aggr:
+			case e_psm:
+				continue;
+		}
+		assert(e->type == e_cmp);
+
+		if (e->flag == cmp_or) {
+			if (exp_in_predicate(exp, e->l))
+				return 1;
+			if (exp_in_predicate(exp, e->r))
+				return 1;
+			continue;
+		}
+
+		if (re->type == e_convert)
+			le = le->l;
+		if (le->type == e_convert)
+			re = re->l;
+
+		if ((le->type == e_column && exp_match_exp(exp, le)) ||
+				(re->type == e_column && exp_match_exp(exp, re)))
+			return 1;
+	}
+
+	return 0;
+}
+
 static stmt *
 rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 {
@@ -2059,7 +2098,7 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	list *loa, *roa;
 
 	// iterators
-	node *n, *en;
+	node *n, *m, *p, *q;
 
 	stmt *left = NULL;
 	stmt *right = NULL;
@@ -2096,25 +2135,44 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 
 	// perform selection on concatenated matrices
 	if (rel->exps && rel->exps->h) {
-		list *sl = sa_list(sql->sa);
-		list_merge_destroy(sl, l, NULL);
-		list_merge_destroy(sl, loa, NULL);
-		list_merge_destroy(sl, roa, NULL);
+		list *lexps = list_dup(rel->lexps, NULL);
+		list *rexps = list_dup(rel->rexps, NULL);
 
+		// create matrixadd stmts, which are referenced from predicates
+		for (n = loa->h, m = roa->h, p = lexps->h, q = rexps->h; n && m && p && q; n = n->next, m = m->next, p = p->next, q = q->next) {
+			if (!exp_in_predicate(p->data, rel->exps))
+				continue;
+			stmt *s = stmt_matrixadd(sql->sa, n->data, m->data);
+			list_append(l, s);
+			list_remove_node(loa, n);
+			list_remove_node(roa, m);
+			list_remove_node(lexps, p);
+			list_remove_node(rexps, q);
+		}
+
+		// create selection stmt on concatenated stmt-list
+		list_merge_destroy(l, loa, NULL);
+		list_merge_destroy(l, roa, NULL);
+		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, l), rel->exps, refs);
+
+		list_destroy(l);
 		l = sa_list(sql->sa);
 		loa = sa_list(sql->sa);
 		roa = sa_list(sql->sa);
 
-		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, sl), rel->exps, refs);
+		// recreate application part
+		split_exps_appl_desc(sql, sel, lexps, &loa, NULL);
+		split_exps_appl_desc(sql, sel, rexps, &roa, NULL);
 
-		// application part of right relation will be in l
-		split_exps_appl_desc(sql, sel, rel->lexps, &loa, &l);
-		split_exps_appl_desc(sql, sel, rel->rexps, &roa, NULL);
+		// recreate descriptive part
+		list_merge_destroy(lexps, rexps, NULL);
+		split_exps_appl_desc(sql, sel, lexps, NULL, &l);
+		list_destroy(lexps);
 	}
 
-	// create matrixadd stmts, which perform addition between two stmts each
-	for (n = loa->h, en = roa->h; n && en; n = n->next, en = en->next) {
-		stmt *s = stmt_matrixadd(sql->sa, n->data, en->data);
+	// create matrixadd stmts
+	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {
+		stmt *s = stmt_matrixadd(sql->sa, n->data, m->data);
 		list_append(l, s);
 	}
 

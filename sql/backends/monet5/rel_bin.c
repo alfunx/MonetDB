@@ -1873,7 +1873,7 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 				char *rname = exp->l;
 				char *name = exp->r;
 
-				if (rnme && nme && strcmp(nme, name) == 0 && strcmp(rnme, rname) == 0) {
+				if (nme && strcmp(nme, name) == 0 && rnme && strcmp(rnme, rname) == 0) {
 					fprintf(stderr, "    %c.%c: application\n", *rnme, *nme);
 
 					s = column(sql->sa, c);
@@ -2053,10 +2053,10 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	list *l;
 
 	// application part and description part columns
-	list *al, *ar, *dl, *dr;
+	list *la, *ra, *ld, *rd;
 
 	// ordered application part columns (desc part is directly appended to l)
-	list *oal, *oar;
+	list *loa, *roa;
 
 	// iterators
 	node *n, *en;
@@ -2072,48 +2072,48 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 
 	// construct list of statements
 	l = sa_list(sql->sa);
-	al = sa_list(sql->sa);
-	ar = sa_list(sql->sa);
-	dl = sa_list(sql->sa);
-	dr = sa_list(sql->sa);
-	oal = sa_list(sql->sa);
-	oar = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ra = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	rd = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	roa = sa_list(sql->sa);
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &al, &dl);
-	split_exps_appl_desc(sql, right, rel->rexps, &ar, &dr);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
 
 	// generate the orderby ids
 	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, dl, &l);
-	align_by_ids(sql, orderby_idsr, dr, &l);
-	align_by_ids(sql, orderby_idsl, al, &oal);
-	align_by_ids(sql, orderby_idsr, ar, &oar);
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsr, rd, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsr, ra, &roa);
 
 	// perform selection on concatenated matrices
 	if (rel->exps && rel->exps->h) {
 		list *sl = sa_list(sql->sa);
 		list_merge_destroy(sl, l, NULL);
-		list_merge_destroy(sl, oal, NULL);
-		list_merge_destroy(sl, oar, NULL);
+		list_merge_destroy(sl, loa, NULL);
+		list_merge_destroy(sl, roa, NULL);
 
 		l = sa_list(sql->sa);
-		oal = sa_list(sql->sa);
-		oar = sa_list(sql->sa);
+		loa = sa_list(sql->sa);
+		roa = sa_list(sql->sa);
 
 		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, sl), rel->exps, refs);
 
 		// application part of right relation will be in l
-		split_exps_appl_desc(sql, sel, rel->lexps, &oal, &l);
-		split_exps_appl_desc(sql, sel, rel->rexps, &oar, NULL);
+		split_exps_appl_desc(sql, sel, rel->lexps, &loa, &l);
+		split_exps_appl_desc(sql, sel, rel->rexps, &roa, NULL);
 	}
 
 	// create matrixadd stmts, which perform addition between two stmts each
-	for (n = oal->h, en = oar->h; n && en; n = n->next, en = en->next) {
+	for (n = loa->h, en = roa->h; n && en; n = n->next, en = en->next) {
 		stmt *s = stmt_matrixadd(sql->sa, n->data, en->data);
 		list_append(l, s);
 	}

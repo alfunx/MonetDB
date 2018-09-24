@@ -5120,10 +5120,10 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 	int nr = ++sql->label;
 	char name[16], *rnm;
 	rnm = number2name(name, 16, nr);
-	node *n, *en;
+	node *n, *m;
 
 	// append only min(list_length(lexps), list_length(rexps)) expressions
-	for (n = apl->h, en = apr->h; n && en; n = n->next, en = en->next) {
+	for (n = apl->h, m = apr->h; n && m; n = n->next, m = m->next) {
 		sql_exp *te = n->data;
 		const char *nm = te->name;
 		fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);

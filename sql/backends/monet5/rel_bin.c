@@ -1352,6 +1352,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_groupby: 
 		if (rel->r) 
 			args = exps2bin_args(sql, rel->r, args);
+	case op_matrixsqrt:
 	case op_project:
 	case op_select: 
 	case op_topn: 
@@ -2173,6 +2174,57 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	// create matrixadd stmts
 	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {
 		stmt *s = stmt_matrixadd(sql->sa, n->data, m->data);
+		list_append(l, s);
+	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part, description part and gathering columns
+	list *la, *ld, *lg;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa, *log;
+
+	// iterators
+	node *n, *m, *p, *q;
+
+	stmt *left = NULL;
+	stmt *orderby_idsl = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+	assert(left);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	lg = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	log = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps && rel->rexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+	split_exps_appl_desc(sql, left, rel->rexps, &lg, NULL);
+
+	// generate the orderby ids
+	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsl, lg, &log);
+
+	// create matrixsqrt stmts
+	for (n = loa->h, m = log->h; n && m; n = n->next, m = m->next) {
+		stmt *s = stmt_matrixsqrt(sql->sa, n->data, m->data);
 		list_append(l, s);
 	}
 
@@ -4960,6 +5012,11 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	case op_matrixadd:
 		fprintf(stderr, ">>> [subrel_bin]\n");
 		s = rel2bin_matrixadd(sql, rel, refs);
+		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		break;
+	case op_matrixsqrt:
+		fprintf(stderr, ">>> [subrel_bin]\n");
+		s = rel2bin_matrixsqrt(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]\n");
 		break;
 	}

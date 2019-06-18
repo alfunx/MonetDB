@@ -47,6 +47,7 @@ extern sql_rel *rel_setop(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_ty
 extern sql_rel *rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join);
 
 extern sql_rel *rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r);
+extern sql_rel *rel_matrixsqrt(sql_allocator *sa, sql_rel *l);
 
 extern sql_rel *rel_topn(sql_allocator *sa, sql_rel *l, list *exps );
 extern sql_rel *rel_sample(sql_allocator *sa, sql_rel *l, list *exps );

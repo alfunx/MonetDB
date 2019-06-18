@@ -576,6 +576,7 @@ int yydebug=1;
 %left <operation> '*' '/'
 %left <operation> '%'
 %left <operation> '~'
+%left <operation> '!'
 %left <operation> ADD
 
 %left <operatio> GEOM_OVERLAP GEOM_OVERLAP_OR_ABOVE GEOM_OVERLAP_OR_BELOW GEOM_OVERLAP_OR_LEFT 
@@ -3466,6 +3467,13 @@ simple_scalar_exp:
 			{ dlist *l = L();
 			  append_list(l, 
 			  	append_string(append_string(L(), sa_strdup(SA, "sys")), sa_strdup(SA, "sql_add")));
+	  		  append_symbol(l, $1);
+	  		  append_symbol(l, $3);
+	  		  $$ = _symbol_create_list( SQL_BINOP, l ); }
+ |  scalar_exp '!' scalar_exp
+			{ dlist *l = L();
+			  append_list(l, 
+			  	append_string(append_string(L(), sa_strdup(SA, "sys")), sa_strdup(SA, "sql_group_sqrt")));
 	  		  append_symbol(l, $1);
 	  		  append_symbol(l, $3);
 	  		  $$ = _symbol_create_list( SQL_BINOP, l ); }

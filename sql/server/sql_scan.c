@@ -964,6 +964,7 @@ int scanner_symbol(mvc * c, int cur)
 	case '*':
 	case '?':
 	case '%':
+	case '!':
 	case '+':
 	case '(':
 	case ')':

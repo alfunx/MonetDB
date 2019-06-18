@@ -21,6 +21,7 @@ gdk_export BAT *BATcalcmin(BAT *b1, BAT *b2, BAT *s);
 gdk_export BAT *BATcalcmin_no_nil(BAT *b1, BAT *b2, BAT *s);
 gdk_export BAT *BATcalcmax(BAT *b1, BAT *b2, BAT *s);
 gdk_export BAT *BATcalcmax_no_nil(BAT *b1, BAT *b2, BAT *s);
+gdk_export BAT *BATcalcgsqrt(BAT *b1, BAT *b2, BAT *s, int tp, int abort_on_error);
 gdk_export BAT *BATcalcadd(BAT *b1, BAT *b2, BAT *s, int tp, int abort_on_error);
 gdk_export BAT *BATcalcaddcst(BAT *b, const ValRecord *v, BAT *s, int tp, int abort_on_error);
 gdk_export BAT *BATcalccstadd(const ValRecord *v, BAT *b, BAT *s, int tp, int abort_on_error);

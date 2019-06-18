@@ -5398,3 +5398,23 @@ pattern prod(b:bat[:dbl],s:bat[:oid],nil_if_empty:bit) :dbl
 address CMDBATprod
 comment "Calculate aggregate product of B with candidate list.";
 
+pattern !(v1:flt,v2:flt) :flt
+address CMDvarGSQRTsignal
+comment "Return sqrt(V2), grouped by V1, signal error on overflow";
+pattern gsqrt(v1:flt,v2:flt) :flt
+address CMDvarGSQRTsignal
+comment "Return sqrt(V2), grouped by V1, signal error on overflow";
+pattern gsqrt_noerror(v1:flt,v2:flt) :flt
+address CMDvarGSQRT
+comment "Return sqrt(V2), grouped by V1, overflow causes NIL value";
+
+pattern !(v1:dbl,v2:dbl) :dbl
+address CMDvarGSQRTsignal
+comment "Return sqrt(V2), grouped by V1, signal error on overflow";
+pattern gsqrt(v1:dbl,v2:dbl) :dbl
+address CMDvarGSQRTsignal
+comment "Return sqrt(V2), grouped by V1, signal error on overflow";
+pattern gsqrt_noerror(v1:dbl,v2:dbl) :dbl
+address CMDvarGSQRT
+comment "Return sqrt(V2), grouped by V1, overflow causes NIL value";
+

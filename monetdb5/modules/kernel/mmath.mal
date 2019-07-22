@@ -129,9 +129,9 @@ command pow(x:dbl,y:dbl)  :dbl
 address MATHbinary_POWdbl
 comment "The pow(x,y) function  returns the value of x raised to the power of y.";
 
-# command group_sqrt(y:flt)  	  :flt 
+# command gsqrt(y:flt)  	  :flt 
 # address MATHunary_SQRTflt;
-# command group_sqrt(y:dbl)  	  :dbl 
+# command gsqrt(y:dbl)  	  :dbl 
 # address MATHunary_SQRTdbl
 # comment "The sqrt(x) function returns the non-negative square root of x.";
 

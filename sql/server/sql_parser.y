@@ -3488,7 +3488,7 @@ simple_scalar_exp:
  |  scalar_exp '!' scalar_exp
 			{ dlist *l = L();
 			  append_list(l, 
-			  	append_string(append_string(L(), sa_strdup(SA, "sys")), sa_strdup(SA, "sql_group_sqrt")));
+			  	append_string(append_string(L(), sa_strdup(SA, "sys")), sa_strdup(SA, "sql_gsqrt")));
 	  		  append_symbol(l, $1);
 	  		  append_symbol(l, $3);
 	  		  $$ = _symbol_create_list( SQL_BINOP, l ); }

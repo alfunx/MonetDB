@@ -3413,7 +3413,7 @@ gsqrt(const dbl *lft, int incr1,
 			dst[k] = dbl_nil;
 			nils++;
 		} else {
-			dst[k] = sqrt(lft[j]);
+			dst[k] = sqrt(lft[i]);
 			// ADD_WITH_CHECK(dbl, lft[i],
 			// 	       dbl, rgt[j],
 			// 	       dbl, dst[k],

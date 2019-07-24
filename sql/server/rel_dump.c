@@ -286,6 +286,8 @@ op2string(operator_type op)
 		return "sample";
 	case op_matrixadd:
 		return "matrix add";
+	case op_matrixsqrt:
+		return "matrix sqrt";
 	case op_insert: 
 	case op_update: 
 	case op_delete: 
@@ -470,6 +472,27 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 		exps_print(sql, fout, rel->exps, depth, 1, 0);
 		break;
 
+	case op_matrixsqrt: 
+		if (rel->op == op_matrixsqrt)
+			r = "matrix sqrt";
+		print_indent(sql, fout, depth, decorate);
+		if (need_distinct(rel))
+			mnstr_printf(fout, "distinct ");
+		mnstr_printf(fout, "%s (", r);
+		if (rel_is_ref(rel->l)) {
+			int nr = find_ref(refs, rel->l);
+			print_indent(sql, fout, depth+1, decorate);
+			mnstr_printf(fout, "& REF %d ", nr);
+		} else
+			rel_print_(sql, fout, rel->l, depth+1, refs, decorate);
+		mnstr_printf(fout, ",");
+		print_indent(sql, fout, depth, decorate);
+		mnstr_printf(fout, ")");
+		exps_print(sql, fout, rel->lexps, depth, 1, 0);
+		exps_print(sql, fout, rel->lord, depth, 1, 0);
+		exps_print(sql, fout, rel->exps, depth, 1, 0);
+		break;
+
 	case op_project:
 	case op_select: 
 	case op_groupby: 
@@ -583,6 +606,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 			list_append(refs, rel->r);
 		}
 		break;
+	case op_matrixsqrt: 
 	case op_project:
 	case op_select: 
 	case op_groupby: 

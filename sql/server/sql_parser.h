@@ -173,6 +173,8 @@ typedef enum tokens {
 	SQL_XMLNAMESPACES,
 	SQL_MATRIX,
 	SQL_MATRIXADD,
+	SQL_MATRIXSQRT,
+	SQL_GATHER,
 } tokens;
 
 typedef enum jt {

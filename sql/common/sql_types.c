@@ -1527,6 +1527,8 @@ sqltypeinit( sql_allocator *sa)
 	for (t = numerical; *t != TME; t++) {
 		sql_subtype *lt = sql_bind_localtype((*t)->base.name);
 
+		sql_create_func(sa, "sql_gsqrt", "calc", "!", *t, *t, *t, SCALE_FIX);
+
 		sql_create_func(sa, "sql_sub", "calc", "-", *t, *t, *t, SCALE_FIX);
 		sql_create_func(sa, "sql_add", "calc", "+", *t, *t, *t, SCALE_FIX);
 		sql_create_func(sa, "sql_mul", "calc", "*", *t, *t, *t, SCALE_MUL);

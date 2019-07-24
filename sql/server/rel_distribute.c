@@ -40,6 +40,8 @@ has_remote_or_replica( sql_rel *rel )
 	case op_semi: 
 	case op_anti: 
 
+	case op_matrixadd: 
+
 	case op_union: 
 	case op_inter: 
 	case op_except: 
@@ -152,6 +154,8 @@ replica(mvc *sql, sql_rel *rel, char *uri)
 	case op_semi: 
 	case op_anti: 
 
+	case op_matrixadd: 
+
 	case op_union: 
 	case op_inter: 
 	case op_except: 
@@ -225,6 +229,8 @@ distribute(mvc *sql, sql_rel *rel)
 	case op_semi: 
 	case op_anti: 
 
+	case op_matrixadd: 
+
 	case op_union: 
 	case op_inter: 
 	case op_except: 
@@ -292,6 +298,8 @@ rel_remote_func(mvc *sql, sql_rel *rel)
 	case op_apply: 
 	case op_semi: 
 	case op_anti: 
+
+	case op_matrixadd: 
 
 	case op_union: 
 	case op_inter: 

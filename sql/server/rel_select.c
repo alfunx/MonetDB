@@ -59,6 +59,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_left:
 	case op_right:
 	case op_full:
+	case op_matrixadd:
 		exps = rel_table_projections( sql, rel->l, tname, level+1);
 		if (exps)
 			return exps;
@@ -212,6 +213,7 @@ static sql_rel * rel_setquery(mvc *sql, sql_rel *rel, symbol *sq);
 static sql_rel * rel_joinquery(mvc *sql, sql_rel *rel, symbol *sq);
 static sql_rel * rel_crossquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *sq);
+static sql_rel * rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q);
 
 static sql_rel *
 rel_table_optname(mvc *sql, sql_rel *sq, symbol *optname)
@@ -348,6 +350,14 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_UNIONJOIN:
 	{
 		sql_rel *tq = rel_unionjoinquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXADD:
+	{
+		sql_rel *tq = rel_matrixaddquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3621,6 +3631,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_left:
 	case op_right:
 	case op_full:
+	case op_matrixadd:
 		exps = rel_projections_(sql, rel->l);
 		rexps = rel_projections_(sql, rel->r);
 		exps = list_merge( exps, rexps, (fdup)NULL);
@@ -5070,6 +5081,140 @@ rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *q)
 	rel->exps = rel_projections(sql, rel, NULL, 0, 1);
 	if (!all)
 		rel = rel_distinct(rel);
+	return rel;
+}
+
+static list *
+append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
+{
+	if (!*outexps)
+		return NULL;
+
+	list *exps = rel_projections(sql, t, NULL, 1, 0);
+	if (!exps)
+		return NULL;
+
+	node *n;
+
+	for (n = exps->h; n; n = n->next) {
+		sql_exp *te = n->data;
+		const char *rnm = te->rname;
+		const char *nm = te->name;
+		sql_exp *e = exps_bind_column(ap, nm, NULL);
+
+		if (!e) {
+			fprintf(stderr, ">>> [append_desc_part] column: %s.%s\n", rnm, nm);
+			append(*outexps, te);
+		}
+	}
+
+	return *outexps;
+}
+
+static list *
+append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
+{
+	if (!*outexps)
+		return NULL;
+
+	int nr = ++sql->label;
+	char name[16], *rnm;
+	rnm = number2name(name, 16, nr);
+	node *n, *m;
+
+	// append only min(list_length(lexps), list_length(rexps)) expressions
+	for (n = apl->h, m = apr->h; n && m; n = n->next, m = m->next) {
+		sql_exp *te = n->data;
+		const char *nm = te->name;
+		fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
+
+		exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
+		append(*outexps, te);
+	}
+
+	return *outexps;
+}
+
+static sql_rel *
+rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *en, *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
+	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *t1 = table_ref(sql, rel, tab1);
+	sql_rel *t2 = table_ref(sql, rel, tab4);
+	if (!t1 || !t2)
+		return NULL;
+
+	rel = rel_matrixadd(sql->sa, t1, t2);
+
+	// set no-optimization flag
+	rel->noopt = n->next->next->data.i_val;
+
+	list *lobe = NULL;
+	list *robe = NULL;
+	int lnrcols = 0;
+	int rnrcols = 0;
+
+	// set orderby for left relation
+	if (tab2) {
+		lobe = rel_order_by(sql, &rel, tab2, 0);
+	}
+
+	// set orderby for right relation
+	if (tab5) {
+		sql_rel *t = rel->l;
+		rel->l = rel->r;
+		rel->r = t;
+		robe = rel_order_by(sql, &rel, tab5, 0);
+		t = rel->l;
+		rel->l = rel->r;
+		rel->r = t;
+	}
+
+	rel->lord = lobe;
+	rel->rord = robe;
+
+	// set application part of left relation
+	for (en = tab3->h; en; en = en->next, lnrcols++) {
+		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
+
+		if (ce)
+			append(rel->lexps, ce);
+	}
+
+	// set application part of right relation
+	for (en = tab6->h; en; en = en->next, rnrcols++) {
+		sql_exp *ce = rel_column_exp(sql, &t2, en->data.sym, sql_sel);
+
+		if (ce)
+			append(rel->rexps, ce);
+	}
+
+	if (lnrcols != rnrcols) {
+		sql_error(sql, 02, "MATRIX ADD: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(t1)?rel_name(t1):"", rel_name(t2)?rel_name(t2):"");
+		rel_destroy(rel);
+		return NULL;
+	}
+
+	// set number of attributes in the result relation
+	rel->nrcols = t1->nrcols + t2->nrcols - lnrcols;
+	fprintf(stderr, ">>> [rel_matrixaddquery] nrcols: %d\n", rel->nrcols);
+
+	// project necessary attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append_desc_part(sql, t1, rel->lexps, &exps);
+	append_desc_part(sql, t2, rel->rexps, &exps);
+	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
+	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
 

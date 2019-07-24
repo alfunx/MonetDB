@@ -1935,6 +1935,22 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			renameVariable(mb, getArg(q, 1), "r1_%d", s->nr);
 			break;
 		}
+		case st_matrixadd:{
+			int  l, r;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			r = _dumpstmt(sql, mb, s->op2);
+			assert(l >= 0 && r >= 0);
+
+			q = newStmt(mb, batcalcRef, "+");
+
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, r);
+
+			s->nr = getDestVar(q);
+			return s->nr;
+		}
+			break;
 		case st_group:{
 			int cnt = 0, ext = 0, grp = 0, o1;
 

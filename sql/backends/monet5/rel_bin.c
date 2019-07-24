@@ -1337,6 +1337,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_left: 
 	case op_right: 
 	case op_full: 
+	case op_matrixadd:
 
 	case op_apply: 
 	case op_semi: 
@@ -1849,6 +1850,332 @@ rel2bin_join( mvc *sql, sql_rel *rel, list *refs)
 		s = stmt_alias(sql->sa, s, rnme, nme);
 		list_append(l, s);
 	}
+	return stmt_list(sql->sa, l);
+}
+
+static void
+split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
+{
+	node *n, *en;
+
+	fprintf(stderr, ">>> [split_exps_appl_desc]\n");
+	for (n = p->op4.lval->h; n; n = n->next) {
+		stmt *c = n->data;
+		stmt *s;
+		bool desc = true;
+		const char *rnme = table_name(sql->sa, c);
+		const char *nme = column_name(sql->sa, c);
+
+		for (en = exps->h; en; en = en->next) {
+			sql_exp *exp = en->data;
+
+			if (exp->l && exp->r) {
+				char *rname = exp->l;
+				char *name = exp->r;
+
+				if (nme && strcmp(nme, name) == 0 && rnme && strcmp(rnme, rname) == 0) {
+					fprintf(stderr, "    %c.%c: application\n", *rnme, *nme);
+
+					s = column(sql->sa, c);
+					s = stmt_alias(sql->sa, s, rnme, nme);
+
+					if (a)
+						list_append(*a, s);
+					desc = false;
+					break;
+				}
+			}
+		}
+
+		if (desc) {
+			fprintf(stderr, "    %c.%c: descriptive\n", *rnme, *nme);
+			s = column(sql->sa, c);
+			s = stmt_alias(sql->sa, s, rnme, nme);
+			if (d)
+				list_append(*d, s);
+		}
+	}
+}
+
+static stmt *
+gen_orderby_ids(mvc *sql, stmt *s, list *ord)
+{
+	if (!ord)
+		return NULL;
+
+	node *n;
+	list *p;
+	stmt *psub = NULL;
+	stmt *orderby_ids = NULL;
+	stmt *orderby_grp = NULL;
+
+	p = sa_list(sql->sa);
+	p->expected_cnt = list_length(s->op4.lval);
+	psub = stmt_list(sql->sa, p);
+
+	stmt_set_nrcols(psub);
+
+	// ordering of the order specification columns to know the final order of OIDs for
+	for (n = ord->h; n; n = n->next) {
+		stmt *orderby = NULL;
+		sql_exp *orderbycole = n->data;
+		stmt *orderbycolstmt = exp_bin(sql, orderbycole, s, psub, NULL, NULL, NULL, NULL);
+
+		if (!orderbycolstmt) {
+			assert(0);
+			return NULL;
+		}
+
+		/* single values don't need sorting */
+		if (orderbycolstmt->nrcols == 0) {
+			orderby_ids = NULL;
+			break;
+		}
+
+		if (orderby_ids)
+			orderby = stmt_reorder(sql->sa, orderbycolstmt, is_ascending(orderbycole), orderby_ids, orderby_grp);
+		else
+			orderby = stmt_order(sql->sa, orderbycolstmt, is_ascending(orderbycole));
+
+		const char *tname = table_name(sql->sa, orderbycolstmt);
+		const char *cname = column_name(sql->sa, orderbycolstmt);
+		fprintf(stderr, ">>> [gen_orderby_ids] ordering: %s.%s\n", tname, cname);
+
+		orderby_ids = stmt_result(sql->sa, orderby, 1);
+		orderby_grp = stmt_result(sql->sa, orderby, 2);
+	}
+	return orderby_ids;
+}
+
+static void
+align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
+{
+	node *n;
+
+	for(n = l->h; n; n = n->next) {
+		stmt *c = n->data;
+		stmt *s;
+
+		const char *tname = table_name(sql->sa, c);
+		const char *cname = column_name(sql->sa, c);
+
+		if (orderby_ids)
+			s = stmt_project(sql->sa, orderby_ids, c);
+		else
+			s = column(sql->sa, c);
+		s = stmt_alias(sql->sa, s, tname, cname);
+
+		fprintf(stderr, ">>> [align_by_ids] ordering: %s.%s\n", tname, cname);
+
+		if (ol)
+			list_append(*ol, s);
+	}
+}
+
+/* forward ref */
+static stmt * rel2bin_predicate(mvc *sql);
+
+static stmt *
+select_on_matrixadd(mvc *sql, stmt *sub, list *exps, list *refs)
+{
+	list *l;
+	node *en, *n;
+	stmt *sel = NULL;
+	stmt *predicate = NULL;
+
+	if (!sub)
+		return NULL;
+	sub = row2cols(sql, sub);
+	if (!sub && !predicate)
+		predicate = rel2bin_predicate(sql);
+	else if (!predicate)
+		predicate = stmt_const(sql->sa, bin_first_column(sql->sa, sub), stmt_bool(sql->sa, 1));
+	if (!exps || !exps->h) {
+		if (sub)
+			return sub;
+		return predicate;
+	}
+	if (!sub && predicate) {
+		list *l = sa_list(sql->sa);
+		append(l, predicate);
+		sub = stmt_list(sql->sa, l);
+	}
+	// TODO
+	// /* handle possible index lookups */
+	// /* expressions are in index order ! */
+	// if (sub && (en = exps->h) != NULL) {
+	// 	sql_exp *e = en->data;
+	// 	prop *p;
+	//
+	// 	if ((p=find_prop(e->p, PROP_HASHCOL)) != NULL) {
+	// 		sql_idx *i = p->value;
+	//
+	// 		sel = rel2bin_hash_lookup(sql, rel, sub, NULL, i, en);
+	// 	}
+	// }
+	for (en = exps->h; en; en = en->next) {
+		sql_exp *e = en->data;
+		stmt *s = exp_bin(sql, e, sub, NULL, NULL, NULL, NULL, sel);
+
+		if (!s) {
+			assert(0);
+			return NULL;
+		}
+		if (s->nrcols == 0){
+			sel = stmt_uselect(sql->sa, predicate, s, cmp_equal, sel);
+		} else if (e->type != e_cmp) {
+			sel = stmt_uselect(sql->sa, s, stmt_bool(sql->sa, 1), cmp_equal, NULL);
+		} else {
+			sel = s;
+		}
+	}
+
+	/* construct relation */
+	l = sa_list(sql->sa);
+	if (sub && sel) {
+		for ( n = sub->op4.lval->h; n; n = n->next ) {
+			stmt *col = n->data;
+
+			if (col->nrcols == 0) /* constant */
+				col = stmt_const(sql->sa, sel, col);
+			else
+				col = stmt_project(sql->sa, sel, col);
+			list_append(l, col);
+		}
+	}
+	return stmt_list(sql->sa, l);
+}
+
+static int
+exp_in_predicate(sql_exp *exp, list *l)
+{
+	node *n;
+
+	for (n = l->h; n; n = n->next) {
+		sql_exp *e = n->data;
+		sql_exp *le = e->l;
+		sql_exp *re = e->r;
+
+		switch (e->type) {
+			case e_func:
+			case e_aggr:
+			case e_psm:
+				continue;
+		}
+		assert(e->type == e_cmp);
+
+		if (e->flag == cmp_or) {
+			if (exp_in_predicate(exp, e->l))
+				return 1;
+			if (exp_in_predicate(exp, e->r))
+				return 1;
+			continue;
+		}
+
+		if (re->type == e_convert)
+			le = le->l;
+		if (le->type == e_convert)
+			re = re->l;
+
+		if ((le->type == e_column && exp_match_exp(exp, le)) ||
+				(re->type == e_column && exp_match_exp(exp, re)))
+			return 1;
+	}
+
+	return 0;
+}
+
+static stmt *
+rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ra, *ld, *rd;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa, *roa;
+
+	// iterators
+	node *n, *m, *p, *q;
+
+	stmt *left = NULL;
+	stmt *right = NULL;
+	stmt *orderby_idsl = NULL;
+	stmt *orderby_idsr = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+	right = subrel_bin(sql, rel->r, refs);
+	assert(left && right);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ra = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	rd = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	roa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps && rel->rexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
+
+	// generate the orderby ids
+	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsr, rd, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsr, ra, &roa);
+
+	// perform selection on concatenated matrices
+	if (rel->exps && rel->exps->h) {
+		list *lexps = list_dup(rel->lexps, NULL);
+		list *rexps = list_dup(rel->rexps, NULL);
+
+		// create matrixadd stmts, which are referenced from predicates
+		for (n = loa->h, m = roa->h, p = lexps->h, q = rexps->h; n && m && p && q; n = n->next, m = m->next, p = p->next, q = q->next) {
+			if (!exp_in_predicate(p->data, rel->exps))
+				continue;
+			stmt *s = stmt_matrixadd(sql->sa, n->data, m->data);
+			list_append(l, s);
+			list_remove_node(loa, n);
+			list_remove_node(roa, m);
+			list_remove_node(lexps, p);
+			list_remove_node(rexps, q);
+		}
+
+		// create selection stmt on concatenated stmt-list
+		list_merge_destroy(l, loa, NULL);
+		list_merge_destroy(l, roa, NULL);
+		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, l), rel->exps, refs);
+
+		list_destroy(l);
+		l = sa_list(sql->sa);
+		loa = sa_list(sql->sa);
+		roa = sa_list(sql->sa);
+
+		// recreate application part
+		split_exps_appl_desc(sql, sel, lexps, &loa, NULL);
+		split_exps_appl_desc(sql, sel, rexps, &roa, NULL);
+
+		// recreate descriptive part
+		list_merge_destroy(lexps, rexps, NULL);
+		split_exps_appl_desc(sql, sel, lexps, NULL, &l);
+		list_destroy(lexps);
+	}
+
+	// create matrixadd stmts
+	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {
+		stmt *s = stmt_matrixadd(sql->sa, n->data, m->data);
+		list_append(l, s);
+	}
+
 	return stmt_list(sql->sa, l);
 }
 
@@ -4629,6 +4956,11 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		break;
 	case op_ddl:
 		s = rel2bin_ddl(sql, rel, refs);
+		break;
+	case op_matrixadd:
+		fprintf(stderr, ">>> [subrel_bin]\n");
+		s = rel2bin_matrixadd(sql, rel, refs);
+		fprintf(stderr, ">>> END: [subrel_bin]\n");
 		break;
 	}
 	if (s && rel_is_ref(rel)) {

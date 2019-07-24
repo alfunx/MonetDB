@@ -116,6 +116,13 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 		if (i->r)
 			rel->r = (i->r)?list_dup(i->r, (fdup)NULL):NULL;
 		break;
+	case op_matrixadd:
+		rel->exps = (i->exps)?list_dup(i->exps, (fdup)NULL):NULL;
+		rel->lexps = (i->lexps)?list_dup(i->lexps, (fdup)NULL):NULL;
+		rel->rexps = (i->rexps)?list_dup(i->rexps, (fdup)NULL):NULL;
+		rel->lord = i->lord;
+		rel->rord = i->rord;
+		// fallthrough
 	case op_join:
 	case op_left:
 	case op_right:
@@ -222,6 +229,28 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 		*p = rel;
 		if (rel->l)
 			return rel_bind_column_(sql, p, rel->l, cname);
+
+	case op_matrixadd:
+		// TODO: matrixadd
+		if (rel->exps && exps_bind_column(rel->exps, cname, &ambiguous))
+			return rel;
+		if (rel->lexps && exps_bind_column(rel->lexps, cname, &ambiguous))
+			return rel;
+		if (rel->rexps && exps_bind_column(rel->rexps, cname, &ambiguous))
+			return rel;
+		if (ambiguous) {
+			(void) sql_error(sql, ERR_AMBIGUOUS, "SELECT: identifier '%s' ambiguous", cname);
+			return NULL;
+		}
+		*p = rel;
+		if (is_processed(rel))
+			return NULL;
+		if (rel->l && !(is_base(rel->op)))
+			return rel_bind_column_(sql, p, rel->l, cname);
+		if (rel->r && !(is_base(rel->op)))
+			return rel_bind_column_(sql, p, rel->r, cname);
+		break;
+
 	default:
 		return NULL;
 	}
@@ -369,6 +398,22 @@ rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join)
 	rel->exps = NULL;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols + r->nrcols;
+	return rel;
+}
+
+sql_rel *
+rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r)
+{
+	sql_rel *rel = rel_create(sa);
+
+	rel->l = l;
+	rel->r = r;
+	rel->exps = new_exp_list(sa);
+	rel->lexps = new_exp_list(sa);
+	rel->rexps = new_exp_list(sa);
+	rel->op = op_matrixadd;
+	rel->card = CARD_MULTI;
+	rel->nrcols = l->nrcols;
 	return rel;
 }
 
@@ -794,6 +839,14 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_topn:
 	case op_sample:
 		return rel_projections(sql, rel->l, tname, settname, intern );
+
+	case op_matrixadd:
+		// TODO: matrixadd
+		exps = rel_projections(sql, rel->l, tname, settname, intern);
+		rexps = rel_projections(sql, rel->r, tname, settname, intern);
+		exps = list_merge(exps, rexps, (fdup)NULL);
+		return exps;
+
 	default:
 		return NULL;
 	}
@@ -825,6 +878,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_select:
 	case op_topn:
 	case op_sample:
+	case op_matrixadd:
 		found = rel_bind_path_(rel->l, e, path);
 		break;
 

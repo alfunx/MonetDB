@@ -238,6 +238,7 @@ int yydebug=1;
 	ordering_spec
 	simple_table
 	table_ref
+	matrix_ref
 	opt_limit
 	opt_offset
 	opt_sample
@@ -504,6 +505,8 @@ int yydebug=1;
 	opt_asc_desc
 	tz
 
+	opt_no_optimize
+
 %right <sval> STRING
 %right <sval> X_BODY
 
@@ -573,6 +576,7 @@ int yydebug=1;
 %left <operation> '*' '/'
 %left <operation> '%'
 %left <operation> '~'
+%left <operation> ADD
 
 %left <operatio> GEOM_OVERLAP GEOM_OVERLAP_OR_ABOVE GEOM_OVERLAP_OR_BELOW GEOM_OVERLAP_OR_LEFT 
 %left <operatio> GEOM_OVERLAP_OR_RIGHT GEOM_BELOW GEOM_ABOVE GEOM_DIST
@@ -585,6 +589,7 @@ SQLCODE SQLERROR UNDER WHENEVER
 
 %token TEMP TEMPORARY STREAM MERGE REMOTE REPLICA
 %token<sval> ASC DESC AUTHORIZATION
+%token NOOPTIMIZE
 %token CHECK CONSTRAINT CREATE
 %token TYPE PROCEDURE FUNCTION AGGREGATE RETURNS EXTERNAL sqlNAME DECLARE
 %token CALL LANGUAGE 
@@ -2788,17 +2793,38 @@ opt_where_clause:
  |  WHERE search_condition	{ $$ = $2; }
  ;
 
+matrix_ref:
+   '(' table_ref ON selection opt_order_by_clause ')'
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_symbol(l, $5);
+	  append_list(l, $4);
+	  $$ = _symbol_create_list( SQL_MATRIX, l); }
+ ;
+
 	/* query expressions */
+
+opt_no_optimize:
+    /* empty */ 	{ $$ = FALSE; }
+ |  NOOPTIMIZE		{ $$ = TRUE; }
+ ;
 
 joined_table:
    '(' joined_table ')'
 	{ $$ = $2; }
  |  table_ref CROSS JOIN table_ref
-
 	{ dlist *l = L();
 	  append_symbol(l, $1);
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_CROSS, l); }
+
+ |  matrix_ref ADD matrix_ref opt_no_optimize
+	{ dlist *l = L();
+	  append_symbol(l, $1);
+	  append_symbol(l, $3);
+	  append_int(l, $4);
+	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
+
  |  table_ref UNIONJOIN table_ref join_spec
 	{ dlist *l = L();
 	  append_symbol(l, $1);

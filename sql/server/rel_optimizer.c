@@ -229,6 +229,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_left: 
 	case op_right: 
 	case op_full: 
+	case op_matrixadd: 
 
 	case op_apply: 
 	case op_semi: 
@@ -267,6 +268,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_left: 
 	case op_right: 
 	case op_full: 
+	case op_matrixadd: 
 
 	case op_apply: 
 	case op_semi: 
@@ -5001,6 +5003,43 @@ rel_remove_join(int *changes, mvc *sql, sql_rel *rel)
 	return rel;
 }
 
+static sql_rel *
+push_select_exps_to_matrix(int *changes, mvc *sql, sql_rel *rel)
+{
+	if (!is_select(rel->op))
+		return rel;
+
+	sql_rel *p = rel->l;
+	list *exps = rel->exps;
+	node *n;
+
+	if (!p || !is_matrixadd(p->op))
+		return rel;
+
+	if (p->noopt) {
+		fprintf(stderr, ">>> [push_select_exps_to_matrix] no-optimization flag is set\n");
+		return rel;
+	}
+
+	for (n = exps->h; n; n = n->next) {
+		sql_exp *e = n->data;
+		sql_exp *l = e->l;
+		sql_exp *r = e->r;
+
+		switch (e->type) {
+			case e_func:
+			case e_aggr:
+			case e_psm:
+				continue;
+		}
+
+		list_append(p->exps, e);
+		list_remove_node(rel->exps, n);
+	}
+
+	return rel;
+}
+
 /* Pushing projects up the tree. Done very early in the optimizer.
  * Makes later steps easier. 
  */
@@ -5025,6 +5064,12 @@ rel_push_project_up(int *changes, mvc *sql, sql_rel *rel)
 		   (is_join(rel->op) && (is_subquery(r) ||
 		    (r->op == op_project && (!r->l || r->r || project_unsafe(r))))))) 
 			return rel;
+
+		/* Don't rewrite projection of matrixadd */
+		if (is_project(l->op) && l->l && is_matrixadd(((sql_rel*)l->l)->op)) {
+			fprintf(stderr, ">>> [rel_push_project_up] no action\n");
+			return rel;
+		}
 
 		if (l->op == op_project && l->l) {
 			/* Go through the list of project expressions.
@@ -7954,6 +7999,9 @@ _rel_optimizer(mvc *sql, sql_rel *rel, int level)
 
 	if (gp.cnt[op_project]) 
 		rel = rewrite_topdown(sql, rel, &rel_push_project_down_union, &changes);
+
+	if (gp.cnt[op_select])
+		rel = rewrite(sql, rel, &push_select_exps_to_matrix, &changes);
 
 	/* Remove unused expressions */
 	if (level <= 0)

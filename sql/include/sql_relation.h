@@ -156,6 +156,7 @@ typedef enum operator_type {
 	op_groupby,	
 	op_topn,
 	op_sample,
+	op_matrixadd,
 	op_insert, 	/* insert(l=table, r insert expressions) */ 
 	op_update, 	/* update(l=table, r update expressions) */
 	op_delete 	/* delete(l=table, r delete expression) */
@@ -220,6 +221,8 @@ typedef enum operator_type {
 	(op == op_insert || op == op_update || op == op_delete)
 #define is_sample(op) \
 	(op == op_sample)
+#define is_matrixadd(op) \
+	(op == op_matrixadd)
 
 /* NO NIL semantics of aggr operations */
 #define need_no_nil(e) \
@@ -281,6 +284,11 @@ typedef struct relation {
 	void *l;
 	void *r;
 	list *exps; 
+	list *lexps; 
+	list *rexps; 
+	list *lord;
+	list *rord;
+	int noopt;
 	int nrcols;	/* nr of cols */	
 	char flag;	/* EXP_DISTINCT */ 
 	char card;	/* 0, 1 (row), 2 aggr, 3 */

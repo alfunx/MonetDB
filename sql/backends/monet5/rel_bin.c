@@ -2223,7 +2223,7 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, lg, &log);
 
 	// create matrixsqrt stmts
-	for (n = loa->h, m = log->h; n && m; n = n->next, m = m->next) {
+	for (n = log->h, m = loa->h; n && m; n = n->next, m = m->next) {
 		stmt *s = stmt_matrixsqrt(sql->sa, n->data, m->data);
 		list_append(l, s);
 	}

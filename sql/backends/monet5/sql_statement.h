@@ -90,6 +90,9 @@ typedef enum stmt_type {
 	st_matrixadd,
 	st_matrixsqrt,
 
+	st_normalize,
+	st_orthogonalize,
+
 	/* used internally only */
 	st_list,
 

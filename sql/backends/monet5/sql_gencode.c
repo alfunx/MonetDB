@@ -1963,6 +1963,58 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_normalize:{
+			int l, res;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, batcalcRef, "*");
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, l);
+			res = getDestVar(q);
+
+			q = newStmt(mb, aggrRef, "sum");
+			q = pushArgument(mb, q, res);
+			res = getDestVar(q);
+
+			q = newStmt(mb, mmathRef, "sqrt");
+			q = pushArgument(mb, q, res);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batcalcRef, "/");
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, res);
+			s->nr = getDestVar(q);
+		}
+			break;
+		case st_orthogonalize:{
+			int l, r, res;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			r = _dumpstmt(sql, mb, s->op2);
+			assert(l >= 0 && r >= 0);
+
+			q = newStmt(mb, batcalcRef, "*");
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, r);
+			res = getDestVar(q);
+
+			q = newStmt(mb, aggrRef, "sum");
+			q = pushArgument(mb, q, res);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batcalcRef, "*");
+			q = pushArgument(mb, q, r);
+			q = pushArgument(mb, q, res);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batcalcRef, "-");
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, res);
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_group:{
 			int cnt = 0, ext = 0, grp = 0, o1;
 

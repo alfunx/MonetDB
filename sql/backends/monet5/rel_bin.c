@@ -2181,6 +2181,57 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 }
 
 static stmt *
+rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ld;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa;
+
+	// iterators
+	node *n, *m;
+
+	stmt *left = NULL;
+	stmt *orderby_idsl = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+	assert(left);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps && rel->rexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+
+	// generate the orderby ids
+	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+
+	// create qqr stmts
+	for (n = loa->h; n; n = n->next) {
+		stmt *s = stmt_normalize(sql->sa, n->data);
+		list_append(l, s);
+		for (m = n->next; m; m->next) {
+			stmt *o = stmt_orthogonalize(sql->sa, m->data, s);
+			m->data = o;
+		}
+	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
 rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 {
 	// list of all statements (result)

@@ -108,6 +108,7 @@ scanner_init_keywords(void)
 	keywords_insert("NOOPTIMIZE", NOOPTIMIZE);
 	keywords_insert("GATHER", GATHER);
 	keywords_insert("SQRT", SQRT);
+	keywords_insert("LINSOLVE", LINSOLVE);
 
 	keywords_insert("LAG", AGGR);
 	keywords_insert("LEAD", AGGR);

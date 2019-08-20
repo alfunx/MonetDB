@@ -2208,7 +2208,7 @@ rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
 	loa = sa_list(sql->sa);
 
 	// split into application and descriptive part lists
-	assert(rel->lexps && rel->rexps);
+	assert(rel->lexps);
 	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
 
 	// generate the orderby ids

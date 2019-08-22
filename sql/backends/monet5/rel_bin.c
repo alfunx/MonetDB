@@ -2181,6 +2181,73 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 }
 
 static stmt *
+rel2bin_matrixmultrans(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ra, *ld, *rd;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa, *roa;
+
+	// iterators
+	node *n, *m;
+
+	stmt *left = NULL;
+	stmt *right = NULL;
+	stmt *orderby_idsl = NULL;
+	stmt *orderby_idsr = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+	right = subrel_bin(sql, rel->r, refs);
+	assert(left && right);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ra = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	rd = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	roa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps && rel->rexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
+
+	// generate the orderby ids
+	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsr, rd, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsr, ra, &roa);
+
+	assert(loa->h && roa->h);
+
+	// create matrixmul stmts
+	for (m = roa->h; m; m = m->next) {
+		// compute first element of new result column
+		stmt *rc = stmt_dotproduct(sql->sa, loa->h->data, m->data);
+		for (n = loa->h->next; n; n = n->next) {
+			// compute 2nd and following elements
+			stmt *e = stmt_dotproduct(sql->sa, n->data, m->data);
+			// append the new element to result column
+			rc = stmt_append(sql->sa, rc, e);
+		}
+		// add finished column to result
+		list_append(l, rc);
+	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
 rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
 {
 	// list of all statements (result)

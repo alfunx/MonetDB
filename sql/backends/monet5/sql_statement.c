@@ -911,6 +911,16 @@ stmt_orthogonalize(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
+stmt_dotproduct(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_dotproduct);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
 stmt_join(sql_allocator *sa, stmt *op1, stmt *op2, comp_type cmptype)
 {
 	stmt *s = stmt_create(sa, st_join);

@@ -194,6 +194,7 @@ extern stmt *stmt_matrixsqrt(sql_allocator *sa, stmt *op1, stmt *op2);
 
 extern stmt *stmt_normalize(sql_allocator *sa, stmt *op1);
 extern stmt *stmt_orthogonalize(sql_allocator *sa, stmt *op1, stmt *op2);
+extern stmt *stmt_dotproduct(sql_allocator *sa, stmt *op1, stmt *op2);
 
 extern stmt *stmt_join(sql_allocator *sa, stmt *op1, stmt *op2, comp_type cmptype);
 extern stmt *stmt_join2(sql_allocator *sa, stmt *l, stmt *ra, stmt *rb, int cmp, int swapped);

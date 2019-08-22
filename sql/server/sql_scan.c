@@ -110,6 +110,8 @@ scanner_init_keywords(void)
 	keywords_insert("SQRT", SQRT);
 	keywords_insert("LINSOLVE", LINSOLVE);
 	keywords_insert("QQR", QQR);
+	keywords_insert("T", T);
+	keywords_insert("MUL", MUL);
 
 	keywords_insert("LAG", AGGR);
 	keywords_insert("LEAD", AGGR);

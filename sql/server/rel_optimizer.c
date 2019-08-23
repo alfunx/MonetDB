@@ -241,7 +241,8 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 		rel_properties(sql, gp, rel->l);
 		rel_properties(sql, gp, rel->r);
 		break;
-	case op_matrixsqrt: 
+	case op_matrixsqrt:
+	case op_matrixqqr:
 	case op_project:
 	case op_select:
 	case op_groupby:
@@ -280,7 +281,8 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_except: 
 		break;
 
-	case op_matrixsqrt: 
+	case op_matrixsqrt:
+	case op_matrixqqr:
 	case op_project:
 	case op_groupby:
 	case op_topn:

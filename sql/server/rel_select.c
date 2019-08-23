@@ -65,6 +65,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 			return exps;
 		return rel_table_projections( sql, rel->r, tname, level+1);
 	case op_matrixsqrt:
+	case op_matrixqqr:
 	case op_apply:
 	case op_semi:
 	case op_anti:
@@ -217,6 +218,7 @@ static sql_rel * rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *sq);
 
 static sql_rel * rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
 
 static sql_rel *
 rel_table_optname(mvc *sql, sql_rel *sq, symbol *optname)
@@ -369,6 +371,14 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_MATRIXSQRT:
 	{
 		sql_rel *tq = rel_matrixsqrtquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXQQR:
+	{
+		sql_rel *tq = rel_matrixqqrquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3695,6 +3705,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_anti:
 
 	case op_matrixsqrt:
+	case op_matrixqqr:
 	case op_select:
 	case op_topn:
 	case op_sample:
@@ -5284,6 +5295,54 @@ rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 
 		if (ce)
 			append(rel->rexps, ce);
+	}
+
+	// set number of attributes in the result relation
+	rel->nrcols = t1->nrcols;
+	fprintf(stderr, ">>> [rel_matrixsqrtquery] nrcols: %d\n", rel->nrcols);
+
+	// project necessary attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append_desc_part(sql, t1, rel->lexps, &exps);
+	append_appl_part(sql, rel->lexps, NULL, &exps);
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *en, *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *t1 = table_ref(sql, rel, tab1);
+	if (!t1)
+		return NULL;
+
+	rel = rel_matrixqqr(sql->sa, t1);
+
+	list *lobe = NULL;
+	list *robe = NULL;
+
+	// set orderby for left relation
+	if (tab2) {
+		lobe = rel_order_by(sql, &rel, tab2, 0);
+	}
+
+	rel->lord = lobe;
+	rel->rord = robe;
+
+	// set application part of left relation
+	for (en = tab3->h; en; en = en->next) {
+		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
+
+		if (ce)
+			append(rel->lexps, ce);
 	}
 
 	// set number of attributes in the result relation

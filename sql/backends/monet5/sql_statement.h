@@ -87,7 +87,7 @@ typedef enum stmt_type {
 
 	st_alias,
 
-	st_matrixadd,
+	st_vectoradd,
 	st_matrixsqrt,
 
 	st_dotproduct,
@@ -189,7 +189,7 @@ extern stmt *stmt_tunion(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_tdiff(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_tinter(sql_allocator *sa, stmt *op1, stmt *op2);
 
-extern stmt *stmt_matrixadd(sql_allocator *sa, stmt *op1, stmt *op2);
+extern stmt *stmt_vectoradd(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_matrixsqrt(sql_allocator *sa, stmt *op1, stmt *op2);
 
 extern stmt *stmt_normalize(sql_allocator *sa, stmt *op1);

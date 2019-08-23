@@ -92,8 +92,12 @@ st_type2string(st_type type)
 		ST(join2);
 		ST(joinN);
 
-		ST(matrixadd);
+		ST(vectoradd);
 		ST(matrixsqrt);
+
+		ST(dotproduct);
+		ST(normalize);
+		ST(orthogonalize);
 
 		ST(export);
 		ST(append);
@@ -329,7 +333,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 
 			case st_uselect:
 			case st_uselect2:
-			case st_matrixadd:
+			case st_vectoradd:
 			case st_matrixsqrt:
 				if (s->op1)
 					push(s->op1);
@@ -872,9 +876,9 @@ stmt_tinter(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
-stmt_matrixadd(sql_allocator *sa, stmt *op1, stmt *op2)
+stmt_vectoradd(sql_allocator *sa, stmt *op1, stmt *op2)
 {
-	stmt *s = stmt_create(sa, st_matrixadd);
+	stmt *s = stmt_create(sa, st_vectoradd);
 	s->op1 = op1;
 	s->op2 = op2;
 	s->nrcols = 1;
@@ -1267,7 +1271,7 @@ tail_type(stmt *st)
 	case st_alias:
 	case st_gen_group:
 	case st_order:
-	case st_matrixadd:
+	case st_vectoradd:
 	case st_matrixsqrt:
 		return tail_type(st->op1);
 
@@ -1422,7 +1426,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_tdiff:
 	case st_tinter:
 	case st_convert:
-	case st_matrixadd:
+	case st_vectoradd:
 	case st_matrixsqrt:
 		return column_name(sa, st->op1);
 	case st_Nop:
@@ -1495,7 +1499,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_tdiff:
 	case st_tinter:
 	case st_aggr:
-	case st_matrixadd:
+	case st_vectoradd:
 	case st_matrixsqrt:
 		return table_name(sa, st->op1);
 
@@ -1554,7 +1558,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_convert:
 	case st_Nop:
 	case st_aggr:
-	case st_matrixadd:
+	case st_vectoradd:
 	case st_matrixsqrt:
 		return schema_name(sa, st->op1);
 	case st_alias:

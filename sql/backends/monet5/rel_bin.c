@@ -2139,11 +2139,11 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 		list *lexps = list_dup(rel->lexps, NULL);
 		list *rexps = list_dup(rel->rexps, NULL);
 
-		// create matrixadd stmts, which are referenced from predicates
+		// create vectoradd stmts, which are referenced from predicates
 		for (n = loa->h, m = roa->h, p = lexps->h, q = rexps->h; n && m && p && q; n = n->next, m = m->next, p = p->next, q = q->next) {
 			if (!exp_in_predicate(p->data, rel->exps))
 				continue;
-			stmt *s = stmt_matrixadd(sql->sa, n->data, m->data);
+			stmt *s = stmt_vectoradd(sql->sa, n->data, m->data);
 			list_append(l, s);
 			list_remove_node(loa, n);
 			list_remove_node(roa, m);
@@ -2171,9 +2171,9 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 		list_destroy(lexps);
 	}
 
-	// create matrixadd stmts
+	// create vectoradd stmts
 	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {
-		stmt *s = stmt_matrixadd(sql->sa, n->data, m->data);
+		stmt *s = stmt_vectoradd(sql->sa, n->data, m->data);
 		list_append(l, s);
 	}
 

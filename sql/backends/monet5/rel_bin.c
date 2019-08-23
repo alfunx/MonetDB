@@ -1353,6 +1353,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 		if (rel->r) 
 			args = exps2bin_args(sql, rel->r, args);
 	case op_matrixsqrt:
+	case op_matrixqqr:
 	case op_project:
 	case op_select: 
 	case op_topn: 
@@ -2289,7 +2290,7 @@ rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
 	for (n = loa->h; n; n = n->next) {
 		stmt *s = stmt_normalize(sql->sa, n->data);
 		list_append(l, s);
-		for (m = n->next; m; m->next) {
+		for (m = n->next; m; m = m->next) {
 			stmt *o = stmt_orthogonalize(sql->sa, m->data, s);
 			m->data = o;
 		}
@@ -5135,6 +5136,11 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	case op_matrixsqrt:
 		fprintf(stderr, ">>> [subrel_bin]\n");
 		s = rel2bin_matrixsqrt(sql, rel, refs);
+		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		break;
+	case op_matrixqqr:
+		fprintf(stderr, ">>> [subrel_bin]\n");
+		s = rel2bin_matrixqqr(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]\n");
 		break;
 	}

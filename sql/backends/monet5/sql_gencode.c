@@ -1935,7 +1935,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			renameVariable(mb, getArg(q, 1), "r1_%d", s->nr);
 			break;
 		}
-		case st_matrixadd:{
+		case st_vectoradd:{
 			int  l, r;
 
 			l = _dumpstmt(sql, mb, s->op1);

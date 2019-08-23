@@ -2837,11 +2837,10 @@ joined_table:
 	  append_int(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
 
- |  matrix_ref LINSOLVE BY matrix_ref opt_no_optimize
+ |  matrix_ref LINSOLVE BY matrix_ref
 	{ dlist *l = L();
 	  append_symbol(l, $1);
 	  append_symbol(l, $4);
-	  append_int(l, $5);
 	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
 
  |  SQRT matrix_ref

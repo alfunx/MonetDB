@@ -5259,13 +5259,8 @@ rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	rel = rel_matrixsqrt(sql->sa, t1);
 
-	// set no-optimization flag
-	rel->noopt = n->next->data.i_val;
-
 	list *lobe = NULL;
 	list *robe = NULL;
-	int lnrcols = 0;
-	int rnrcols = 0;
 
 	// set orderby for left relation
 	if (tab2) {
@@ -5276,7 +5271,7 @@ rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 	rel->rord = robe;
 
 	// set application part of left relation
-	for (en = tab3->h; en; en = en->next, lnrcols++) {
+	for (en = tab3->h; en; en = en->next) {
 		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
 
 		if (ce)
@@ -5284,7 +5279,7 @@ rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 	}
 
 	// set gathering attributes
-	for (en = tab4->h; en; en = en->next, lnrcols++) {
+	for (en = tab4->h; en; en = en->next) {
 		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
 
 		if (ce)

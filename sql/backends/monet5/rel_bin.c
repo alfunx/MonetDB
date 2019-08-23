@@ -2289,7 +2289,7 @@ rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
 	for (n = loa->h; n; n = n->next) {
 		stmt *s = stmt_normalize(sql->sa, n->data);
 		list_append(l, s);
-		for (m = n->next; m; m->next) {
+		for (m = n->next; m; m = m->next) {
 			stmt *o = stmt_orthogonalize(sql->sa, m->data, s);
 			m->data = o;
 		}

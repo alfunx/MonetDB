@@ -2850,7 +2850,7 @@ joined_table:
 	  append_symbol(l, $1);
 	  append_symbol(l, $4);
 	  append_int(l, $5);
-	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
+	  $$ = _symbol_create_list( SQL_MATRIXTRANSMUL, l); }
 
  |  SQRT matrix_ref
 	{ dlist *l = L();

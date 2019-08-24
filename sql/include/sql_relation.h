@@ -157,6 +157,7 @@ typedef enum operator_type {
 	op_topn,
 	op_sample,
 	op_matrixadd,
+	op_matrixtransmul,
 	op_matrixsqrt,
 	op_matrixqqr,
 	op_insert, 	/* insert(l=table, r insert expressions) */ 
@@ -225,6 +226,8 @@ typedef enum operator_type {
 	(op == op_sample)
 #define is_matrixadd(op) \
 	(op == op_matrixadd)
+#define is_matrixtransmul(op) \
+	(op == op_matrixtransmul)
 #define is_matrixsqrt(op) \
 	(op == op_matrixsqrt)
 #define is_matrixqqr(op) \

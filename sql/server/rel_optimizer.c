@@ -230,6 +230,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_right: 
 	case op_full: 
 	case op_matrixadd: 
+	case op_matrixtransmul: 
 
 	case op_apply: 
 	case op_semi: 
@@ -271,6 +272,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_right: 
 	case op_full: 
 	case op_matrixadd: 
+	case op_matrixtransmul: 
 
 	case op_apply: 
 	case op_semi: 

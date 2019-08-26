@@ -2353,7 +2353,7 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	for (m = roa->h; m; m = m->next) {
 		stmt *s = stmt_dotproduct(sql->sa, m->data, loa->h->data);
 		for (n = loa->h->next; n; n = n->next) {
-			stmt *e = stmt_dotproduct(sql->sa, m->data, loa->h->data);
+			stmt *e = stmt_dotproduct(sql->sa, m->data, n->data);
 			s = stmt_append(sql->sa, s, e);
 		}
 		list_append(l, s);

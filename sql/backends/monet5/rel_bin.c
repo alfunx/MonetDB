@@ -1339,6 +1339,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_full: 
 	case op_matrixadd:
 	case op_matrixtransmul:
+	case op_matrixrqr:
 
 	case op_apply: 
 	case op_semi: 
@@ -5208,6 +5209,11 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	case op_matrixqqr:
 		fprintf(stderr, ">>> [subrel_bin]\n");
 		s = rel2bin_matrixqqr(sql, rel, refs);
+		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		break;
+	case op_matrixrqr:
+		fprintf(stderr, ">>> [subrel_bin]\n");
+		s = rel2bin_matrixrqr(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]\n");
 		break;
 	}

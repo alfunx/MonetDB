@@ -565,6 +565,7 @@ int yydebug=1;
 %token SQRT
 %token LINSOLVE
 %token QQR
+%token RQR
 %token T MUL
 
 /* operators */
@@ -2861,6 +2862,12 @@ joined_table:
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  $$ = _symbol_create_list( SQL_MATRIXQQR, l); }
+
+ |  RQR matrix_ref USING matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_symbol(l, $4);
+	  $$ = _symbol_create_list( SQL_MATRIXRQR, l); }
 
  |  table_ref UNIONJOIN table_ref join_spec
 	{ dlist *l = L();

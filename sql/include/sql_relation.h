@@ -160,6 +160,7 @@ typedef enum operator_type {
 	op_matrixtransmul,
 	op_matrixsqrt,
 	op_matrixqqr,
+	op_matrixrqr,
 	op_insert, 	/* insert(l=table, r insert expressions) */ 
 	op_update, 	/* update(l=table, r update expressions) */
 	op_delete 	/* delete(l=table, r delete expression) */
@@ -232,6 +233,8 @@ typedef enum operator_type {
 	(op == op_matrixsqrt)
 #define is_matrixqqr(op) \
 	(op == op_matrixqqr)
+#define is_matrixrqr(op) \
+	(op == op_matrixrqr)
 
 /* NO NIL semantics of aggr operations */
 #define need_no_nil(e) \

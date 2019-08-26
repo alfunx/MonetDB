@@ -2846,11 +2846,10 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
 
- |  matrix_ref T MUL matrix_ref opt_no_optimize
+ |  matrix_ref T MUL matrix_ref
 	{ dlist *l = L();
 	  append_symbol(l, $1);
 	  append_symbol(l, $4);
-	  append_int(l, $5);
 	  $$ = _symbol_create_list( SQL_MATRIXTRANSMUL, l); }
 
  |  SQRT matrix_ref

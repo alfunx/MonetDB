@@ -61,6 +61,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_full:
 	case op_matrixadd:
 	case op_matrixtransmul:
+	case op_matrixrqr:
 		exps = rel_table_projections( sql, rel->l, tname, level+1);
 		if (exps)
 			return exps;

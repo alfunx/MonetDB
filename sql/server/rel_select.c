@@ -5121,9 +5121,6 @@ rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *q)
 static list *
 append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
 {
-	if (!*outexps)
-		return NULL;
-
 	list *exps = rel_projections(sql, t, NULL, 1, 0);
 	if (!exps)
 		return NULL;
@@ -5136,21 +5133,21 @@ append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
 		const char *nm = te->name;
 		sql_exp *e = exps_bind_column(ap, nm, NULL);
 
-		if (!e) {
+		if (outexps && !e) {
 			fprintf(stderr, ">>> [append_desc_part] column: %s.%s\n", rnm, nm);
 			append(*outexps, te);
 		}
 	}
 
-	return *outexps;
+	if (outexps)
+		return *outexps;
+	else
+		return NULL;
 }
 
 static list *
 append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 {
-	if (!*outexps)
-		return NULL;
-
 	int nr = ++sql->label;
 	char name[16], *rnm;
 	rnm = number2name(name, 16, nr);
@@ -5164,7 +5161,8 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 			fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
 
 			exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
-			append(*outexps, te);
+			if (outexps)
+				append(*outexps, te);
 		}
 	} else {
 		for (n = apl->h; n; n = n->next) {
@@ -5173,11 +5171,15 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 			fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
 
 			exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
-			append(*outexps, te);
+			if (outexps)
+				append(*outexps, te);
 		}
 	}
 
-	return *outexps;
+	if (outexps)
+		return *outexps;
+	else
+		return NULL;
 }
 
 static sql_rel *

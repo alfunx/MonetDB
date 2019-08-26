@@ -118,6 +118,7 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 		break;
 	case op_matrixsqrt:
 	case op_matrixqqr:
+	case op_matrixrqr:
 	case op_matrixadd:
 	case op_matrixtransmul:
 		rel->exps = (i->exps)?list_dup(i->exps, (fdup)NULL):NULL;
@@ -235,6 +236,7 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 
 	case op_matrixsqrt:
 	case op_matrixqqr:
+	case op_matrixrqr:
 	case op_matrixadd:
 	case op_matrixtransmul:
 		// TODO: matrixadd
@@ -466,6 +468,22 @@ rel_matrixqqr(sql_allocator *sa, sql_rel *l)
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
 	rel->op = op_matrixqqr;
+	rel->card = CARD_MULTI;
+	rel->nrcols = l->nrcols;
+	return rel;
+}
+
+sql_rel *
+rel_matrixrqr(sql_allocator *sa, sql_rel *l, sql_rel *r)
+{
+	sql_rel *rel = rel_create(sa);
+
+	rel->l = l;
+	rel->r = r;
+	rel->exps = new_exp_list(sa);
+	rel->lexps = new_exp_list(sa);
+	rel->rexps = new_exp_list(sa);
+	rel->op = op_matrixrqr;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
 	return rel;
@@ -898,6 +916,7 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 
 	case op_matrixadd:
 	case op_matrixtransmul:
+	case op_matrixrqr:
 		// TODO: matrixadd
 		exps = rel_projections(sql, rel->l, tname, settname, intern);
 		rexps = rel_projections(sql, rel->r, tname, settname, intern);
@@ -937,6 +956,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_sample:
 	case op_matrixsqrt:
 	case op_matrixqqr:
+	case op_matrixrqr:
 	case op_matrixadd:
 	case op_matrixtransmul:
 		found = rel_bind_path_(rel->l, e, path);

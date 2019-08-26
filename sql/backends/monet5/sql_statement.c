@@ -335,6 +335,9 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_uselect2:
 			case st_vectoradd:
 			case st_matrixsqrt:
+			case st_dotproduct:
+			case st_normalize:
+			case st_orthogonalize:
 				if (s->op1)
 					push(s->op1);
 				if (s->op2)
@@ -1273,6 +1276,9 @@ tail_type(stmt *st)
 	case st_order:
 	case st_vectoradd:
 	case st_matrixsqrt:
+	case st_dotproduct:
+	case st_normalize:
+	case st_orthogonalize:
 		return tail_type(st->op1);
 
 	case st_list:
@@ -1428,6 +1434,9 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_convert:
 	case st_vectoradd:
 	case st_matrixsqrt:
+	case st_dotproduct:
+	case st_normalize:
+	case st_orthogonalize:
 		return column_name(sa, st->op1);
 	case st_Nop:
 	{
@@ -1501,6 +1510,9 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_aggr:
 	case st_vectoradd:
 	case st_matrixsqrt:
+	case st_dotproduct:
+	case st_normalize:
+	case st_orthogonalize:
 		return table_name(sa, st->op1);
 
 	case st_table_clear:
@@ -1560,6 +1572,9 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_aggr:
 	case st_vectoradd:
 	case st_matrixsqrt:
+	case st_dotproduct:
+	case st_normalize:
+	case st_orthogonalize:
 		return schema_name(sa, st->op1);
 	case st_alias:
 		/* there are no schema aliases, ie look into the base column */

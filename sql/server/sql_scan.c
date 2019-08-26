@@ -94,6 +94,8 @@ scanner_init_keywords(void)
 
 	keywords_insert("ALTER", ALTER);
 	keywords_insert("ADD", ADD);
+	keywords_insert("T", T);
+	keywords_insert("MUL", MUL);
 	keywords_insert("AND", AND);
 	keywords_insert("MEDIAN", AGGR);
 	keywords_insert("CORR", AGGR2);
@@ -110,6 +112,8 @@ scanner_init_keywords(void)
 	keywords_insert("SQRT", SQRT);
 	keywords_insert("LINSOLVE", LINSOLVE);
 	keywords_insert("QQR", QQR);
+	keywords_insert("T", T);
+	keywords_insert("MUL", MUL);
 
 	keywords_insert("LAG", AGGR);
 	keywords_insert("LEAD", AGGR);

@@ -2196,7 +2196,7 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	list *loa, *roa;
 
 	// iterators
-	node *n, *m;
+	node *n, *m, *o;
 
 	stmt *left = NULL;
 	stmt *right = NULL;
@@ -2228,17 +2228,20 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsr, ra, &roa);
 
 	// create matrixmul stmts
-	for (m = roa->h; m; m = m->next) {
+	for (m = roa->h, o = loa->h; m && o; m = m->next, o = o->next) {
 		// compute first element of new result column
-		stmt *rc = stmt_dotproduct(sql->sa, loa->h->data, m->data);
+		stmt *s = stmt_dotproduct(sql->sa, loa->h->data, m->data);
+		stmt *t = o->data;
+		s = stmt_alias(sql->sa, s, t->tname, t->cname);
+		s = const_column(sql->sa, s);
 		for (n = loa->h->next; n; n = n->next) {
 			// compute 2nd and following elements
 			stmt *e = stmt_dotproduct(sql->sa, n->data, m->data);
 			// append the new element to result column
-			rc = stmt_append(sql->sa, rc, e);
+			s = stmt_append(sql->sa, s, e);
 		}
 		// add finished column to result
-		list_append(l, rc);
+		list_append(l, s);
 	}
 
 	return stmt_list(sql->sa, l);
@@ -2308,7 +2311,7 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	list *loa, *roa;
 
 	// iterators
-	node *n, *m;
+	node *n, *m, *o;
 
 	stmt *left = NULL;
 	stmt *right = NULL;
@@ -2340,10 +2343,13 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsr, ra, &roa);
 
 	// create rqr stmts
-	for (m = roa->h; m; m = m->next) {
-		stmt *s = stmt_dotproduct(sql->sa, m->data, loa->h->data);
+	for (m = roa->h, o = loa->h; m && o; m = m->next, o = o->next) {
+		stmt *s = stmt_dotproduct(sql->sa, loa->h->data, m->data);
+		stmt *t = o->data;
+		s = stmt_alias(sql->sa, s, t->tname, t->cname);
+		s = const_column(sql->sa, s);
 		for (n = loa->h->next; n; n = n->next) {
-			stmt *e = stmt_dotproduct(sql->sa, m->data, n->data);
+			stmt *e = stmt_dotproduct(sql->sa, n->data, m->data);
 			s = stmt_append(sql->sa, s, e);
 		}
 		list_append(l, s);

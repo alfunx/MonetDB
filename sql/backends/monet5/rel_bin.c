@@ -2227,8 +2227,6 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, la, &loa);
 	align_by_ids(sql, orderby_idsr, ra, &roa);
 
-	assert(loa->h && roa->h);
-
 	// create matrixmul stmts
 	for (m = roa->h; m; m = m->next) {
 		// compute first element of new result column

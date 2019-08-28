@@ -5344,13 +5344,13 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 	}
 
 	// set number of attributes in the result relation
-	rel->nrcols = t1->nrcols + t2->nrcols - lnrcols;
+	rel->nrcols = lnrcols;
 	fprintf(stderr, ">>> [rel_matrixtransmulquery] nrcols: %d\n", rel->nrcols);
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
-	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_desc_part(sql, t2, rel->rexps, &exps);
+	append_desc_part(sql, t1, rel->lexps, NULL);
+	append_desc_part(sql, t2, rel->rexps, NULL);
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
@@ -5431,7 +5431,6 @@ rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
 	rel = rel_matrixqqr(sql->sa, t1);
 
 	list *lobe = NULL;
-	list *robe = NULL;
 
 	// set orderby for left relation
 	if (tab2) {
@@ -5439,7 +5438,6 @@ rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
 	}
 
 	rel->lord = lobe;
-	rel->rord = robe;
 
 	// set application part of left relation
 	for (en = tab3->h; en; en = en->next) {
@@ -5451,7 +5449,7 @@ rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// set number of attributes in the result relation
 	rel->nrcols = t1->nrcols;
-	fprintf(stderr, ">>> [rel_matrixsqrtquery] nrcols: %d\n", rel->nrcols);
+	fprintf(stderr, ">>> [rel_matrixqqrquery] nrcols: %d\n", rel->nrcols);
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
@@ -5529,14 +5527,13 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 	}
 
 	// set number of attributes in the result relation
-	rel->nrcols = t1->nrcols + t2->nrcols - lnrcols;
 	rel->nrcols = lnrcols;
 	fprintf(stderr, ">>> [rel_matrixrqrquery] nrcols: %d\n", rel->nrcols);
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
-	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_desc_part(sql, t2, rel->rexps, &exps);
+	append_desc_part(sql, t1, rel->lexps, NULL);
+	append_desc_part(sql, t2, rel->rexps, NULL);
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;

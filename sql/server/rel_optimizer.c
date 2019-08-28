@@ -7778,6 +7778,9 @@ rewrite(mvc *sql, sql_rel *rel, rewrite_fptr rewriter, int *has_changes)
 	case op_left: 
 	case op_right: 
 	case op_full: 
+	case op_matrixadd: 
+	case op_matrixtransmul: 
+	case op_matrixrqr: 
 
 	case op_apply: 
 	case op_semi: 
@@ -7789,6 +7792,8 @@ rewrite(mvc *sql, sql_rel *rel, rewrite_fptr rewriter, int *has_changes)
 		rel->l = rewrite(sql, rel->l, rewriter, has_changes);
 		rel->r = rewrite(sql, rel->r, rewriter, has_changes);
 		break;
+	case op_matrixsqrt:
+	case op_matrixqqr:
 	case op_project:
 	case op_select: 
 	case op_groupby: 

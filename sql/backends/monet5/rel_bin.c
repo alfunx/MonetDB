@@ -2190,7 +2190,7 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	list *l;
 
 	// application part and description part columns
-	list *la, *ra, *ld, *rd;
+	list *la, *ra;
 
 	// ordered application part columns (desc part is directly appended to l)
 	list *loa, *roa;
@@ -2211,23 +2211,19 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	l = sa_list(sql->sa);
 	la = sa_list(sql->sa);
 	ra = sa_list(sql->sa);
-	ld = sa_list(sql->sa);
-	rd = sa_list(sql->sa);
 	loa = sa_list(sql->sa);
 	roa = sa_list(sql->sa);
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, NULL);
+	split_exps_appl_desc(sql, right, rel->rexps, &ra, NULL);
 
 	// generate the orderby ids
 	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsr, rd, &l);
 	align_by_ids(sql, orderby_idsl, la, &loa);
 	align_by_ids(sql, orderby_idsr, ra, &roa);
 
@@ -2308,7 +2304,7 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	list *l;
 
 	// application part and description part columns
-	list *la, *ra, *ld, *rd;
+	list *la, *ra;
 
 	// ordered application part columns (desc part is directly appended to l)
 	list *loa, *roa;
@@ -2329,23 +2325,19 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	l = sa_list(sql->sa);
 	la = sa_list(sql->sa);
 	ra = sa_list(sql->sa);
-	ld = sa_list(sql->sa);
-	rd = sa_list(sql->sa);
 	loa = sa_list(sql->sa);
 	roa = sa_list(sql->sa);
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, NULL);
+	split_exps_appl_desc(sql, right, rel->rexps, &ra, NULL);
 
 	// generate the orderby ids
 	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsr, rd, &l);
 	align_by_ids(sql, orderby_idsl, la, &loa);
 	align_by_ids(sql, orderby_idsr, ra, &roa);
 

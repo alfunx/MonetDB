@@ -171,6 +171,7 @@ extern stmt *stmt_atom(sql_allocator *sa, atom *op1);
 extern stmt *stmt_atom_string(sql_allocator *sa, const char *s);
 extern stmt *stmt_atom_string_nil(sql_allocator *sa);
 extern stmt *stmt_atom_int(sql_allocator *sa, int i);
+extern stmt *stmt_atom_dbl(sql_allocator *sa, dbl i);
 extern stmt *stmt_atom_wrd(sql_allocator *sa, wrd i);
 extern stmt *stmt_atom_wrd_nil(sql_allocator *sa);
 extern stmt *stmt_bool(sql_allocator *sa, int b);

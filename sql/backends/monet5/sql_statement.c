@@ -162,6 +162,15 @@ stmt_atom_int(sql_allocator *sa, int i)
 }
 
 stmt *
+stmt_atom_dbl(sql_allocator *sa, dbl i)
+{
+	sql_subtype t;
+
+	sql_find_subtype(&t, "double", 64, 0);
+	return stmt_atom(sa, atom_float(sa, &t, i));
+}
+
+stmt *
 stmt_atom_wrd(sql_allocator *sa, wrd i)
 {
 	sql_subtype t;

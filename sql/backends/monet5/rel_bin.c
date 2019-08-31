@@ -1144,6 +1144,34 @@ stmt_rename(mvc *sql, sql_rel *rel, sql_exp *exp, stmt *s )
 	return s;
 }
 
+list *
+identity_matrix(mvc *sql, list *orig)
+{
+	list *l = sa_list(sql->sa);
+	node *n;
+
+	const int len = list_length(orig);
+	int i, j;
+
+	for (n = orig->h, j = 0; n; n = n->next, j++) {
+		stmt *e = stmt_atom_dbl(sql->sa, j == 0 ? 1.0 : 0.0);
+		stmt *t = n->data;
+
+		stmt *s = stmt_temp(sql->sa, tail_type(e));
+		s = stmt_alias(sql->sa, s, t->tname, t->cname);
+		s = stmt_append(sql->sa, s, e);
+
+		for (i = 1; i < len; i++) {
+			e = stmt_atom_dbl(sql->sa, j == i ? 1.0 : 0.0);
+			s = stmt_append(sql->sa, s, e);
+		}
+
+		list_append(l, s);
+	}
+
+	return l;
+}
+
 static stmt *
 rel2bin_sql_table(mvc *sql, sql_table *t) 
 {

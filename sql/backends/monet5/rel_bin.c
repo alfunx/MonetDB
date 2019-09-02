@@ -2152,6 +2152,9 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	// iterators
 	node *n, *m, *p, *q;
 
+	// temporary statement
+	stmt *s;
+
 	stmt *left = NULL;
 	stmt *right = NULL;
 	stmt *orderby_idsl = NULL;
@@ -2224,7 +2227,7 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 
 	// create vectoradd stmts
 	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {
-		stmt *s = stmt_vectoradd(sql->sa, n->data, m->data);
+		s = stmt_vectoradd(sql->sa, n->data, m->data);
 		list_append(l, s);
 	}
 
@@ -2316,6 +2319,9 @@ rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
 	// iterators
 	node *n, *m;
 
+	// temporary statements
+	stmt *s, *t;
+
 	stmt *left = NULL;
 	stmt *orderby_idsl = NULL;
 
@@ -2341,11 +2347,11 @@ rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
 
 	// create qqr stmts
 	for (n = loa->h; n; n = n->next) {
-		stmt *s = stmt_normalize(sql->sa, n->data);
+		s = stmt_normalize(sql->sa, n->data);
 		list_append(l, s);
 		for (m = n->next; m; m = m->next) {
-			stmt *o = stmt_orthogonalize(sql->sa, m->data, s);
-			m->data = o;
+			t = stmt_orthogonalize(sql->sa, m->data, s);
+			m->data = t;
 		}
 	}
 
@@ -2444,6 +2450,9 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 	// iterators
 	node *n, *m, *p, *q;
 
+	// temporary statement
+	stmt *s;
+
 	stmt *left = NULL;
 	stmt *orderby_idsl = NULL;
 
@@ -2473,7 +2482,7 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 
 	// create matrixsqrt stmts
 	for (n = loa->h, m = log->h; n && m; n = n->next, m = m->next) {
-		stmt *s = stmt_matrixsqrt(sql->sa, n->data, m->data);
+		s = stmt_matrixsqrt(sql->sa, n->data, m->data);
 		list_append(l, s);
 	}
 

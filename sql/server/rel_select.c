@@ -5346,6 +5346,7 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
+	append(exps, exp_column(sql->sa, NULL, "schema", NULL, 0, 0, 0));
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
@@ -5527,6 +5528,7 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
+	append(exps, exp_column(sql->sa, NULL, "schema", NULL, 0, 0, 0));
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
@@ -5581,6 +5583,7 @@ rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
+	append(exps, exp_column(sql->sa, NULL, "schema", NULL, 0, 0, 0));
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
 	rel = rel_project(sql->sa, rel, exps);
 

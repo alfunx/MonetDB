@@ -1144,6 +1144,26 @@ stmt_rename(mvc *sql, sql_rel *rel, sql_exp *exp, stmt *s )
 	return s;
 }
 
+stmt *
+stmt_schema(mvc *sql, list *orig)
+{
+	node *n;
+	stmt *t = orig->h->data;
+	stmt *e = stmt_atom_string(sql->sa, t->cname);
+	stmt *s = stmt_temp(sql->sa, tail_type(e));
+	s = stmt_append(sql->sa, s, e);
+
+	if (orig->h->next) {
+		for (n = orig->h->next; n; n = n->next) {
+			t = n->data;
+			e = stmt_atom_string(sql->sa, t->cname);
+			s = stmt_append(sql->sa, s, e);
+		}
+	}
+
+	return stmt_alias(sql->sa, s, t->tname, "schema");
+}
+
 list *
 identity_matrix(mvc *sql, list *orig)
 {
@@ -2226,6 +2246,9 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	// iterators
 	node *n, *m, *o;
 
+	// temporary statements
+	stmt *s, *t, *e;
+
 	stmt *left = NULL;
 	stmt *right = NULL;
 	stmt *orderby_idsl = NULL;
@@ -2258,13 +2281,16 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	// zero stmt
 	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
 
+	// append schema stmt
+	list_append(l, stmt_schema(sql, roa));
+
 	// create matrixmul stmts
 	for (m = roa->h, o = loa->h; m && o; m = m->next, o = o->next) {
-		stmt *t = o->data;
-		stmt *s = stmt_temp(sql->sa, tail_type(zero));
+		t = o->data;
+		s = stmt_temp(sql->sa, tail_type(zero));
 
 		for (n = loa->h; n; n = n->next) {
-			stmt *e = stmt_dotproduct(sql->sa, n->data, m->data);
+			e = stmt_dotproduct(sql->sa, n->data, m->data);
 			s = stmt_append(sql->sa, s, e);
 		}
 
@@ -2341,6 +2367,9 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	// iterators
 	node *n, *m, *o;
 
+	// temporary statements
+	stmt *s, *t, *e;
+
 	// counters
 	int i, j;
 
@@ -2376,10 +2405,13 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	// zero stmt
 	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
 
+	// append schema stmt
+	list_append(l, stmt_schema(sql, loa));
+
 	// create rqr stmts
 	for (m = roa->h, o = loa->h, i = 0; m && o; m = m->next, o = o->next, i++) {
-		stmt *t = o->data;
-		stmt *s = stmt_temp(sql->sa, tail_type(zero));
+		t = o->data;
+		s = stmt_temp(sql->sa, tail_type(zero));
 
 		for (n = loa->h, j = 0; n && j < i; n = n->next, j++) {
 			s = stmt_append(sql->sa, s, zero);

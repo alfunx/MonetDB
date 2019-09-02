@@ -1931,16 +1931,15 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 	}
 }
 
-static stmt *
-gen_orderby_ids(mvc *sql, stmt *s, list *ord)
+static void
+gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
 {
 	if (!ord)
-		return NULL;
+		return;
 
 	node *n;
 	list *p;
 	stmt *psub = NULL;
-	stmt *orderby_ids = NULL;
 	stmt *orderby_grp = NULL;
 
 	p = sa_list(sql->sa);
@@ -1957,17 +1956,17 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord)
 
 		if (!orderbycolstmt) {
 			assert(0);
-			return NULL;
+			return;
 		}
 
 		/* single values don't need sorting */
 		if (orderbycolstmt->nrcols == 0) {
-			orderby_ids = NULL;
+			*orderby_ids = NULL;
 			break;
 		}
 
-		if (orderby_ids)
-			orderby = stmt_reorder(sql->sa, orderbycolstmt, is_ascending(orderbycole), orderby_ids, orderby_grp);
+		if (*orderby_ids)
+			orderby = stmt_reorder(sql->sa, orderbycolstmt, is_ascending(orderbycole), *orderby_ids, orderby_grp);
 		else
 			orderby = stmt_order(sql->sa, orderbycolstmt, is_ascending(orderbycole));
 
@@ -1975,10 +1974,9 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord)
 		const char *cname = column_name(sql->sa, orderbycolstmt);
 		fprintf(stderr, ">>> [gen_orderby_ids] ordering: %s.%s\n", tname, cname);
 
-		orderby_ids = stmt_result(sql->sa, orderby, 1);
+		*orderby_ids = stmt_result(sql->sa, orderby, 1);
 		orderby_grp = stmt_result(sql->sa, orderby, 2);
 	}
-	return orderby_ids;
 }
 
 static void
@@ -2158,8 +2156,8 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
 
 	// generate the orderby ids
-	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
-	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
 
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, ld, &l);
@@ -2250,8 +2248,8 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	split_exps_appl_desc(sql, right, rel->rexps, &ra, NULL);
 
 	// generate the orderby ids
-	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
-	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
 
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, la, &loa);
@@ -2309,7 +2307,7 @@ rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
 	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
 
 	// generate the orderby ids
-	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
 
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, ld, &l);
@@ -2368,8 +2366,8 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	split_exps_appl_desc(sql, right, rel->rexps, &ra, NULL);
 
 	// generate the orderby ids
-	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
-	orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
 
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, la, &loa);
@@ -2434,7 +2432,7 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 	split_exps_appl_desc(sql, left, rel->rexps, &lg, NULL);
 
 	// generate the orderby ids
-	orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
 
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, ld, &l);

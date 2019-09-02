@@ -5129,12 +5129,12 @@ rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *q)
 	return rel;
 }
 
-static list *
+static void
 append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
 {
 	list *exps = rel_projections(sql, t, NULL, 1, 0);
 	if (!exps)
-		return NULL;
+		return;
 
 	node *n;
 
@@ -5144,19 +5144,14 @@ append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
 		const char *nm = te->name;
 		sql_exp *e = exps_bind_column(ap, nm, NULL);
 
-		if (outexps && !e) {
+		if (!e) {
 			fprintf(stderr, ">>> [append_desc_part] column: %s.%s\n", rnm, nm);
 			append(*outexps, te);
 		}
 	}
-
-	if (outexps)
-		return *outexps;
-	else
-		return NULL;
 }
 
-static list *
+static void
 append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 {
 	int nr = ++sql->label;
@@ -5172,8 +5167,7 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 			fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
 
 			exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
-			if (outexps)
-				append(*outexps, te);
+			append(*outexps, te);
 		}
 	} else {
 		for (n = apl->h; n; n = n->next) {
@@ -5182,15 +5176,9 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 			fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
 
 			exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
-			if (outexps)
-				append(*outexps, te);
+			append(*outexps, te);
 		}
 	}
-
-	if (outexps)
-		return *outexps;
-	else
-		return NULL;
 }
 
 static sql_rel *
@@ -5349,8 +5337,6 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
-	append_desc_part(sql, t1, rel->lexps, NULL);
-	append_desc_part(sql, t2, rel->rexps, NULL);
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
@@ -5532,8 +5518,6 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
-	append_desc_part(sql, t1, rel->lexps, NULL);
-	append_desc_part(sql, t2, rel->rexps, NULL);
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;

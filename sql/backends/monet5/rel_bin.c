@@ -2255,20 +2255,20 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, la, &loa);
 	align_by_ids(sql, orderby_idsr, ra, &roa);
 
+	// zero stmt
+	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
+
 	// create matrixmul stmts
 	for (m = roa->h, o = loa->h; m && o; m = m->next, o = o->next) {
-		// compute first element of new result column
-		stmt *s = stmt_dotproduct(sql->sa, loa->h->data, m->data);
 		stmt *t = o->data;
-		s = stmt_alias(sql->sa, s, t->tname, t->cname);
-		s = const_column(sql->sa, s);
-		for (n = loa->h->next; n; n = n->next) {
-			// compute 2nd and following elements
+		stmt *s = stmt_temp(sql->sa, tail_type(zero));
+
+		for (n = loa->h; n; n = n->next) {
 			stmt *e = stmt_dotproduct(sql->sa, n->data, m->data);
-			// append the new element to result column
 			s = stmt_append(sql->sa, s, e);
 		}
-		// add finished column to result
+
+		s = stmt_alias(sql->sa, s, t->tname, t->cname);
 		list_append(l, s);
 	}
 

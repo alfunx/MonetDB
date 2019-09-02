@@ -2862,6 +2862,11 @@ joined_table:
 	  append_symbol(l, $2);
 	  $$ = _symbol_create_list( SQL_MATRIXQQR, l); }
 
+ |  RQR matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  $$ = _symbol_create_list( SQL_MATRIXRQR_SIMPLE, l); }
+
  |  RQR matrix_ref USING matrix_ref
 	{ dlist *l = L();
 	  append_symbol(l, $2);

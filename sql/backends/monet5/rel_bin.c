@@ -1153,19 +1153,21 @@ identity_matrix(mvc *sql, list *orig)
 	const int len = list_length(orig);
 	int i, j;
 
+	// zero & one stmts
+	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
+	stmt *one = stmt_atom_dbl(sql->sa, 1.0);
+
 	for (n = orig->h, j = 0; n; n = n->next, j++) {
-		stmt *e = stmt_atom_dbl(sql->sa, j == 0 ? 1.0 : 0.0);
 		stmt *t = n->data;
 
-		stmt *s = stmt_temp(sql->sa, tail_type(e));
-		s = stmt_alias(sql->sa, s, t->tname, t->cname);
-		s = stmt_append(sql->sa, s, e);
+		stmt *s = stmt_temp(sql->sa, tail_type(zero));
+		s = stmt_append(sql->sa, s, j == 0 ? one : zero);
 
 		for (i = 1; i < len; i++) {
-			e = stmt_atom_dbl(sql->sa, j == i ? 1.0 : 0.0);
-			s = stmt_append(sql->sa, s, e);
+			s = stmt_append(sql->sa, s, j == i ? one : zero);
 		}
 
+		s = stmt_alias(sql->sa, s, t->tname, t->cname);
 		list_append(l, s);
 	}
 

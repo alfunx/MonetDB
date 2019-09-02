@@ -2341,6 +2341,9 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	// iterators
 	node *n, *m, *o;
 
+	// counters
+	int i, j;
+
 	stmt *left = NULL;
 	stmt *right = NULL;
 	stmt *orderby_idsl = NULL;
@@ -2370,16 +2373,24 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, la, &loa);
 	align_by_ids(sql, orderby_idsr, ra, &roa);
 
+	// zero stmt
+	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
+
 	// create rqr stmts
-	for (m = roa->h, o = loa->h; m && o; m = m->next, o = o->next) {
-		stmt *s = stmt_dotproduct(sql->sa, loa->h->data, m->data);
+	for (m = roa->h, o = loa->h, i = 0; m && o; m = m->next, o = o->next, i++) {
 		stmt *t = o->data;
-		s = stmt_alias(sql->sa, s, t->tname, t->cname);
-		s = const_column(sql->sa, s);
-		for (n = loa->h->next; n; n = n->next) {
+		stmt *s = stmt_temp(sql->sa, tail_type(zero));
+
+		for (n = loa->h, j = 0; n && j < i; n = n->next, j++) {
+			s = stmt_append(sql->sa, s, zero);
+		}
+
+		for (; n; n = n->next) {
 			stmt *e = stmt_dotproduct(sql->sa, n->data, m->data);
 			s = stmt_append(sql->sa, s, e);
 		}
+
+		s = stmt_alias(sql->sa, s, t->tname, t->cname);
 		list_append(l, s);
 	}
 

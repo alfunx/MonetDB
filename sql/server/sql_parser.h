@@ -177,6 +177,7 @@ typedef enum tokens {
 	SQL_MATRIXSQRT,
 	SQL_MATRIXQQR,
 	SQL_MATRIXRQR,
+	SQL_MATRIXRQR_SIMPLE,
 	SQL_GATHER,
 } tokens;
 

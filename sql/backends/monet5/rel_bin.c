@@ -1159,15 +1159,13 @@ identity_matrix(mvc *sql, list *orig)
 
 	for (n = orig->h, j = 0; n; n = n->next, j++) {
 		stmt *t = n->data;
-
 		stmt *s = stmt_temp(sql->sa, tail_type(zero));
-		s = stmt_append(sql->sa, s, j == 0 ? one : zero);
 
-		for (i = 1; i < len; i++) {
+		for (i = 0; i < len; i++) {
 			s = stmt_append(sql->sa, s, j == i ? one : zero);
 		}
 
-		s = stmt_alias(sql->sa, s, t->tname, t->cname);
+		s = stmt_alias(sql->sa, s, table_name(sql->sa, t), column_name(sql->sa, t));
 		list_append(l, s);
 	}
 
@@ -2268,7 +2266,7 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 			s = stmt_append(sql->sa, s, e);
 		}
 
-		s = stmt_alias(sql->sa, s, t->tname, t->cname);
+		s = stmt_alias(sql->sa, s, table_name(sql->sa, t), column_name(sql->sa, t));
 		list_append(l, s);
 	}
 
@@ -2390,7 +2388,7 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 			s = stmt_append(sql->sa, s, e);
 		}
 
-		s = stmt_alias(sql->sa, s, t->tname, t->cname);
+		s = stmt_alias(sql->sa, s, table_name(sql->sa, t), column_name(sql->sa, t));
 		list_append(l, s);
 	}
 

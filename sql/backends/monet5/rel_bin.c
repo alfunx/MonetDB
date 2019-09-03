@@ -1190,6 +1190,19 @@ identity_matrix(mvc *sql, list *orig)
 	return l;
 }
 
+list *
+list_reverse(mvc *sql, list *orig)
+{
+	list *l = sa_list(sql->sa);
+	node *n;
+
+	for (n = orig->h; n; n = n->next) {
+		list_prepend(l, n->data);
+	}
+
+	return l;
+}
+
 static stmt *
 rel2bin_sql_table(mvc *sql, sql_table *t) 
 {

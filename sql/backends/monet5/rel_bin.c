@@ -1148,20 +1148,18 @@ stmt *
 stmt_schema(mvc *sql, list *orig)
 {
 	node *n;
-	stmt *t = orig->h->data;
-	stmt *e = stmt_atom_string(sql->sa, t->cname);
-	stmt *s = stmt_temp(sql->sa, tail_type(e));
-	s = stmt_append(sql->sa, s, e);
+	stmt *t = stmt_atom_string(sql->sa, column_name(sql->sa, orig->h->data));
+	stmt *s = stmt_temp(sql->sa, tail_type(t));
+	s = stmt_append(sql->sa, s, t);
 
 	if (orig->h->next) {
 		for (n = orig->h->next; n; n = n->next) {
-			t = n->data;
-			e = stmt_atom_string(sql->sa, t->cname);
-			s = stmt_append(sql->sa, s, e);
+			t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
+			s = stmt_append(sql->sa, s, t);
 		}
 	}
 
-	return stmt_alias(sql->sa, s, t->tname, "schema");
+	return stmt_alias(sql->sa, s, NULL, "schema");
 }
 
 list *

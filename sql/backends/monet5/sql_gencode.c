@@ -1995,6 +1995,21 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_spreadelem:{
+			int  l, r;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			r = _dumpstmt(sql, mb, s->op2);
+			assert(l >= 0 && r >= 0);
+
+			q = newStmt(mb, batcalcRef, "spreadelem");
+
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, r);
+
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_matrixsqrt:{
 			int  l, r;
 

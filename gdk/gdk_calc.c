@@ -3391,6 +3391,80 @@ VARcalcincr(ValPtr ret, const ValRecord *v, int abort_on_error)
 }
 
 /* ---------------------------------------------------------------------- */
+/* spread one element over a BAT (dbl/int only) */
+
+static BUN
+spreadelem(const dbl *lft, int incr1,
+		const int *rgt, int incr2,
+		dbl *restrict dst,
+		BUN cnt, BUN start, BUN end,
+		const oid *restrict cand,
+		const oid *candend, oid candoff,
+		int abort_on_error)
+{
+	BUN i, j, k;
+	BUN nils = 0;
+
+	CANDLOOP(dst, k, dbl_nil, 0, start);
+	i = start * incr1 + rgt[start * incr2] * incr1;
+	for (k = start; k < end; k++) {
+		CHECKCAND(dst, k, candoff, dbl_nil);
+		dst[k] = lft[i];
+	}
+	CANDLOOP(dst, k, dbl_nil, end, cnt);
+	return nils;
+}
+
+BAT *
+BATcalcspreadelem(BAT *b1, BAT *b2, BAT *s, int tp, int abort_on_error)
+{
+	BAT *bn;
+	BUN nils;
+	BUN start, end, cnt;
+	const oid *restrict cand = NULL, *candend = NULL;
+
+	BATcheck(b1, "BATcalcspreadelem", NULL);
+	BATcheck(b2, "BATcalcspreadelem", NULL);
+
+	CANDINIT(b1, s, start, end, cnt, cand, candend);
+
+	if (b1->T->type != TYPE_dbl && b2->T->type != TYPE_int && tp != TYPE_dbl)
+		return NULL;
+
+	bn = BATnew(TYPE_void, tp, cnt, TRANSIENT);
+	if (bn == NULL)
+		return NULL;
+
+	nils = spreadelem((dbl*) Tloc(b1, b1->batFirst), 1,
+			 (int*) Tloc(b2, b2->batFirst), 1,
+			 (dbl*) Tloc(bn, bn->batFirst),
+			 cnt, start, end,
+			 cand, candend, b1->H->seq,
+			 abort_on_error);
+
+	if (nils == BUN_NONE) {
+		BBPunfix(bn->batCacheid);
+		return NULL;
+	}
+
+	BATsetcount(bn, cnt);
+	BATseqbase(bn, b1->H->seq);
+
+	/* if both inputs are sorted the same way, and no overflow
+	 * occurred (we only know for sure if abort_on_error is set),
+	 * the result is also sorted */
+	bn->T->sorted = (abort_on_error && b1->T->sorted && nils == 0) ||
+		cnt <= 1 || nils == cnt;
+	bn->T->revsorted = (abort_on_error && b1->T->revsorted && nils == 0) ||
+		cnt <= 1 || nils == cnt;
+	bn->T->key = cnt <= 1;
+	bn->T->nil = nils != 0;
+	bn->T->nonil = nils == 0;
+
+	return bn;
+}
+
+/* ---------------------------------------------------------------------- */
 /* group and sqrt (dbl only) */
 
 static BUN

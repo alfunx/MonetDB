@@ -567,6 +567,28 @@ CMDbatMAX_no_nil(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	return CMDbatBINARY0(stk, pci, BATcalcmax_no_nil, NULL, NULL, "batcalc.max_no_nil");
 }
 
+mal_export str CMDbatSPREADELEM(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
+
+str
+CMDbatSPREADELEM(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	(void) cntxt;
+
+	return CMDbatBINARY2(mb, stk, pci, BATcalcspreadelem, NULL, NULL,
+						 calctype, 0, "batcalc.spreadelem_noerror");
+}
+
+mal_export str CMDbatSPREADELEMsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
+
+str
+CMDbatSPREADELEMsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	(void) cntxt;
+
+	return CMDbatBINARY2(mb, stk, pci, BATcalcspreadelem, NULL, NULL,
+						 calctype, 1, "batcalc.spreadelem");
+}
+
 mal_export str CMDbatGSQRT(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
 
 str

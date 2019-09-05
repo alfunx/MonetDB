@@ -135,7 +135,7 @@ typedef struct expression {
 #define DDL_ALTER_TABLE_DEL_TABLE  64
 #define DDL_ALTER_TABLE_SET_ACCESS  65
 
-#define MAXOPS 21
+#define MAXOPS 27
 
 typedef enum operator_type {
 	op_basetable = 0,
@@ -156,14 +156,15 @@ typedef enum operator_type {
 	op_groupby,	
 	op_topn,
 	op_sample,
+	op_insert, 	/* insert(l=table, r insert expressions) */ 
+	op_update, 	/* update(l=table, r update expressions) */
+	op_delete, 	/* delete(l=table, r delete expression) */
+
 	op_matrixadd,
 	op_matrixtransmul,
 	op_matrixsqrt,
 	op_matrixqqr,
 	op_matrixrqr,
-	op_insert, 	/* insert(l=table, r insert expressions) */ 
-	op_update, 	/* update(l=table, r update expressions) */
-	op_delete 	/* delete(l=table, r delete expression) */
 } operator_type;
 
 #define is_atom(et) \

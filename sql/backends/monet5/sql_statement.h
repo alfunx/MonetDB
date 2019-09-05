@@ -87,13 +87,6 @@ typedef enum stmt_type {
 
 	st_alias,
 
-	st_vectoradd,
-	st_matrixsqrt,
-
-	st_dotproduct,
-	st_normalize,
-	st_orthogonalize,
-
 	/* used internally only */
 	st_list,
 
@@ -101,7 +94,14 @@ typedef enum stmt_type {
 	st_cond,
 	st_control_end,
 	st_return,
-	st_assign
+	st_assign,
+
+	st_vectoradd,
+	st_matrixsqrt,
+
+	st_dotproduct,
+	st_normalize,
+	st_orthogonalize,
 } st_type;
 
 /* flag to indicate anti join/select */

@@ -2492,7 +2492,7 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 
 	// create matrixsqrt stmts
 	for (n = loa->h, m = log->h; n && m; n = n->next, m = m->next) {
-		s = stmt_matrixsqrt(sql->sa, n->data, m->data);
+		s = stmt_gathersqrt(sql->sa, n->data, m->data);
 		list_append(l, s);
 	}
 

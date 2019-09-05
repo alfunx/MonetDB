@@ -5462,6 +5462,7 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
+	append(exps, schema_column());
 	append_desc_part(sql, t1, rel->lexps, &exps);
 	append_appl_part(sql, rel->lexps, NULL, &exps);
 	rel = rel_project(sql->sa, rel, exps);

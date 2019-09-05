@@ -109,6 +109,7 @@ scanner_init_keywords(void)
 	keywords_insert("GATHER", GATHER);
 	keywords_insert("SQRT", SQRT);
 	keywords_insert("LINSOLVE", LINSOLVE);
+	keywords_insert("INV", INV);
 	keywords_insert("QQR", QQR);
 	keywords_insert("RQR", RQR);
 	keywords_insert("T", T);

@@ -1414,6 +1414,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 		if (rel->r) 
 			args = exps2bin_args(sql, rel->r, args);
 	case op_matrixsqrt:
+	case op_matrixinv:
 	case op_matrixqqr:
 	case op_project:
 	case op_select: 
@@ -5374,6 +5375,11 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	case op_matrixsqrt:
 		fprintf(stderr, ">>> [subrel_bin]\n");
 		s = rel2bin_matrixsqrt(sql, rel, refs);
+		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		break;
+	case op_matrixinv:
+		fprintf(stderr, ">>> [subrel_bin]\n");
+		s = rel2bin_matrixinv(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]\n");
 		break;
 	case op_matrixqqr:

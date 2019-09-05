@@ -564,6 +564,7 @@ int yydebug=1;
 %token GATHER
 %token SQRT
 %token LINSOLVE
+%token INV
 %token QQR
 %token RQR
 %token T MUL
@@ -2856,6 +2857,11 @@ joined_table:
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  $$ = _symbol_create_list( SQL_MATRIXSQRT, l); }
+
+ |  INV matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  $$ = _symbol_create_list( SQL_MATRIXINV, l); }
 
  |  QQR matrix_ref
 	{ dlist *l = L();

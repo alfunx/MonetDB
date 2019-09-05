@@ -52,6 +52,7 @@ has_remote_or_replica( sql_rel *rel )
 			return 1;
 		break;
 	case op_matrixsqrt:
+	case op_matrixinv:
 	case op_matrixqqr:
 	case op_project:
 	case op_select: 
@@ -262,6 +263,7 @@ distribute(mvc *sql, sql_rel *rel)
 		}
 		break;
 	case op_matrixsqrt:
+	case op_matrixinv:
 	case op_matrixqqr:
 	case op_project:
 	case op_select: 
@@ -320,6 +322,7 @@ rel_remote_func(mvc *sql, sql_rel *rel)
 		rel->r = rel_remote_func(sql, rel->r);
 		break;
 	case op_matrixsqrt:
+	case op_matrixinv:
 	case op_matrixqqr:
 	case op_project:
 	case op_select: 

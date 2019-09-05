@@ -1943,10 +1943,8 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			assert(l >= 0 && r >= 0);
 
 			q = newStmt(mb, batcalcRef, "+");
-
 			q = pushArgument(mb, q, l);
 			q = pushArgument(mb, q, r);
-
 			s->nr = getDestVar(q);
 		}
 			break;
@@ -1958,10 +1956,8 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			 assert(l >= 0 && r >= 0);
 
 			 q = newStmt(mb, batcalcRef, "-");
-
 			 q = pushArgument(mb, q, l);
 			 q = pushArgument(mb, q, r);
-
 			 s->nr = getDestVar(q);
 		}
 			break;
@@ -1973,10 +1969,8 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			assert(l >= 0 && r >= 0);
 
 			q = newStmt(mb, batcalcRef, "*");
-
 			q = pushArgument(mb, q, l);
 			q = pushArgument(mb, q, r);
-
 			s->nr = getDestVar(q);
 		}
 			break;
@@ -1988,10 +1982,8 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			assert(l >= 0 && r >= 0);
 
 			q = newStmt(mb, batcalcRef, "/");
-
 			q = pushArgument(mb, q, l);
 			q = pushArgument(mb, q, r);
-
 			s->nr = getDestVar(q);
 		}
 			break;
@@ -2003,10 +1995,8 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			assert(l >= 0 && r >= 0);
 
 			q = newStmt(mb, batcalcRef, "spreadelem");
-
 			q = pushArgument(mb, q, l);
 			q = pushArgument(mb, q, r);
-
 			s->nr = getDestVar(q);
 		}
 			break;
@@ -2018,10 +2008,8 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			assert(l >= 0 && r >= 0);
 
 			q = newStmt(mb, batcalcRef, "gsqrt");
-
 			q = pushArgument(mb, q, r);
 			q = pushArgument(mb, q, l);
-
 			s->nr = getDestVar(q);
 		}
 			break;

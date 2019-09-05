@@ -163,6 +163,7 @@ typedef enum operator_type {
 	op_matrixadd,
 	op_matrixtransmul,
 	op_matrixsqrt,
+	op_matrixinv,
 	op_matrixqqr,
 	op_matrixrqr,
 } operator_type;
@@ -232,6 +233,8 @@ typedef enum operator_type {
 	(op == op_matrixtransmul)
 #define is_matrixsqrt(op) \
 	(op == op_matrixsqrt)
+#define is_matrixinv(op) \
+	(op == op_matrixinv)
 #define is_matrixqqr(op) \
 	(op == op_matrixqqr)
 #define is_matrixrqr(op) \

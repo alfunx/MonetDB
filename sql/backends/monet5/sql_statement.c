@@ -93,6 +93,10 @@ st_type2string(st_type type)
 		ST(joinN);
 
 		ST(vectoradd);
+		ST(vectorsub);
+		ST(vectormul);
+		ST(vectordiv);
+		ST(spreadelem);
 		ST(matrixsqrt);
 
 		ST(dotproduct);
@@ -343,6 +347,10 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_uselect:
 			case st_uselect2:
 			case st_vectoradd:
+			case st_vectorsub:
+			case st_vectormul:
+			case st_vectordiv:
+			case st_spreadelem:
 			case st_matrixsqrt:
 			case st_dotproduct:
 			case st_normalize:
@@ -898,6 +906,46 @@ stmt_vectoradd(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
+stmt_vectorsub(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_vectorsub);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
+stmt_vectormul(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_vectormul);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
+stmt_vectordiv(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_vectordiv);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
+stmt_spreadelem(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_spreadelem);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
 stmt_matrixsqrt(sql_allocator *sa, stmt *op1, stmt *op2)
 {
 	stmt *s = stmt_create(sa, st_matrixsqrt);
@@ -1284,6 +1332,10 @@ tail_type(stmt *st)
 	case st_gen_group:
 	case st_order:
 	case st_vectoradd:
+	case st_vectorsub:
+	case st_vectormul:
+	case st_vectordiv:
+	case st_spreadelem:
 	case st_matrixsqrt:
 	case st_dotproduct:
 	case st_normalize:
@@ -1442,6 +1494,10 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_convert:
 	case st_vectoradd:
+	case st_vectorsub:
+	case st_vectormul:
+	case st_vectordiv:
+	case st_spreadelem:
 	case st_matrixsqrt:
 	case st_dotproduct:
 	case st_normalize:
@@ -1518,6 +1574,10 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_aggr:
 	case st_vectoradd:
+	case st_vectorsub:
+	case st_vectormul:
+	case st_vectordiv:
+	case st_spreadelem:
 	case st_matrixsqrt:
 	case st_dotproduct:
 	case st_normalize:
@@ -1580,6 +1640,10 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_Nop:
 	case st_aggr:
 	case st_vectoradd:
+	case st_vectorsub:
+	case st_vectormul:
+	case st_vectordiv:
+	case st_spreadelem:
 	case st_matrixsqrt:
 	case st_dotproduct:
 	case st_normalize:

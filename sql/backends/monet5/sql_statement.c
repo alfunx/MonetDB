@@ -97,8 +97,7 @@ st_type2string(st_type type)
 		ST(vectormul);
 		ST(vectordiv);
 		ST(spreadelem);
-		ST(matrixsqrt);
-
+		ST(gathersqrt);
 		ST(dotproduct);
 		ST(normalize);
 		ST(orthogonalize);
@@ -351,7 +350,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_vectormul:
 			case st_vectordiv:
 			case st_spreadelem:
-			case st_matrixsqrt:
+			case st_gathersqrt:
 			case st_dotproduct:
 			case st_normalize:
 			case st_orthogonalize:
@@ -946,9 +945,9 @@ stmt_spreadelem(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
-stmt_matrixsqrt(sql_allocator *sa, stmt *op1, stmt *op2)
+stmt_gathersqrt(sql_allocator *sa, stmt *op1, stmt *op2)
 {
-	stmt *s = stmt_create(sa, st_matrixsqrt);
+	stmt *s = stmt_create(sa, st_gathersqrt);
 	s->op1 = op1;
 	s->op2 = op2;
 	s->nrcols = 1;
@@ -1336,7 +1335,7 @@ tail_type(stmt *st)
 	case st_vectormul:
 	case st_vectordiv:
 	case st_spreadelem:
-	case st_matrixsqrt:
+	case st_gathersqrt:
 	case st_dotproduct:
 	case st_normalize:
 	case st_orthogonalize:
@@ -1498,7 +1497,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_vectormul:
 	case st_vectordiv:
 	case st_spreadelem:
-	case st_matrixsqrt:
+	case st_gathersqrt:
 	case st_dotproduct:
 	case st_normalize:
 	case st_orthogonalize:
@@ -1578,7 +1577,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_vectormul:
 	case st_vectordiv:
 	case st_spreadelem:
-	case st_matrixsqrt:
+	case st_gathersqrt:
 	case st_dotproduct:
 	case st_normalize:
 	case st_orthogonalize:
@@ -1644,7 +1643,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_vectormul:
 	case st_vectordiv:
 	case st_spreadelem:
-	case st_matrixsqrt:
+	case st_gathersqrt:
 	case st_dotproduct:
 	case st_normalize:
 	case st_orthogonalize:

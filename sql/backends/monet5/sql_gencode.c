@@ -2010,7 +2010,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
-		case st_matrixsqrt:{
+		case st_gathersqrt:{
 			int  l, r;
 
 			l = _dumpstmt(sql, mb, s->op1);

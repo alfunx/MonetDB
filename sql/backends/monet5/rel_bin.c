@@ -2383,11 +2383,11 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	// iterators
 	node *n, *m, *o;
 
-	// temporary statements
-	stmt *s, *t, *e;
-
 	// counters
 	int i, j;
+
+	// temporary statements
+	stmt *s, *t, *e;
 
 	stmt *left = NULL;
 	stmt *right = NULL;
@@ -2517,6 +2517,12 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 	// iterators
 	node *ol, *or, *il, *ir;
 
+	// counters
+	int i, j, d;
+
+	// temporary statement
+	stmt *s, *t, *tl, *tr;
+
 	stmt *left = NULL;
 	stmt *orderby_idsl = NULL;
 
@@ -2548,13 +2554,13 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 	identity = list_reverse(sql, identity);
 
 	// matrix dimension
-	int d = list_length(loa);
-	int i, j;
+	d = list_length(loa);
+
+	// append schema stmt
+	list_append(l, stmt_schema(sql, loa));
 
 	// create matrix inverse stmts
 	for (ol = loa_rev->h, or = identity->h, i = d - 1; ol && or; ol = ol->next, or = or->next, i--) {
-		stmt *s;
-
 		s = stmt_atom_int(sql->sa, i);
 		s = stmt_spreadelem(sql->sa, ol->data, s);
 
@@ -2562,8 +2568,6 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 		or->data = stmt_vectordiv(sql->sa, or->data, s);
 
 		for (il = ol->next, ir = or->next, j = i - 1; il && ir; il = il->next, ir = ir->next, j--) {
-			stmt *t, *tl, *tr;
-
 			t = stmt_atom_int(sql->sa, i);
 			t = stmt_spreadelem(sql->sa, il->data, t);
 

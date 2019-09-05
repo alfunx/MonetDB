@@ -21123,17 +21123,17 @@ pattern gsqrt_noerror(b1:bat[:dbl],b2:bat[:dbl]) :bat[:dbl]
 address CMDbatGSQRT
 comment "Return sqrt(B2), grouped by B1, overflow causes NIL value";
 
-pattern spreadelem(b1:bat[:flt],b2:bat[:int]) :bat[:flt]
+pattern spreadelem(b:bat[:flt],v:int) :bat[:flt]
 address CMDbatSPREADELEMsignal
-comment "Return BAT B1, each element replaced by B2, signal error on overflow";
-pattern spreadelem_noerror(b1:bat[:flt],b2:bat[:int]) :bat[:flt]
+comment "Return BAT, each element replaced by V, signal error on overflow";
+pattern spreadelem_noerror(b:bat[:flt],v:int) :bat[:flt]
 address CMDbatSPREADELEM
-comment "Return BAT B1, each element replaced by B2, overflow causes NIL value";
+comment "Return BAT, each element replaced by V, overflow causes NIL value";
 
-pattern spreadelem(b1:bat[:dbl],b2:bat[:int]) :bat[:dbl]
+pattern spreadelem(b:bat[:dbl],v:int) :bat[:dbl]
 address CMDbatSPREADELEMsignal
-comment "Return BAT B1, each element replaced by B2, signal error on overflow";
-pattern spreadelem_noerror(b1:bat[:dbl],b2:bat[:int]) :bat[:dbl]
+comment "Return BAT, each element replaced by V, signal error on overflow";
+pattern spreadelem_noerror(b:bat[:dbl],v:int) :bat[:dbl]
 address CMDbatSPREADELEM
-comment "Return BAT B1, each element replaced by B2, overflow causes NIL value";
+comment "Return BAT, each element replaced by V, overflow causes NIL value";
 

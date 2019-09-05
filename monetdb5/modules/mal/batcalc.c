@@ -574,7 +574,7 @@ CMDbatSPREADELEM(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 {
 	(void) cntxt;
 
-	return CMDbatBINARY2(mb, stk, pci, BATcalcspreadelem, NULL, NULL,
+	return CMDbatBINARY2(mb, stk, pci, NULL, BATcalcspreadelem, NULL,
 						 calctype, 0, "batcalc.spreadelem_noerror");
 }
 
@@ -585,7 +585,7 @@ CMDbatSPREADELEMsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 {
 	(void) cntxt;
 
-	return CMDbatBINARY2(mb, stk, pci, BATcalcspreadelem, NULL, NULL,
+	return CMDbatBINARY2(mb, stk, pci, NULL, BATcalcspreadelem, NULL,
 						 calctype, 1, "batcalc.spreadelem");
 }
 

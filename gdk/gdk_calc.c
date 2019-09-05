@@ -3416,30 +3416,32 @@ spreadelem(const dbl *lft, int incr1,
 }
 
 BAT *
-BATcalcspreadelem(BAT *b1, BAT *b2, BAT *s, int tp, int abort_on_error)
+BATcalcspreadelem(BAT *b, const ValRecord *v, BAT *s, int tp, int abort_on_error)
 {
 	BAT *bn;
 	BUN nils;
 	BUN start, end, cnt;
 	const oid *restrict cand = NULL, *candend = NULL;
 
-	BATcheck(b1, "BATcalcspreadelem", NULL);
-	BATcheck(b2, "BATcalcspreadelem", NULL);
+	BATcheck(b, "BATcalcspreadelem", NULL);
 
-	CANDINIT(b1, s, start, end, cnt, cand, candend);
+	if (checkbats(b, NULL, "BATcalcspreadelem") != GDK_SUCCEED)
+		return NULL;
 
-	if (b1->T->type != TYPE_dbl && b2->T->type != TYPE_int && tp != TYPE_dbl)
+	CANDINIT(b, s, start, end, cnt, cand, candend);
+
+	if (b->T->type != TYPE_dbl && v->vtype != TYPE_int && tp != TYPE_dbl)
 		return NULL;
 
 	bn = BATnew(TYPE_void, tp, cnt, TRANSIENT);
 	if (bn == NULL)
 		return NULL;
 
-	nils = spreadelem((dbl*) Tloc(b1, b1->batFirst), 1,
-			 (int*) Tloc(b2, b2->batFirst), 1,
+	nils = spreadelem((dbl*) Tloc(b, b->batFirst), 1,
+			 (int*) VALptr(v), 0,
 			 (dbl*) Tloc(bn, bn->batFirst),
 			 cnt, start, end,
-			 cand, candend, b1->H->seq,
+			 cand, candend, b->H->seq,
 			 abort_on_error);
 
 	if (nils == BUN_NONE) {
@@ -3448,14 +3450,14 @@ BATcalcspreadelem(BAT *b1, BAT *b2, BAT *s, int tp, int abort_on_error)
 	}
 
 	BATsetcount(bn, cnt);
-	BATseqbase(bn, b1->H->seq);
+	BATseqbase(bn, b->H->seq);
 
 	/* if both inputs are sorted the same way, and no overflow
 	 * occurred (we only know for sure if abort_on_error is set),
 	 * the result is also sorted */
-	bn->T->sorted = (abort_on_error && b1->T->sorted && nils == 0) ||
+	bn->T->sorted = (abort_on_error && b->T->sorted && nils == 0) ||
 		cnt <= 1 || nils == cnt;
-	bn->T->revsorted = (abort_on_error && b1->T->revsorted && nils == 0) ||
+	bn->T->revsorted = (abort_on_error && b->T->revsorted && nils == 0) ||
 		cnt <= 1 || nils == cnt;
 	bn->T->key = cnt <= 1;
 	bn->T->nil = nils != 0;

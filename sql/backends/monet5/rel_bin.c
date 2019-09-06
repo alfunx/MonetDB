@@ -2295,11 +2295,11 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
 
 	// append schema stmt
-	list_append(l, stmt_schema(sql, roa));
+	list_append(l, stmt_schema(sql, loa));
 
 	// create matrixmul stmts
-	for (m = roa->h, o = loa->h; m && o; m = m->next, o = o->next) {
-		t = o->data;
+	for (m = roa->h; m; m = m->next) {
+		t = m->data;
 		s = stmt_temp(sql->sa, tail_type(zero));
 
 		for (n = loa->h; n; n = n->next) {

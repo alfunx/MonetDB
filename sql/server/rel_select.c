@@ -5172,7 +5172,7 @@ append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
 }
 
 static void
-append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
+append_appl_part(mvc *sql, list *apl, list *apr, list **outexps, bool use_right)
 {
 	int nr = ++sql->label;
 	char name[16], *rnm;
@@ -5180,8 +5180,7 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps)
 	node *n, *m;
 
 	if (apr) {
-		// append only min(list_length(lexps), list_length(rexps)) expressions
-		for (n = apl->h, m = apr->h; n && m; n = n->next, m = m->next) {
+		for (n = use_right ? apr->h : apl->h; n; n = n->next) {
 			sql_exp *te = n->data;
 			const char *nm = te->name;
 			fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
@@ -5281,7 +5280,7 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 	list *exps = new_exp_list(sql->sa);
 	append_desc_part(sql, t1, rel->lexps, &exps);
 	append_desc_part(sql, t2, rel->rexps, &exps);
-	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
+	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5347,12 +5346,6 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 			append(rel->rexps, ce);
 	}
 
-	if (lnrcols != rnrcols) {
-		sql_error(sql, 02, "MATRIX TRANS MUL: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(t1)?rel_name(t1):"", rel_name(t2)?rel_name(t2):"");
-		rel_destroy(rel);
-		return NULL;
-	}
-
 	// set number of attributes in the result relation
 	rel->nrcols = lnrcols;
 	fprintf(stderr, ">>> [rel_matrixtransmulquery] nrcols: %d\n", rel->nrcols);
@@ -5360,7 +5353,7 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append(exps, schema_column());
-	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
+	append_appl_part(sql, rel->lexps, rel->rexps, &exps, true);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5417,7 +5410,7 @@ rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_appl_part(sql, rel->lexps, NULL, &exps);
+	append_appl_part(sql, rel->lexps, NULL, &exps, false);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5464,7 +5457,7 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 	list *exps = new_exp_list(sql->sa);
 	append(exps, schema_column());
 	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_appl_part(sql, rel->lexps, NULL, &exps);
+	append_appl_part(sql, rel->lexps, NULL, &exps, false);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5510,7 +5503,7 @@ rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_appl_part(sql, rel->lexps, NULL, &exps);
+	append_appl_part(sql, rel->lexps, NULL, &exps, false);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5589,7 +5582,7 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append(exps, schema_column());
-	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
+	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5644,7 +5637,7 @@ rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q)
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append(exps, schema_column());
-	append_appl_part(sql, rel->lexps, rel->rexps, &exps);
+	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
 	rel = rel_project(sql->sa, rel, exps);
 
 	return rel;

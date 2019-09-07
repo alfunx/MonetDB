@@ -1145,7 +1145,7 @@ stmt_rename(mvc *sql, sql_rel *rel, sql_exp *exp, stmt *s )
 }
 
 stmt *
-stmt_schema(mvc *sql, list *orig)
+stmt_schema_column(mvc *sql, list *orig)
 {
 	node *n;
 	stmt *t = stmt_atom_string(sql->sa, column_name(sql->sa, orig->h->data));
@@ -1159,7 +1159,26 @@ stmt_schema(mvc *sql, list *orig)
 		}
 	}
 
-	return stmt_alias(sql->sa, s, NULL, "schema");
+	return stmt_alias(sql->sa, s, NULL, "__schema");
+}
+
+stmt *
+stmt_order_column(mvc *sql, list *orig)
+{
+	node *n;
+	int i = 0;
+	stmt *t = stmt_atom_int(sql->sa, i);
+	stmt *s = stmt_temp(sql->sa, tail_type(t));
+	s = stmt_append(sql->sa, s, t);
+
+	if (orig->h->next) {
+		for (n = orig->h->next, i = 1; n; n = n->next, i++) {
+			t = stmt_atom_int(sql->sa, i);
+			s = stmt_append(sql->sa, s, t);
+		}
+	}
+
+	return stmt_alias(sql->sa, s, NULL, "__order");
 }
 
 list *
@@ -2294,8 +2313,9 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	// zero stmt
 	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
 
-	// append schema stmt
-	list_append(l, stmt_schema(sql, loa));
+	// append schema and order stmt
+	list_append(l, stmt_schema_column(sql, loa));
+	list_append(l, stmt_order_column(sql, loa));
 
 	// create matrixmul stmts
 	for (m = roa->h; m; m = m->next) {
@@ -2421,8 +2441,9 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	// zero stmt
 	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
 
-	// append schema stmt
-	list_append(l, stmt_schema(sql, loa));
+	// append schema and order stmt
+	list_append(l, stmt_schema_column(sql, loa));
+	list_append(l, stmt_order_column(sql, loa));
 
 	// create rqr stmts
 	for (m = roa->h, o = loa->h, i = 0; m && o; m = m->next, o = o->next, i++) {
@@ -2556,8 +2577,9 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 	// matrix dimension
 	d = list_length(loa);
 
-	// append schema stmt
-	list_append(l, stmt_schema(sql, loa));
+	// append schema and order stmt
+	list_append(l, stmt_schema_column(sql, loa));
+	list_append(l, stmt_order_column(sql, loa));
 
 	// create matrix inverse stmts
 	for (ol = loa_rev->h, or = identity->h, i = d - 1; ol && or; ol = ol->next, or = or->next, i--) {

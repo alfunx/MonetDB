@@ -5162,6 +5162,11 @@ append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
 		sql_exp *te = n->data;
 		const char *rnm = te->rname;
 		const char *nm = te->name;
+
+		// ignore any leftover schema and order columns
+		if (strcmp(nm, "__schema") == 0 || strcmp(nm, "__order") == 0)
+			continue;
+
 		sql_exp *e = exps_bind_column(ap, nm, NULL);
 
 		if (!e) {
@@ -5200,7 +5205,8 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps, bool use_right)
 	}
 }
 
-#define schema_column() (exp_column(sql->sa, NULL, "schema", NULL, 0, 0, 0))
+#define schema_column() (exp_column(sql->sa, NULL, "__schema", NULL, 0, 0, 0))
+#define order_column() (exp_column(sql->sa, NULL, "__order", NULL, 0, 0, 0))
 
 static sql_rel *
 rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
@@ -5352,6 +5358,7 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
+	append(exps, order_column());
 	append(exps, schema_column());
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps, true);
 	rel = rel_project(sql->sa, rel, exps);
@@ -5455,6 +5462,7 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
+	append(exps, order_column());
 	append(exps, schema_column());
 	append_desc_part(sql, t1, rel->lexps, &exps);
 	append_appl_part(sql, rel->lexps, NULL, &exps, false);
@@ -5581,6 +5589,7 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
+	append(exps, order_column());
 	append(exps, schema_column());
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
 	rel = rel_project(sql->sa, rel, exps);
@@ -5636,6 +5645,7 @@ rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
+	append(exps, order_column());
 	append(exps, schema_column());
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
 	rel = rel_project(sql->sa, rel, exps);

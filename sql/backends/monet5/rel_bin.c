@@ -2277,7 +2277,7 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	list *loa, *roa;
 
 	// iterators
-	node *n, *m, *o;
+	node *n, *m;
 
 	// temporary statements
 	stmt *s, *t, *e;
@@ -2402,7 +2402,7 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	list *loa, *roa;
 
 	// iterators
-	node *n, *m, *o;
+	node *n, *m;
 
 	// counters
 	int i, j;
@@ -2447,8 +2447,8 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	list_append(l, stmt_order_column(sql, loa));
 
 	// create rqr stmts
-	for (m = roa->h, o = loa->h, i = 0; m && o; m = m->next, o = o->next, i++) {
-		t = o->data;
+	for (m = roa->h, i = 0; m; m = m->next, i++) {
+		t = m->data;
 		s = stmt_temp(sql->sa, tail_type(zero));
 
 		for (n = loa->h, j = 0; n && j < i; n = n->next, j++) {

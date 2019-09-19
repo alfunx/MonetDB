@@ -5469,12 +5469,6 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 	set_left_application_part(&rel, tab3);
 	set_right_application_part(&rel, tab6);
 
-	if (list_length(rel->lexps) != list_length(rel->rexps)) {
-		sql_error(sql, 02, "MATRIX RQR: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(t1)?rel_name(t1):"", rel_name(t2)?rel_name(t2):"");
-		rel_destroy(rel);
-		return NULL;
-	}
-
 	// set number of attributes in the result relation
 	rel->nrcols = list_length(rel->lexps) + 2;
 	fprintf(stderr, ">>> [rel_matrixrqrquery] nrcols: %d\n", rel->nrcols);
@@ -5483,7 +5477,7 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 	list *exps = new_exp_list(sql->sa);
 	append(exps, order_column());
 	append(exps, schema_column());
-	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
+	append_appl_part(sql, rel->lexps, rel->rexps, &exps, true);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }

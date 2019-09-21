@@ -1987,6 +1987,20 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_vectorsigmoid:{
+			int l, res;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, batcalcRef, "-");
+			q = pushArgument(mb, q, l);
+			
+			// TODO: Continue implementation of sigmoid function
+			
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_spreadelem:{
 			int  l, r;
 

@@ -2608,6 +2608,30 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 }
 
 static stmt *
+rel2bin_vectorsigmoid(mvc *sql, sql_rel *rel, list *refs)
+{
+	list *lst = sa_list(sql->sa);
+
+	stmt *left = NULL;
+	stmt *sigmoid = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+
+	assert(left);
+
+	node *n = left->op4.lval->h;
+	stmt *c = n->data;
+
+	stmt *l = column(sql->sa, c);
+
+	sigmoid = stmt_vectorsigmoid(sql->sa, l);
+
+	list_append(lst, sigmoid);
+
+	return stmt_list(sql->sa, lst);
+}
+
+static stmt *
 rel2bin_semijoin( mvc *sql, sql_rel *rel, list *refs)
 {
 	list *l; 
@@ -5417,8 +5441,7 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		break;
 	case op_vectorsigmoid:
 		fprintf(stderr, ">>> [subrel_bin]\n");
-		// TODO: Implement rel2bin_vectorsigmoid
-		//s = rel2bin_vectorsigmoid(sql, rel, refs);
+		s = rel2bin_vectorsigmoid(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]\n");
 	}
 	if (s && rel_is_ref(rel)) {

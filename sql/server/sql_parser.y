@@ -2880,7 +2880,7 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXRQR, l); }
 
- |  SIGMOID matrix_ref
+ |  SIGMOID table_ref
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  $$ = _symbol_create_list( SQL_VECTORSIGMOID, l); }

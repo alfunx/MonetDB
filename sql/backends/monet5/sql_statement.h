@@ -100,6 +100,7 @@ typedef enum stmt_type {
 	st_vectorsub,
 	st_vectormul,
 	st_vectordiv,
+	st_vectorsigmoid,
 	st_spreadelem,
 	st_gathersqrt,
 	st_dotproduct,
@@ -200,6 +201,7 @@ extern stmt *stmt_vectordiv(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_spreadelem(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_gathersqrt(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_normalize(sql_allocator *sa, stmt *op1);
+extern stmt *stmt_vectorsigmoid(sql_allocator *sa, stmt *op1);
 extern stmt *stmt_orthogonalize(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_dotproduct(sql_allocator *sa, stmt *op1, stmt *op2);
 

@@ -54,6 +54,7 @@ has_remote_or_replica( sql_rel *rel )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_vectorsigmoid:
 	case op_project:
 	case op_select: 
 	case op_groupby: 
@@ -265,6 +266,7 @@ distribute(mvc *sql, sql_rel *rel)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_vectorsigmoid:
 	case op_project:
 	case op_select: 
 	case op_groupby: 
@@ -324,6 +326,7 @@ rel_remote_func(mvc *sql, sql_rel *rel)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_vectorsigmoid:
 	case op_project:
 	case op_select: 
 	case op_groupby: 

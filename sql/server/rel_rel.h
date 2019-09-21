@@ -52,6 +52,7 @@ extern sql_rel *rel_matrixsqrt(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixinv(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixqqr(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixrqr(sql_allocator *sa, sql_rel *l, sql_rel *r);
+extern sql_rel *rel_vectorsigmoid(sql_allocator *sa, sql_rel *l);
 
 extern sql_rel *rel_topn(sql_allocator *sa, sql_rel *l, list *exps );
 extern sql_rel *rel_sample(sql_allocator *sa, sql_rel *l, list *exps );

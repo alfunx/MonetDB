@@ -1435,6 +1435,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_vectorsigmoid:
 	case op_project:
 	case op_select: 
 	case op_topn: 
@@ -5414,6 +5415,11 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		s = rel2bin_matrixrqr(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]\n");
 		break;
+	case op_vectorsigmoid:
+		fprintf(stderr, ">>> [subrel_bin]\n");
+		// TODO: Implement rel2bin_vectorsigmoid
+		//s = rel2bin_vectorsigmoid(sql, rel, refs);
+		fprintf(stderr, ">>> END: [subrel_bin]\n");
 	}
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);

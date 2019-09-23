@@ -1995,9 +1995,19 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 
 			q = newStmt(mb, batcalcRef, "-");
 			q = pushArgument(mb, q, l);
-			
-			// TODO: Continue implementation of sigmoid function
-			
+			res = getDestVar(q);
+
+			// TODO: Implement and call exponential function for BATs here
+
+			q = newStmt(mb, batcalcRef, "+");
+			q = pushArgument(mb, q, res);
+			q = pushInt(mb, q, 1);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batcalcRef, "/");
+			q = pushInt(mb, q, 1);
+			q = pushArgument(mb, q, res);
+
 			s->nr = getDestVar(q);
 		}
 			break;

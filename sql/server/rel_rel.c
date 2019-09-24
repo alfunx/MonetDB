@@ -516,8 +516,11 @@ rel_vectorsigmoid(sql_allocator *sa, sql_rel *l)
 
 	rel->l = l;
 	rel->r = NULL;
+	rel->exps = new_exp_list(sa);
+	rel->lexps = new_exp_list(sa);
+	rel->rexps = new_exp_list(sa);
 	rel->op = op_vectorsigmoid;
-	rel->card = l->card;
+	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
 	return rel;
 }

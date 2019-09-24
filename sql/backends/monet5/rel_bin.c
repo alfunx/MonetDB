@@ -2610,25 +2610,51 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 static stmt *
 rel2bin_vectorsigmoid(mvc *sql, sql_rel *rel, list *refs)
 {
-	list *lst = sa_list(sql->sa);
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ld;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa;
+
+	// iterators
+	node *n, *m;
+
+	// temporary statements
+	stmt *s, *t;
 
 	stmt *left = NULL;
-	stmt *sigmoid = NULL;
+	stmt *orderby_idsl = NULL;
 
 	left = subrel_bin(sql, rel->l, refs);
-
 	assert(left);
 
-	node *n = left->op4.lval->h;
-	stmt *c = n->data;
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
 
-	stmt *l = column(sql->sa, c);
+	// split into application and descriptive part lists
+	assert(rel->lexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
 
-	sigmoid = stmt_vectorsigmoid(sql->sa, l);
+	// generate the orderby ids
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
 
-	list_append(lst, sigmoid);
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+	
+	// create sigmoid stmts
+	for (n = loa->h; n; n = n->next) {
+		s = stmt_vectorsigmoid(sql->sa, n->data);
+		list_append(l, s);
+	}
 
-	return stmt_list(sql->sa, lst);
+	return stmt_list(sql->sa, l);
 }
 
 static stmt *

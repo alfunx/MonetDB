@@ -2009,7 +2009,6 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			q = newStmt(mb, batcalcRef, "/");
 			q = pushInt(mb, q, 1);
 			q = pushArgument(mb, q, res);
-
 			s->nr = getDestVar(q);
 		}
 			break;

@@ -81,7 +81,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_union:
 	case op_except:
 	case op_inter:
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 	case op_project:
 		if (!is_processed(rel) && level == 0)
 			return rel_table_projections( sql, rel->l, tname, level+1);
@@ -227,7 +227,7 @@ static sql_rel * rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q);
-static sql_rel * rel_vectorsigmoidquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q);
 
 static sql_rel *
 rel_table_optname(mvc *sql, sql_rel *sq, symbol *optname)
@@ -425,9 +425,9 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 			return NULL;
 		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
 	}
-	case SQL_VECTORSIGMOID:
+	case SQL_MATRIXSIGMOID:
 	{
-		sql_rel *tq = rel_vectorsigmoidquery(sql, r, q);
+		sql_rel *tq = rel_matrixsigmoidquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3709,7 +3709,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 		exps = list_merge( exps, rexps, (fdup)NULL);
 		return exps;
 	case op_groupby:
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_table:
 	case op_basetable:
@@ -5665,7 +5665,7 @@ rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q)
 }
 
 static sql_rel *
-rel_vectorsigmoidquery(mvc *sql, sql_rel *rel, symbol *q)
+rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q)
 {
 	dnode *en, *n = q->data.lval->h;
 
@@ -5679,7 +5679,7 @@ rel_vectorsigmoidquery(mvc *sql, sql_rel *rel, symbol *q)
 	if (!t1)
 		return NULL;
 
-	rel = rel_vectorsigmoid(sql->sa, t1);
+	rel = rel_matrixsigmoid(sql->sa, t1);
 
 	list *lobe = NULL;
 
@@ -5700,7 +5700,7 @@ rel_vectorsigmoidquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// set number of attributes in the result relation
 	rel->nrcols = t1->nrcols;
-	fprintf(stderr, ">>> [rel_vectorsigmoidquery] nrcols: %d\n", rel->nrcols);
+	fprintf(stderr, ">>> [rel_matrixsigmoidquery] nrcols: %d\n", rel->nrcols);
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);

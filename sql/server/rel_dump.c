@@ -296,7 +296,7 @@ op2string(operator_type op)
 		return "matrix qqr";
 	case op_matrixrqr:
 		return "matrix rqr";
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 		return "vector sigmoid";
 	case op_insert: 
 	case op_update: 
@@ -431,8 +431,8 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 			r = "except";
 		else if (!rel->exps && rel->op == op_join)
 			r = "crossproduct";
-		else if (!rel->exps && rel->op == op_vectorsigmoid)
-			r = "vectorsigmoid";
+		else if (!rel->exps && rel->op == op_matrixsigmoid)
+			r = "matrixsigmoid";
 		print_indent(sql, fout, depth, decorate);
 		if (need_distinct(rel))
 			mnstr_printf(fout, "distinct ");
@@ -605,7 +605,7 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 		exps_print(sql, fout, rel->exps, depth, 1, 0);
 		break;
 
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_select: 
 	case op_groupby: 
@@ -724,7 +724,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_select: 
 	case op_groupby: 

@@ -2883,7 +2883,7 @@ joined_table:
  |  SIGMOID matrix_ref
 	{ dlist *l = L();
 	  append_symbol(l, $2);
-	  $$ = _symbol_create_list( SQL_VECTORSIGMOID, l); }
+	  $$ = _symbol_create_list( SQL_MATRIXSIGMOID, l); }
 
  |  table_ref UNIONJOIN table_ref join_spec
 	{ dlist *l = L();

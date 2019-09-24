@@ -349,7 +349,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_vectorsub:
 			case st_vectormul:
 			case st_vectordiv:
-			case st_vectorsigmoid:
+			case st_sigmoid:
 			case st_spreadelem:
 			case st_gathersqrt:
 			case st_dotproduct:
@@ -965,9 +965,9 @@ stmt_normalize(sql_allocator *sa, stmt *op1)
 }
 
 stmt *
-stmt_vectorsigmoid(sql_allocator *sa, stmt *op1)
+stmt_sigmoid(sql_allocator *sa, stmt *op1)
 {
-	stmt *s = stmt_create(sa, st_vectorsigmoid);
+	stmt *s = stmt_create(sa, st_sigmoid);
 	s->op1 = op1;
 	s->nrcols = 1;
 	return s;
@@ -1344,7 +1344,7 @@ tail_type(stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
-	case st_vectorsigmoid:
+	case st_sigmoid:
 	case st_spreadelem:
 	case st_gathersqrt:
 	case st_dotproduct:
@@ -1507,7 +1507,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
-	case st_vectorsigmoid:
+	case st_sigmoid:
 	case st_spreadelem:
 	case st_gathersqrt:
 	case st_dotproduct:
@@ -1588,7 +1588,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
-	case st_vectorsigmoid:
+	case st_sigmoid:
 	case st_spreadelem:
 	case st_gathersqrt:
 	case st_dotproduct:
@@ -1655,7 +1655,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
-	case st_vectorsigmoid:
+	case st_sigmoid:
 	case st_spreadelem:
 	case st_gathersqrt:
 	case st_dotproduct:

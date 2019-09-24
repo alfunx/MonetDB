@@ -1435,7 +1435,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_select: 
 	case op_topn: 
@@ -2608,7 +2608,7 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 }
 
 static stmt *
-rel2bin_vectorsigmoid(mvc *sql, sql_rel *rel, list *refs)
+rel2bin_matrixsigmoid(mvc *sql, sql_rel *rel, list *refs)
 {
 	// list of all statements (result)
 	list *l;
@@ -2650,7 +2650,7 @@ rel2bin_vectorsigmoid(mvc *sql, sql_rel *rel, list *refs)
 	
 	// create sigmoid stmts
 	for (n = loa->h; n; n = n->next) {
-		s = stmt_vectorsigmoid(sql->sa, n->data);
+		s = stmt_sigmoid(sql->sa, n->data);
 		list_append(l, s);
 	}
 
@@ -5465,9 +5465,9 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		s = rel2bin_matrixrqr(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]\n");
 		break;
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 		fprintf(stderr, ">>> [subrel_bin]\n");
-		s = rel2bin_vectorsigmoid(sql, rel, refs);
+		s = rel2bin_matrixsigmoid(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]\n");
 	}
 	if (s && rel_is_ref(rel)) {

@@ -1987,7 +1987,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
-		case st_vectorsigmoid:{
+		case st_sigmoid:{
 			int l, res;
 
 			l = _dumpstmt(sql, mb, s->op1);

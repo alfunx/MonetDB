@@ -166,7 +166,7 @@ typedef enum operator_type {
 	op_matrixinv,
 	op_matrixqqr,
 	op_matrixrqr,
-	op_vectorsigmoid,
+	op_matrixsigmoid,
 } operator_type;
 
 #define is_atom(et) \
@@ -240,8 +240,8 @@ typedef enum operator_type {
 	(op == op_matrixqqr)
 #define is_matrixrqr(op) \
 	(op == op_matrixrqr)
-#define is_vectorsigmoid(op) \
-	(op == op_vectorsigmoid)
+#define is_matrixsigmoid(op) \
+	(op == op_matrixsigmoid)
 
 /* NO NIL semantics of aggr operations */
 #define need_no_nil(e) \

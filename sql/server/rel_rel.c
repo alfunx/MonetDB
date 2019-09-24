@@ -135,7 +135,7 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 	case op_apply:
 	case op_semi:
 	case op_anti:
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_select:
 	default:
@@ -210,7 +210,7 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_except:
 	case op_inter:
 	case op_groupby:
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_table:
 	case op_basetable:
@@ -510,7 +510,7 @@ rel_matrixrqr(sql_allocator *sa, sql_rel *l, sql_rel *r)
 }
 
 sql_rel *
-rel_vectorsigmoid(sql_allocator *sa, sql_rel *l)
+rel_matrixsigmoid(sql_allocator *sa, sql_rel *l)
 {
 	sql_rel *rel = rel_create(sa);
 
@@ -519,7 +519,7 @@ rel_vectorsigmoid(sql_allocator *sa, sql_rel *l)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
-	rel->op = op_vectorsigmoid;
+	rel->op = op_matrixsigmoid;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
 	return rel;
@@ -906,7 +906,7 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 		}
 		return exps;
 	case op_groupby:
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_basetable:
 	case op_table:
@@ -1010,7 +1010,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 			break;
 		}
 	case op_groupby:
-	case op_vectorsigmoid:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_table:
 	case op_basetable:

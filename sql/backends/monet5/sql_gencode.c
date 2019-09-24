@@ -1997,7 +1997,9 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			q = pushArgument(mb, q, l);
 			res = getDestVar(q);
 
-			// TODO: Implement and call exponential function for BATs here
+			q = newStmt(mb, batmmathRef, "exp");
+			q = pushArgument(mb, q, res);
+			res = getDestVar(q);
 
 			q = newStmt(mb, batcalcRef, "+");
 			q = pushArgument(mb, q, res);

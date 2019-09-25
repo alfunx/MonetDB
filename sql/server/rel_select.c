@@ -5486,18 +5486,20 @@ rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q)
 	if (!t1)
 		return NULL;
 
-	// create qqr relation
-	sql_rel *qqr_rel = rel_matrixqqrquery(sql, rel, q);
+	// qqr relation
+	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, t1);
+
+	set_left_orderby(&qqr_rel, tab2);
+	set_left_application_part(&qqr_rel, tab3);
+
+	// rqr relation
 	rel = rel_matrixrqr(sql->sa, t1, qqr_rel);
 
 	set_left_orderby(&rel, tab2);
 	set_left_application_part(&rel, tab3);
 
-	// set orderby for right relation
-	rel->rord = ((sql_rel*)qqr_rel->l)->lord;
-
-	// set application part of right relation
-	rel->rexps = ((sql_rel*)qqr_rel->l)->lexps;
+	rel->rord = qqr_rel->lord;
+	rel->rexps = qqr_rel->lexps;
 
 	// set number of attributes in the result relation
 	rel->nrcols = list_length(rel->lexps) + 2;

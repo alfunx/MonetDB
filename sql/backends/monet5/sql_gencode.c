@@ -1987,6 +1987,31 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_sigmoid:{
+			int l, res;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, batcalcRef, "-");
+			q = pushArgument(mb, q, l);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batmmathRef, "exp");
+			q = pushArgument(mb, q, res);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batcalcRef, "+");
+			q = pushArgument(mb, q, res);
+			q = pushInt(mb, q, 1);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batcalcRef, "/");
+			q = pushInt(mb, q, 1);
+			q = pushArgument(mb, q, res);
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_spreadelem:{
 			int  l, r;
 

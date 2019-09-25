@@ -135,7 +135,7 @@ typedef struct expression {
 #define DDL_ALTER_TABLE_DEL_TABLE  64
 #define DDL_ALTER_TABLE_SET_ACCESS  65
 
-#define MAXOPS 27
+#define MAXOPS 28
 
 typedef enum operator_type {
 	op_basetable = 0,
@@ -166,6 +166,7 @@ typedef enum operator_type {
 	op_matrixinv,
 	op_matrixqqr,
 	op_matrixrqr,
+	op_matrixsigmoid,
 } operator_type;
 
 #define is_atom(et) \
@@ -239,6 +240,8 @@ typedef enum operator_type {
 	(op == op_matrixqqr)
 #define is_matrixrqr(op) \
 	(op == op_matrixrqr)
+#define is_matrixsigmoid(op) \
+	(op == op_matrixsigmoid)
 
 /* NO NIL semantics of aggr operations */
 #define need_no_nil(e) \

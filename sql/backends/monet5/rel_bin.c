@@ -1435,6 +1435,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_select: 
 	case op_topn: 
@@ -2602,6 +2603,56 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 	}
 
 	list_merge_destroy(l, identity, NULL);
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixsigmoid(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ld;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa;
+
+	// iterators
+	node *n, *m;
+
+	// temporary statements
+	stmt *s, *t;
+
+	stmt *left = NULL;
+	stmt *orderby_idsl = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+	assert(left);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+
+	// generate the orderby ids
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+	
+	// create sigmoid stmts
+	for (n = loa->h; n; n = n->next) {
+		s = stmt_sigmoid(sql->sa, n->data);
+		list_append(l, s);
+	}
 
 	return stmt_list(sql->sa, l);
 }
@@ -5414,6 +5465,10 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		s = rel2bin_matrixrqr(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]\n");
 		break;
+	case op_matrixsigmoid:
+		fprintf(stderr, ">>> [subrel_bin]\n");
+		s = rel2bin_matrixsigmoid(sql, rel, refs);
+		fprintf(stderr, ">>> END: [subrel_bin]\n");
 	}
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);

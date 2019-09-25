@@ -81,6 +81,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_union:
 	case op_except:
 	case op_inter:
+	case op_matrixsigmoid:
 	case op_project:
 		if (!is_processed(rel) && level == 0)
 			return rel_table_projections( sql, rel->l, tname, level+1);
@@ -226,6 +227,7 @@ static sql_rel * rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q);
 
 static sql_rel *
 rel_table_optname(mvc *sql, sql_rel *sq, symbol *optname)
@@ -418,6 +420,14 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_MATRIXRQR_SIMPLE:
 	{
 		sql_rel *tq = rel_matrixrqrquery_simple(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXSIGMOID:
+	{
+		sql_rel *tq = rel_matrixsigmoidquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3699,6 +3709,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 		exps = list_merge( exps, rexps, (fdup)NULL);
 		return exps;
 	case op_groupby:
+	case op_matrixsigmoid:
 	case op_project:
 	case op_table:
 	case op_basetable:
@@ -5650,6 +5661,52 @@ rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q)
 	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
 	rel = rel_project(sql->sa, rel, exps);
 
+	return rel;
+}
+
+static sql_rel *
+rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *en, *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *t1 = table_ref(sql, rel, tab1);
+	if (!t1)
+		return NULL;
+
+	rel = rel_matrixsigmoid(sql->sa, t1);
+
+	list *lobe = NULL;
+
+	// set orderby for left relation
+	if (tab2) {
+		lobe = rel_order_by(sql, &rel, tab2, 0);
+	}
+
+	rel->lord = lobe;
+
+	// set application part of left relation
+	for (en = tab3->h; en; en = en->next) {
+		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
+
+		if (ce)
+			append(rel->lexps, ce);
+	}
+
+	// set number of attributes in the result relation
+	rel->nrcols = t1->nrcols;
+	fprintf(stderr, ">>> [rel_matrixsigmoidquery] nrcols: %d\n", rel->nrcols);
+
+	// project necessary attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append_desc_part(sql, t1, rel->lexps, &exps);
+	append_appl_part(sql, rel->lexps, NULL, &exps, false);
+	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
 

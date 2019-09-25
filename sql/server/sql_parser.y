@@ -568,6 +568,7 @@ int yydebug=1;
 %token QQR
 %token RQR
 %token T MUL
+%token SIGMOID
 
 /* operators */
 %left UNION EXCEPT INTERSECT CORRESPONDING UNIONJOIN
@@ -2878,6 +2879,11 @@ joined_table:
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXRQR, l); }
+
+ |  SIGMOID matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  $$ = _symbol_create_list( SQL_MATRIXSIGMOID, l); }
 
  |  table_ref UNIONJOIN table_ref join_spec
 	{ dlist *l = L();

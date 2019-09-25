@@ -5195,24 +5195,13 @@ append_appl_part(mvc *sql, list *apl, list *apr, list **outexps, bool use_right)
 	rnm = number2name(name, 16, nr);
 	node *n, *m;
 
-	if (apr) {
-		for (n = use_right ? apr->h : apl->h; n; n = n->next) {
-			sql_exp *te = n->data;
-			const char *nm = te->name;
-			fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
+	for (n = apr && use_right ? apr->h : apl->h; n; n = n->next) {
+		sql_exp *te = n->data;
+		const char *nm = te->name;
+		fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
 
-			exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
-			append(*outexps, te);
-		}
-	} else {
-		for (n = apl->h; n; n = n->next) {
-			sql_exp *te = n->data;
-			const char *nm = te->name;
-			fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
-
-			exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
-			append(*outexps, te);
-		}
+		exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
+		append(*outexps, te);
 	}
 }
 

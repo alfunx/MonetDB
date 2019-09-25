@@ -69,6 +69,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_matrixsigmoid:
 	case op_apply:
 	case op_semi:
 	case op_anti:
@@ -81,7 +82,6 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_union:
 	case op_except:
 	case op_inter:
-	case op_matrixsigmoid:
 	case op_project:
 		if (!is_processed(rel) && level == 0)
 			return rel_table_projections( sql, rel->l, tname, level+1);
@@ -228,6 +228,7 @@ static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q);
 
 static sql_rel *
 rel_table_optname(mvc *sql, sql_rel *sq, symbol *optname)
@@ -364,6 +365,14 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_UNIONJOIN:
 	{
 		sql_rel *tq = rel_unionjoinquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXLINREG:
+	{
+		sql_rel *tq = rel_matrixlinregquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3709,7 +3718,6 @@ rel_projections_(mvc *sql, sql_rel *rel)
 		exps = list_merge( exps, rexps, (fdup)NULL);
 		return exps;
 	case op_groupby:
-	case op_matrixsigmoid:
 	case op_project:
 	case op_table:
 	case op_basetable:
@@ -3759,6 +3767,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_matrixsigmoid:
 	case op_select:
 	case op_topn:
 	case op_sample:
@@ -5543,6 +5552,80 @@ rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q)
 	list *exps = new_exp_list(sql->sa);
 	append_desc_part(sql, t1, rel->lexps, &exps);
 	append_appl_part(sql, rel->lexps, NULL, &exps, false);
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *en, *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
+	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *t1 = table_ref(sql, rel, tab1);
+	sql_rel *t2 = table_ref(sql, rel, tab4);
+	if (!t1 || !t2)
+		return NULL;
+
+	// qqr relation
+	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, t1);
+
+	set_left_orderby(&qqr_rel, tab2);
+	set_left_application_part(&qqr_rel, tab3);
+
+	// rqr relation
+	sql_rel *rqr_rel = rel_matrixrqr(sql->sa, t1, qqr_rel);
+
+	set_left_orderby(&rqr_rel, tab2);
+	set_left_application_part(&rqr_rel, tab3);
+
+	rqr_rel->rord = qqr_rel->rord;
+	rqr_rel->rexps = qqr_rel->lexps;
+
+	// inv relation
+	sql_rel *inv_rel = rel_matrixinv(sql->sa, rqr_rel);
+
+	// TODO: __order
+	// inv_rel->lord = rqr_rel->rord;
+	inv_rel->lexps = rqr_rel->rexps;
+
+	// qy relation
+	sql_rel *qy_rel = rel_matrixtransmul(sql->sa, qqr_rel, t2);
+
+	qy_rel->lord = qqr_rel->lord;
+	qy_rel->lexps = qqr_rel->lexps;
+
+	set_right_orderby(&qy_rel, tab5);
+	set_right_application_part(&qy_rel, tab6);
+
+	// result relation
+	rel = rel_matrixtransmul(sql->sa, inv_rel, qy_rel);
+
+	// TODO: __order
+	// rel->lord = inv_rel->lord;
+	rel->lexps = inv_rel->lexps;
+
+	// TODO: __order
+	// rel->rord = qy_rel->rord;
+	rel->rexps = qy_rel->rexps;
+
+	// set number of attributes in the result relation
+	rel->nrcols = 3;
+	fprintf(stderr, ">>> [rel_matrixrqrquery] nrcols: %d\n", rel->nrcols);
+
+	// project necessary attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append(exps, order_column());
+	append(exps, schema_column());
+	append_appl_part(sql, rel->lexps, rel->rexps, &exps, true);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }

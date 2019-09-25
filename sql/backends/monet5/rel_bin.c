@@ -2583,15 +2583,15 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 
 	// create matrix inverse stmts
 	for (ol = loa_rev->h, or = identity->h, i = d - 1; ol && or; ol = ol->next, or = or->next, i--) {
-		s = stmt_atom_int(sql->sa, i);
-		s = stmt_spreadelem(sql->sa, ol->data, s);
+		s = stmt_atom_oid(sql->sa, i);
+		s = stmt_fetch(sql->sa, ol->data, s);
 
 		ol->data = stmt_vectordiv(sql->sa, ol->data, s);
 		or->data = stmt_vectordiv(sql->sa, or->data, s);
 
 		for (il = ol->next, ir = or->next, j = i - 1; il && ir; il = il->next, ir = ir->next, j--) {
-			t = stmt_atom_int(sql->sa, i);
-			t = stmt_spreadelem(sql->sa, il->data, t);
+			t = stmt_atom_oid(sql->sa, i);
+			t = stmt_fetch(sql->sa, il->data, t);
 
 			tl = stmt_vectormul(sql->sa, t, ol->data);
 			tr = stmt_vectormul(sql->sa, t, or->data);

@@ -101,7 +101,7 @@ typedef enum stmt_type {
 	st_vectormul,
 	st_vectordiv,
 	st_sigmoid,
-	st_spreadelem,
+	st_fetch,
 	st_gathersqrt,
 	st_dotproduct,
 	st_normalize,
@@ -176,6 +176,7 @@ extern stmt *stmt_atom_string(sql_allocator *sa, const char *s);
 extern stmt *stmt_atom_string_nil(sql_allocator *sa);
 extern stmt *stmt_atom_int(sql_allocator *sa, int i);
 extern stmt *stmt_atom_dbl(sql_allocator *sa, dbl i);
+extern stmt *stmt_atom_oid(sql_allocator *sa, oid i);
 extern stmt *stmt_atom_wrd(sql_allocator *sa, wrd i);
 extern stmt *stmt_atom_wrd_nil(sql_allocator *sa);
 extern stmt *stmt_bool(sql_allocator *sa, int b);
@@ -198,7 +199,7 @@ extern stmt *stmt_vectoradd(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_vectorsub(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_vectormul(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_vectordiv(sql_allocator *sa, stmt *op1, stmt *op2);
-extern stmt *stmt_spreadelem(sql_allocator *sa, stmt *op1, stmt *op2);
+extern stmt *stmt_fetch(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_gathersqrt(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_normalize(sql_allocator *sa, stmt *op1);
 extern stmt *stmt_sigmoid(sql_allocator *sa, stmt *op1);

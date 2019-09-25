@@ -423,6 +423,8 @@ rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixadd;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -439,6 +441,8 @@ rel_matrixtransmul(sql_allocator *sa, sql_rel *l, sql_rel *r)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixtransmul;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -455,6 +459,8 @@ rel_matrixsqrt(sql_allocator *sa, sql_rel *l)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixsqrt;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -471,6 +477,8 @@ rel_matrixinv(sql_allocator *sa, sql_rel *l)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixinv;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -487,6 +495,8 @@ rel_matrixqqr(sql_allocator *sa, sql_rel *l)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixqqr;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -503,6 +513,8 @@ rel_matrixrqr(sql_allocator *sa, sql_rel *l, sql_rel *r)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixrqr;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;

@@ -3436,4 +3436,3 @@ rel_print(mvc *sql, sql_rel *rel, int depth)
 	mnstr_destroy(s);
 	buffer_destroy(b);
 }
-

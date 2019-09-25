@@ -1995,7 +1995,6 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
 	p = sa_list(sql->sa);
 	p->expected_cnt = list_length(s->op4.lval);
 	psub = stmt_list(sql->sa, p);
-
 	stmt_set_nrcols(psub);
 
 	// ordering of the order specification columns to know the final order of OIDs for
@@ -2456,7 +2455,7 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 		}
 
 		for (; n; n = n->next) {
-			stmt *e = stmt_dotproduct(sql->sa, n->data, m->data);
+			e = stmt_dotproduct(sql->sa, n->data, m->data);
 			s = stmt_append(sql->sa, s, e);
 		}
 
@@ -2524,7 +2523,7 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 static stmt *
 rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 {
-// list of all statements (result)
+	// list of all statements (result)
 	list *l;
 
 	// application part and description part columns
@@ -2623,10 +2622,10 @@ rel2bin_matrixsigmoid(mvc *sql, sql_rel *rel, list *refs)
 	list *loa;
 
 	// iterators
-	node *n, *m;
+	node *n;
 
 	// temporary statements
-	stmt *s, *t;
+	stmt *s;
 
 	stmt *left = NULL;
 	stmt *orderby_idsl = NULL;
@@ -2650,7 +2649,7 @@ rel2bin_matrixsigmoid(mvc *sql, sql_rel *rel, list *refs)
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, ld, &l);
 	align_by_ids(sql, orderby_idsl, la, &loa);
-	
+
 	// create sigmoid stmts
 	for (n = loa->h; n; n = n->next) {
 		s = stmt_sigmoid(sql->sa, n->data);

@@ -2602,6 +2602,9 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 		}
 	}
 
+	// reverse statements
+	identity = list_reverse(sql, identity);
+
 	list_merge_destroy(l, identity, NULL);
 
 	return stmt_list(sql->sa, l);

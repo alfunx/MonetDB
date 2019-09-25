@@ -1958,7 +1958,7 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 				char *name = exp->r;
 
 				if (nme && strcmp(nme, name) == 0 && rnme && strcmp(rnme, rname) == 0) {
-					fprintf(stderr, "    %c.%c: application\n", *rnme, *nme);
+					fprintf(stderr, "    %s.%s: application\n", rnme ? rnme : "_", nme);
 
 					s = column(sql->sa, c);
 					s = stmt_alias(sql->sa, s, rnme, nme);
@@ -1972,7 +1972,7 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 		}
 
 		if (desc) {
-			fprintf(stderr, "    %c.%c: descriptive\n", *rnme, *nme);
+			fprintf(stderr, "    %s.%s: descriptive\n", rnme ? rnme : "_", nme);
 			s = column(sql->sa, c);
 			s = stmt_alias(sql->sa, s, rnme, nme);
 			if (d)
@@ -2034,7 +2034,7 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 {
 	node *n;
 
-	for(n = l->h; n; n = n->next) {
+	for (n = l->h; n; n = n->next) {
 		stmt *c = n->data;
 		stmt *s;
 

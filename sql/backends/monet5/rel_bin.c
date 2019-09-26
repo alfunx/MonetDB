@@ -5436,39 +5436,40 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		s = rel2bin_ddl(sql, rel, refs);
 		break;
 	case op_matrixadd:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixadd\n");
 		s = rel2bin_matrixadd(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixadd\n");
 		break;
 	case op_matrixtransmul:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixtransmul\n");
 		s = rel2bin_matrixtransmul(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixtransmul\n");
 		break;
 	case op_matrixsqrt:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixsqrt\n");
 		s = rel2bin_matrixsqrt(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixsqrt\n");
 		break;
 	case op_matrixinv:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixinv\n");
 		s = rel2bin_matrixinv(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixinv\n");
 		break;
 	case op_matrixqqr:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixqqr\n");
 		s = rel2bin_matrixqqr(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixqqr\n");
 		break;
 	case op_matrixrqr:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixrqr\n");
 		s = rel2bin_matrixrqr(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixrqr\n");
 		break;
 	case op_matrixsigmoid:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixsigmoid\n");
 		s = rel2bin_matrixsigmoid(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixsigmoid\n");
+		break;
 	}
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);

@@ -5431,6 +5431,13 @@ rel2bin_ddl(mvc *sql, sql_rel *rel, list *refs)
 	return s;
 }
 
+#define SUBREL_BIN_MATRIX_CASE(TYPE) \
+	case op_##TYPE: \
+		fprintf(stderr, "\n>>> DO: [subrel_bin]: " #TYPE "\n"); \
+		s = rel2bin_##TYPE(sql, rel, refs); \
+		fprintf(stderr, ">>> END: [subrel_bin]: " #TYPE "\n"); \
+		break;
+
 static stmt *
 subrel_bin(mvc *sql, sql_rel *rel, list *refs) 
 {
@@ -5520,46 +5527,14 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	case op_ddl:
 		s = rel2bin_ddl(sql, rel, refs);
 		break;
-	case op_matrixadd:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixadd\n");
-		s = rel2bin_matrixadd(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixadd\n");
-		break;
-	case op_matrixtransmul:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixtransmul\n");
-		s = rel2bin_matrixtransmul(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixtransmul\n");
-		break;
-	case op_matrixsqrt:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixsqrt\n");
-		s = rel2bin_matrixsqrt(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixsqrt\n");
-		break;
-	case op_matrixinv:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixinv\n");
-		s = rel2bin_matrixinv(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixinv\n");
-		break;
-	case op_matrixqqr:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixqqr\n");
-		s = rel2bin_matrixqqr(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixqqr\n");
-		break;
-	case op_matrixrqr:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixrqr\n");
-		s = rel2bin_matrixrqr(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixrqr\n");
-		break;
-	case op_matrixpredict:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixpredict\n");
-		s = rel2bin_matrixpredict(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixpredict\n");
-		break;
-	case op_matrixsigmoid:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixsigmoid\n");
-		s = rel2bin_matrixsigmoid(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixsigmoid\n");
-		break;
+	SUBREL_BIN_MATRIX_CASE(matrixadd);
+	SUBREL_BIN_MATRIX_CASE(matrixtransmul);
+	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
+	SUBREL_BIN_MATRIX_CASE(matrixinv);
+	SUBREL_BIN_MATRIX_CASE(matrixqqr);
+	SUBREL_BIN_MATRIX_CASE(matrixrqr);
+	SUBREL_BIN_MATRIX_CASE(matrixpredict);
+	SUBREL_BIN_MATRIX_CASE(matrixsigmoid);
 	}
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);

@@ -232,6 +232,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_matrixadd: 
 	case op_matrixtransmul: 
 	case op_matrixrqr: 
+	case op_matrixpredict:
 
 	case op_apply: 
 	case op_semi: 
@@ -277,6 +278,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_matrixadd: 
 	case op_matrixtransmul: 
 	case op_matrixrqr: 
+	case op_matrixpredict:
 
 	case op_apply: 
 	case op_semi: 
@@ -7785,6 +7787,7 @@ rewrite(mvc *sql, sql_rel *rel, rewrite_fptr rewriter, int *has_changes)
 	case op_matrixadd: 
 	case op_matrixtransmul: 
 	case op_matrixrqr: 
+	case op_matrixpredict:
 
 	case op_apply: 
 	case op_semi: 

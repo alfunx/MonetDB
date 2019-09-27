@@ -122,6 +122,7 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 	case op_matrixrqr:
 	case op_matrixadd:
 	case op_matrixtransmul:
+	case op_matrixpredict:
 	case op_matrixsigmoid:
 		rel->exps = (i->exps)?list_dup(i->exps, (fdup)NULL):NULL;
 		rel->lexps = (i->lexps)?list_dup(i->lexps, (fdup)NULL):NULL;
@@ -242,6 +243,7 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_matrixrqr:
 	case op_matrixadd:
 	case op_matrixtransmul:
+	case op_matrixpredict:
 	case op_matrixsigmoid:
 		// TODO: matrixadd
 		if (rel->exps && exps_bind_column(rel->exps, cname, &ambiguous))
@@ -516,6 +518,24 @@ rel_matrixrqr(sql_allocator *sa, sql_rel *l, sql_rel *r)
 	rel->lord = NULL;
 	rel->rord = NULL;
 	rel->op = op_matrixrqr;
+	rel->card = CARD_MULTI;
+	rel->nrcols = l->nrcols;
+	return rel;
+}
+
+sql_rel *
+rel_matrixpredict(sql_allocator *sa, sql_rel *l, sql_rel *r)
+{
+	sql_rel *rel = rel_create(sa);
+
+	rel->l = l;
+	rel->r = r;
+	rel->exps = new_exp_list(sa);
+	rel->lexps = new_exp_list(sa);
+	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
+	rel->op = op_matrixpredict;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
 	return rel;
@@ -967,6 +987,7 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_matrixadd:
 	case op_matrixtransmul:
 	case op_matrixrqr:
+	case op_matrixpredict:
 		// TODO: matrixadd
 		exps = rel_projections(sql, rel->l, tname, settname, intern);
 		rexps = rel_projections(sql, rel->r, tname, settname, intern);
@@ -1010,6 +1031,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_matrixrqr:
 	case op_matrixadd:
 	case op_matrixtransmul:
+	case op_matrixpredict:
 	case op_matrixsigmoid:
 		found = rel_bind_path_(rel->l, e, path);
 		break;

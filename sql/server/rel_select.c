@@ -5665,7 +5665,8 @@ rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q)
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append_desc_part(exps, sql, t1, rel->lexps);
-	append(exps, exp_column(sql->sa, NULL, "prediction", NULL, 0, 0, 0));
+	// TODO: fix and remove this ugly hack
+	append(exps, exp_alias_or_copy(sql, NULL, "prediction", t1, rel->lexps->h->data));
 
 	// set number of attributes in the result relation
 	rel->nrcols = list_length(exps);

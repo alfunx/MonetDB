@@ -1941,43 +1941,39 @@ rel2bin_join( mvc *sql, sql_rel *rel, list *refs)
 static void
 split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 {
-	node *n, *en;
+	node *m, *n;
+	stmt *s;
+	sql_exp *e;
 
 	fprintf(stderr, ">>> [split_exps_appl_desc]\n");
-	for (n = p->op4.lval->h; n; n = n->next) {
-		stmt *c = n->data;
-		stmt *s;
-		bool desc = true;
-		const char *rnme = table_name(sql->sa, c);
-		const char *nme = column_name(sql->sa, c);
+	for (m = p->op4.lval->h; m; m = m->next) {
+		s = m->data;
 
-		for (en = exps->h; en; en = en->next) {
-			sql_exp *exp = en->data;
+		const char *rnme = table_name(sql->sa, s);
+		const char *nme = column_name(sql->sa, s);
 
-			if (exp->l && exp->r) {
-				char *rname = exp->l;
-				char *name = exp->r;
+		for (n = exps->h; n; n = n->next) {
+			e = n->data;
 
-				if (nme && strcmp(nme, name) == 0 && rnme && strcmp(rnme, rname) == 0) {
-					fprintf(stderr, "    %s.%s: application\n", rnme ? rnme : "_", nme);
+			if (!e->l || !e->r)
+				continue;
 
-					s = column(sql->sa, c);
-					s = stmt_alias(sql->sa, s, rnme, nme);
+			const char *rname = e->l;
+			const char *name = e->r;
 
-					if (a)
-						list_append(*a, s);
-					desc = false;
-					break;
-				}
-			}
+			if (nme && strcmp(nme, name) != 0)
+				continue;
+			if (rnme && strcmp(rnme, rname) != 0)
+				continue;
+
+			fprintf(stderr, "    <A>  %s.%s\n", rnme ? rnme : "_", nme);
+			if (a) list_append(*a, column(sql->sa, s));
+			break;
 		}
 
-		if (desc) {
-			fprintf(stderr, "    %s.%s: descriptive\n", rnme ? rnme : "_", nme);
-			s = column(sql->sa, c);
-			s = stmt_alias(sql->sa, s, rnme, nme);
-			if (d)
-				list_append(*d, s);
+		if (!n) {
+			fprintf(stderr, "    <D>  %s.%s\n", rnme ? rnme : "_", nme);
+			if (d) list_append(*d, column(sql->sa, s));
 		}
 	}
 }

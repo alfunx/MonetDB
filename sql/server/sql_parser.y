@@ -563,7 +563,7 @@ int yydebug=1;
 %token NOOPTIMIZE
 %token GATHER
 %token SQRT
-%token LINSOLVE
+%token LINREG
 %token INV
 %token QQR
 %token RQR
@@ -2835,17 +2835,17 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_CROSS, l); }
 
+ |  LINREG matrix_ref FOR matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_symbol(l, $4);
+	  $$ = _symbol_create_list( SQL_MATRIXLINREG, l); }
+
  |  matrix_ref ADD matrix_ref opt_no_optimize
 	{ dlist *l = L();
 	  append_symbol(l, $1);
 	  append_symbol(l, $3);
 	  append_int(l, $4);
-	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
-
- |  matrix_ref LINSOLVE BY matrix_ref
-	{ dlist *l = L();
-	  append_symbol(l, $1);
-	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
 
  |  matrix_ref T MUL matrix_ref

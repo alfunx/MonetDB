@@ -96,7 +96,7 @@ st_type2string(st_type type)
 		ST(vectorsub);
 		ST(vectormul);
 		ST(vectordiv);
-		ST(spreadelem);
+		ST(fetch);
 		ST(gathersqrt);
 		ST(dotproduct);
 		ST(normalize);
@@ -171,6 +171,15 @@ stmt_atom_dbl(sql_allocator *sa, dbl i)
 
 	sql_find_subtype(&t, "double", 64, 0);
 	return stmt_atom(sa, atom_float(sa, &t, i));
+}
+
+stmt *
+stmt_atom_oid(sql_allocator *sa, oid i)
+{
+	sql_subtype t;
+
+	sql_find_subtype(&t, "oid", 32, 0);
+	return stmt_atom(sa, atom_int(sa, &t, i));
 }
 
 stmt *
@@ -350,7 +359,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_vectormul:
 			case st_vectordiv:
 			case st_sigmoid:
-			case st_spreadelem:
+			case st_fetch:
 			case st_gathersqrt:
 			case st_dotproduct:
 			case st_normalize:
@@ -936,9 +945,9 @@ stmt_vectordiv(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
-stmt_spreadelem(sql_allocator *sa, stmt *op1, stmt *op2)
+stmt_fetch(sql_allocator *sa, stmt *op1, stmt *op2)
 {
-	stmt *s = stmt_create(sa, st_spreadelem);
+	stmt *s = stmt_create(sa, st_fetch);
 	s->op1 = op1;
 	s->op2 = op2;
 	s->nrcols = 1;
@@ -1345,7 +1354,7 @@ tail_type(stmt *st)
 	case st_vectormul:
 	case st_vectordiv:
 	case st_sigmoid:
-	case st_spreadelem:
+	case st_fetch:
 	case st_gathersqrt:
 	case st_dotproduct:
 	case st_normalize:
@@ -1508,7 +1517,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_vectormul:
 	case st_vectordiv:
 	case st_sigmoid:
-	case st_spreadelem:
+	case st_fetch:
 	case st_gathersqrt:
 	case st_dotproduct:
 	case st_normalize:
@@ -1589,7 +1598,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_vectormul:
 	case st_vectordiv:
 	case st_sigmoid:
-	case st_spreadelem:
+	case st_fetch:
 	case st_gathersqrt:
 	case st_dotproduct:
 	case st_normalize:
@@ -1656,7 +1665,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_vectormul:
 	case st_vectordiv:
 	case st_sigmoid:
-	case st_spreadelem:
+	case st_fetch:
 	case st_gathersqrt:
 	case st_dotproduct:
 	case st_normalize:

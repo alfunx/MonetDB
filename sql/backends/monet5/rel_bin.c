@@ -1958,7 +1958,7 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 				char *name = exp->r;
 
 				if (nme && strcmp(nme, name) == 0 && rnme && strcmp(rnme, rname) == 0) {
-					fprintf(stderr, "    %c.%c: application\n", *rnme, *nme);
+					fprintf(stderr, "    %s.%s: application\n", rnme ? rnme : "_", nme);
 
 					s = column(sql->sa, c);
 					s = stmt_alias(sql->sa, s, rnme, nme);
@@ -1972,7 +1972,7 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 		}
 
 		if (desc) {
-			fprintf(stderr, "    %c.%c: descriptive\n", *rnme, *nme);
+			fprintf(stderr, "    %s.%s: descriptive\n", rnme ? rnme : "_", nme);
 			s = column(sql->sa, c);
 			s = stmt_alias(sql->sa, s, rnme, nme);
 			if (d)
@@ -1995,7 +1995,6 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
 	p = sa_list(sql->sa);
 	p->expected_cnt = list_length(s->op4.lval);
 	psub = stmt_list(sql->sa, p);
-
 	stmt_set_nrcols(psub);
 
 	// ordering of the order specification columns to know the final order of OIDs for
@@ -2034,7 +2033,7 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 {
 	node *n;
 
-	for(n = l->h; n; n = n->next) {
+	for (n = l->h; n; n = n->next) {
 		stmt *c = n->data;
 		stmt *s;
 
@@ -2277,7 +2276,7 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	list *loa, *roa;
 
 	// iterators
-	node *n, *m, *o;
+	node *n, *m;
 
 	// temporary statements
 	stmt *s, *t, *e;
@@ -2402,7 +2401,7 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	list *loa, *roa;
 
 	// iterators
-	node *n, *m, *o;
+	node *n, *m;
 
 	// counters
 	int i, j;
@@ -2447,8 +2446,8 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	list_append(l, stmt_order_column(sql, loa));
 
 	// create rqr stmts
-	for (m = roa->h, o = loa->h, i = 0; m && o; m = m->next, o = o->next, i++) {
-		t = o->data;
+	for (m = roa->h, i = 0; m; m = m->next, i++) {
+		t = m->data;
 		s = stmt_temp(sql->sa, tail_type(zero));
 
 		for (n = loa->h, j = 0; n && j < i; n = n->next, j++) {
@@ -2456,7 +2455,7 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 		}
 
 		for (; n; n = n->next) {
-			stmt *e = stmt_dotproduct(sql->sa, n->data, m->data);
+			e = stmt_dotproduct(sql->sa, n->data, m->data);
 			s = stmt_append(sql->sa, s, e);
 		}
 
@@ -2524,7 +2523,7 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 static stmt *
 rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 {
-// list of all statements (result)
+	// list of all statements (result)
 	list *l;
 
 	// application part and description part columns
@@ -2584,15 +2583,15 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 
 	// create matrix inverse stmts
 	for (ol = loa_rev->h, or = identity->h, i = d - 1; ol && or; ol = ol->next, or = or->next, i--) {
-		s = stmt_atom_int(sql->sa, i);
-		s = stmt_spreadelem(sql->sa, ol->data, s);
+		s = stmt_atom_oid(sql->sa, i);
+		s = stmt_fetch(sql->sa, ol->data, s);
 
 		ol->data = stmt_vectordiv(sql->sa, ol->data, s);
 		or->data = stmt_vectordiv(sql->sa, or->data, s);
 
 		for (il = ol->next, ir = or->next, j = i - 1; il && ir; il = il->next, ir = ir->next, j--) {
-			t = stmt_atom_int(sql->sa, i);
-			t = stmt_spreadelem(sql->sa, il->data, t);
+			t = stmt_atom_oid(sql->sa, i);
+			t = stmt_fetch(sql->sa, il->data, t);
 
 			tl = stmt_vectormul(sql->sa, t, ol->data);
 			tr = stmt_vectormul(sql->sa, t, or->data);
@@ -2601,6 +2600,9 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 			ir->data = stmt_vectorsub(sql->sa, ir->data, tr);
 		}
 	}
+
+	// reverse statements
+	identity = list_reverse(sql, identity);
 
 	list_merge_destroy(l, identity, NULL);
 
@@ -2620,10 +2622,10 @@ rel2bin_matrixsigmoid(mvc *sql, sql_rel *rel, list *refs)
 	list *loa;
 
 	// iterators
-	node *n, *m;
+	node *n;
 
 	// temporary statements
-	stmt *s, *t;
+	stmt *s;
 
 	stmt *left = NULL;
 	stmt *orderby_idsl = NULL;
@@ -2647,7 +2649,7 @@ rel2bin_matrixsigmoid(mvc *sql, sql_rel *rel, list *refs)
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, ld, &l);
 	align_by_ids(sql, orderby_idsl, la, &loa);
-	
+
 	// create sigmoid stmts
 	for (n = loa->h; n; n = n->next) {
 		s = stmt_sigmoid(sql->sa, n->data);
@@ -5436,39 +5438,40 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		s = rel2bin_ddl(sql, rel, refs);
 		break;
 	case op_matrixadd:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixadd\n");
 		s = rel2bin_matrixadd(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixadd\n");
 		break;
 	case op_matrixtransmul:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixtransmul\n");
 		s = rel2bin_matrixtransmul(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixtransmul\n");
 		break;
 	case op_matrixsqrt:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixsqrt\n");
 		s = rel2bin_matrixsqrt(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixsqrt\n");
 		break;
 	case op_matrixinv:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixinv\n");
 		s = rel2bin_matrixinv(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixinv\n");
 		break;
 	case op_matrixqqr:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixqqr\n");
 		s = rel2bin_matrixqqr(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixqqr\n");
 		break;
 	case op_matrixrqr:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixrqr\n");
 		s = rel2bin_matrixrqr(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixrqr\n");
 		break;
 	case op_matrixsigmoid:
-		fprintf(stderr, ">>> [subrel_bin]\n");
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixsigmoid\n");
 		s = rel2bin_matrixsigmoid(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]\n");
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixsigmoid\n");
+		break;
 	}
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);

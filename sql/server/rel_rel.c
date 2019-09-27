@@ -122,6 +122,7 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 	case op_matrixrqr:
 	case op_matrixadd:
 	case op_matrixtransmul:
+	case op_matrixsigmoid:
 		rel->exps = (i->exps)?list_dup(i->exps, (fdup)NULL):NULL;
 		rel->lexps = (i->lexps)?list_dup(i->lexps, (fdup)NULL):NULL;
 		rel->rexps = (i->rexps)?list_dup(i->rexps, (fdup)NULL):NULL;
@@ -135,7 +136,6 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 	case op_apply:
 	case op_semi:
 	case op_anti:
-	case op_matrixsigmoid:
 	case op_project:
 	case op_select:
 	default:
@@ -210,7 +210,6 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_except:
 	case op_inter:
 	case op_groupby:
-	case op_matrixsigmoid:
 	case op_project:
 	case op_table:
 	case op_basetable:
@@ -243,6 +242,7 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_matrixrqr:
 	case op_matrixadd:
 	case op_matrixtransmul:
+	case op_matrixsigmoid:
 		// TODO: matrixadd
 		if (rel->exps && exps_bind_column(rel->exps, cname, &ambiguous))
 			return rel;
@@ -423,6 +423,8 @@ rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixadd;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -439,6 +441,8 @@ rel_matrixtransmul(sql_allocator *sa, sql_rel *l, sql_rel *r)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixtransmul;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -455,6 +459,8 @@ rel_matrixsqrt(sql_allocator *sa, sql_rel *l)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixsqrt;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -471,6 +477,8 @@ rel_matrixinv(sql_allocator *sa, sql_rel *l)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixinv;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -487,6 +495,8 @@ rel_matrixqqr(sql_allocator *sa, sql_rel *l)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixqqr;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -503,6 +513,8 @@ rel_matrixrqr(sql_allocator *sa, sql_rel *l, sql_rel *r)
 	rel->exps = new_exp_list(sa);
 	rel->lexps = new_exp_list(sa);
 	rel->rexps = new_exp_list(sa);
+	rel->lord = NULL;
+	rel->rord = NULL;
 	rel->op = op_matrixrqr;
 	rel->card = CARD_MULTI;
 	rel->nrcols = l->nrcols;
@@ -906,7 +918,6 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 		}
 		return exps;
 	case op_groupby:
-	case op_matrixsigmoid:
 	case op_project:
 	case op_basetable:
 	case op_table:
@@ -947,6 +958,7 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_matrixsigmoid:
 	case op_select:
 	case op_topn:
 	case op_sample:
@@ -998,6 +1010,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_matrixrqr:
 	case op_matrixadd:
 	case op_matrixtransmul:
+	case op_matrixsigmoid:
 		found = rel_bind_path_(rel->l, e, path);
 		break;
 
@@ -1010,7 +1023,6 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 			break;
 		}
 	case op_groupby:
-	case op_matrixsigmoid:
 	case op_project:
 	case op_table:
 	case op_basetable:

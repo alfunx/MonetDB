@@ -69,6 +69,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_matrixsigmoid:
 	case op_apply:
 	case op_semi:
 	case op_anti:
@@ -81,7 +82,6 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_union:
 	case op_except:
 	case op_inter:
-	case op_matrixsigmoid:
 	case op_project:
 		if (!is_processed(rel) && level == 0)
 			return rel_table_projections( sql, rel->l, tname, level+1);
@@ -228,6 +228,7 @@ static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q);
 
 static sql_rel *
 rel_table_optname(mvc *sql, sql_rel *sq, symbol *optname)
@@ -364,6 +365,14 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_UNIONJOIN:
 	{
 		sql_rel *tq = rel_unionjoinquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXLINREG:
+	{
+		sql_rel *tq = rel_matrixlinregquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3709,7 +3718,6 @@ rel_projections_(mvc *sql, sql_rel *rel)
 		exps = list_merge( exps, rexps, (fdup)NULL);
 		return exps;
 	case op_groupby:
-	case op_matrixsigmoid:
 	case op_project:
 	case op_table:
 	case op_basetable:
@@ -3759,6 +3767,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixqqr:
+	case op_matrixsigmoid:
 	case op_select:
 	case op_topn:
 	case op_sample:
@@ -5161,15 +5170,13 @@ rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *q)
 }
 
 static void
-append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
+append_desc_part(list *l, mvc *sql, sql_rel *t, list *ap)
 {
 	list *exps = rel_projections(sql, t, NULL, 1, 0);
 	if (!exps)
 		return;
 
-	node *n;
-
-	for (n = exps->h; n; n = n->next) {
+	for (node *n = exps->h; n; n = n->next) {
 		sql_exp *te = n->data;
 		const char *rnm = te->rname;
 		const char *nm = te->name;
@@ -5178,51 +5185,74 @@ append_desc_part(mvc *sql, sql_rel *t, list *ap, list **outexps)
 		if (strcmp(nm, "__schema") == 0 || strcmp(nm, "__order") == 0)
 			continue;
 
-		sql_exp *e = exps_bind_column(ap, nm, NULL);
-
-		if (!e) {
-			fprintf(stderr, ">>> [append_desc_part] column: %s.%s\n", rnm, nm);
-			append(*outexps, te);
+		if (!exps_bind_column(ap, nm, NULL)) {
+			fprintf(stderr, ">>> [rel] descriptive part: %s.%s\n", rnm, nm);
+			append(l, te);
 		}
 	}
 }
 
 static void
-append_appl_part(mvc *sql, list *apl, list *apr, list **outexps, bool use_right)
+append_appl_part(list *l, mvc *sql, list *ap)
 {
 	int nr = ++sql->label;
 	char name[16], *rnm;
 	rnm = number2name(name, 16, nr);
-	node *n, *m;
 
-	if (apr) {
-		for (n = use_right ? apr->h : apl->h; n; n = n->next) {
-			sql_exp *te = n->data;
-			const char *nm = te->name;
-			fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
+	for (node *n = ap->h; n; n = n->next) {
+		sql_exp *te = n->data;
+		const char *nm = te->name;
+		fprintf(stderr, ">>> [rel] application part: %s.%s\n", rnm, nm);
 
-			exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
-			append(*outexps, te);
-		}
-	} else {
-		for (n = apl->h; n; n = n->next) {
-			sql_exp *te = n->data;
-			const char *nm = te->name;
-			fprintf(stderr, ">>> [append_appl_part] column: %s.%s\n", rnm, nm);
-
-			exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
-			append(*outexps, te);
-		}
+		exp_setname(sql->sa, te, rnm, sa_strdup(sql->sa, nm));
+		append(l, te);
 	}
 }
 
 #define schema_column() (exp_column(sql->sa, NULL, "__schema", NULL, 0, 0, 0))
 #define order_column() (exp_column(sql->sa, NULL, "__order", NULL, 0, 0, 0))
 
+#define set_left_orderby(R, T) \
+	if (T) { \
+		*R->lord = rel_order_by(sql, R, T, 0); \
+	}
+
+#define set_right_orderby(R, T) \
+	if (T) { \
+		sql_rel *t = *R->l; \
+		*R->l = *R->r; \
+		*R->r = t; \
+		*R->rord = rel_order_by(sql, R, T, 0); \
+		t = *R->l; \
+		*R->l = *R->r; \
+		*R->r = t; \
+	}
+
+#define set_left_application_part(R, T) \
+	for (dnode *en = T->h; en; en = en->next) { \
+		sql_exp *ce = rel_column_exp(sql, (sql_rel**)&(*R->l), en->data.sym, sql_sel); \
+		if (ce) \
+			append(*R->lexps, ce); \
+	}
+
+#define set_right_application_part(R, T) \
+	for (dnode *en = T->h; en; en = en->next) { \
+		sql_exp *ce = rel_column_exp(sql, (sql_rel**)&(*R->r), en->data.sym, sql_sel); \
+		if (ce) \
+			append(*R->rexps, ce); \
+	}
+
+#define set_gathering_attributes(R, T) \
+	for (dnode *en = T->h; en; en = en->next) { \
+		sql_exp *ce = rel_column_exp(sql, (sql_rel**)&(*R->l), en->data.sym, sql_sel); \
+		if (ce) \
+			append(*R->rexps, ce); \
+	}
+
 static sql_rel *
 rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 {
-	dnode *en, *n = q->data.lval->h;
+	dnode *n = q->data.lval->h;
 
 	// read data from symbol tree
 	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
@@ -5243,61 +5273,26 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 	// set no-optimization flag
 	rel->noopt = n->next->next->data.i_val;
 
-	list *lobe = NULL;
-	list *robe = NULL;
-	int lnrcols = 0;
-	int rnrcols = 0;
+	set_left_orderby(&rel, tab2);
+	set_right_orderby(&rel, tab5);
+	set_left_application_part(&rel, tab3);
+	set_right_application_part(&rel, tab6);
 
-	// set orderby for left relation
-	if (tab2) {
-		lobe = rel_order_by(sql, &rel, tab2, 0);
-	}
-
-	// set orderby for right relation
-	if (tab5) {
-		sql_rel *t = rel->l;
-		rel->l = rel->r;
-		rel->r = t;
-		robe = rel_order_by(sql, &rel, tab5, 0);
-		t = rel->l;
-		rel->l = rel->r;
-		rel->r = t;
-	}
-
-	rel->lord = lobe;
-	rel->rord = robe;
-
-	// set application part of left relation
-	for (en = tab3->h; en; en = en->next, lnrcols++) {
-		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->lexps, ce);
-	}
-
-	// set application part of right relation
-	for (en = tab6->h; en; en = en->next, rnrcols++) {
-		sql_exp *ce = rel_column_exp(sql, &t2, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->rexps, ce);
-	}
-
-	if (lnrcols != rnrcols) {
+	if (list_length(rel->lexps) != list_length(rel->rexps)) {
 		sql_error(sql, 02, "MATRIX ADD: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(t1)?rel_name(t1):"", rel_name(t2)?rel_name(t2):"");
 		rel_destroy(rel);
 		return NULL;
 	}
 
 	// set number of attributes in the result relation
-	rel->nrcols = t1->nrcols + t2->nrcols - lnrcols;
+	rel->nrcols = t1->nrcols + t2->nrcols - list_length(rel->lexps);
 	fprintf(stderr, ">>> [rel_matrixaddquery] nrcols: %d\n", rel->nrcols);
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
-	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_desc_part(sql, t2, rel->rexps, &exps);
-	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
+	append_desc_part(exps, sql, t1, rel->lexps);
+	append_desc_part(exps, sql, t2, rel->rexps);
+	append_appl_part(exps, sql, rel->lexps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5305,7 +5300,7 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 static sql_rel *
 rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 {
-	dnode *en, *n = q->data.lval->h;
+	dnode *n = q->data.lval->h;
 
 	// read data from symbol tree
 	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
@@ -5323,55 +5318,20 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	rel = rel_matrixtransmul(sql->sa, t1, t2);
 
-	list *lobe = NULL;
-	list *robe = NULL;
-	int lnrcols = 0;
-	int rnrcols = 0;
-
-	// set orderby for left relation
-	if (tab2) {
-		lobe = rel_order_by(sql, &rel, tab2, 0);
-	}
-
-	// set orderby for right relation
-	if (tab5) {
-		sql_rel *t = rel->l;
-		rel->l = rel->r;
-		rel->r = t;
-		robe = rel_order_by(sql, &rel, tab5, 0);
-		t = rel->l;
-		rel->l = rel->r;
-		rel->r = t;
-	}
-
-	rel->lord = lobe;
-	rel->rord = robe;
-
-	// set application part of left relation
-	for (en = tab3->h; en; en = en->next, lnrcols++) {
-		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->lexps, ce);
-	}
-
-	// set application part of right relation
-	for (en = tab6->h; en; en = en->next, rnrcols++) {
-		sql_exp *ce = rel_column_exp(sql, &t2, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->rexps, ce);
-	}
+	set_left_orderby(&rel, tab2);
+	set_right_orderby(&rel, tab5);
+	set_left_application_part(&rel, tab3);
+	set_right_application_part(&rel, tab6);
 
 	// set number of attributes in the result relation
-	rel->nrcols = lnrcols;
+	rel->nrcols = list_length(rel->lexps) + 2;
 	fprintf(stderr, ">>> [rel_matrixtransmulquery] nrcols: %d\n", rel->nrcols);
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append(exps, order_column());
 	append(exps, schema_column());
-	append_appl_part(sql, rel->lexps, rel->rexps, &exps, true);
+	append_appl_part(exps, sql, rel->rexps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5379,7 +5339,7 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 static sql_rel *
 rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 {
-	dnode *en, *n = q->data.lval->h;
+	dnode *n = q->data.lval->h;
 
 	// read data from symbol tree
 	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
@@ -5394,32 +5354,9 @@ rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	rel = rel_matrixsqrt(sql->sa, t1);
 
-	list *lobe = NULL;
-	list *robe = NULL;
-
-	// set orderby for left relation
-	if (tab2) {
-		lobe = rel_order_by(sql, &rel, tab2, 0);
-	}
-
-	rel->lord = lobe;
-	rel->rord = robe;
-
-	// set application part of left relation
-	for (en = tab3->h; en; en = en->next) {
-		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->lexps, ce);
-	}
-
-	// set gathering attributes
-	for (en = tab4->h; en; en = en->next) {
-		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->rexps, ce);
-	}
+	set_left_orderby(&rel, tab2);
+	set_left_application_part(&rel, tab3);
+	set_gathering_attributes(&rel, tab4);
 
 	// set number of attributes in the result relation
 	rel->nrcols = t1->nrcols;
@@ -5427,8 +5364,8 @@ rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
-	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_appl_part(sql, rel->lexps, NULL, &exps, false);
+	append_desc_part(exps, sql, t1, rel->lexps);
+	append_appl_part(exps, sql, rel->lexps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5436,7 +5373,7 @@ rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 static sql_rel *
 rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 {
-	dnode *en, *n = q->data.lval->h;
+	dnode *n = q->data.lval->h;
 
 	// read data from symbol tree
 	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
@@ -5450,33 +5387,19 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	rel = rel_matrixinv(sql->sa, t1);
 
-	list *lobe = NULL;
-
-	// set orderby for left relation
-	if (tab2) {
-		lobe = rel_order_by(sql, &rel, tab2, 0);
-	}
-
-	rel->lord = lobe;
-
-	// set application part of left relation
-	for (en = tab3->h; en; en = en->next) {
-		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->lexps, ce);
-	}
+	set_left_orderby(&rel, tab2);
+	set_left_application_part(&rel, tab3);
 
 	// set number of attributes in the result relation
-	rel->nrcols = t1->nrcols;
+	rel->nrcols = list_length(rel->lexps) + 2;
 	fprintf(stderr, ">>> [rel_matrixinvquery] nrcols: %d\n", rel->nrcols);
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append(exps, order_column());
 	append(exps, schema_column());
-	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_appl_part(sql, rel->lexps, NULL, &exps, false);
+	append_desc_part(exps, sql, t1, rel->lexps);
+	append_appl_part(exps, sql, rel->lexps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5484,7 +5407,7 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 static sql_rel *
 rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
 {
-	dnode *en, *n = q->data.lval->h;
+	dnode *n = q->data.lval->h;
 
 	// read data from symbol tree
 	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
@@ -5498,22 +5421,8 @@ rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	rel = rel_matrixqqr(sql->sa, t1);
 
-	list *lobe = NULL;
-
-	// set orderby for left relation
-	if (tab2) {
-		lobe = rel_order_by(sql, &rel, tab2, 0);
-	}
-
-	rel->lord = lobe;
-
-	// set application part of left relation
-	for (en = tab3->h; en; en = en->next) {
-		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->lexps, ce);
-	}
+	set_left_orderby(&rel, tab2);
+	set_left_application_part(&rel, tab3);
 
 	// set number of attributes in the result relation
 	rel->nrcols = t1->nrcols;
@@ -5521,8 +5430,8 @@ rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
-	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_appl_part(sql, rel->lexps, NULL, &exps, false);
+	append_desc_part(exps, sql, t1, rel->lexps);
+	append_appl_part(exps, sql, rel->lexps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5530,7 +5439,7 @@ rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
 static sql_rel *
 rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 {
-	dnode *en, *n = q->data.lval->h;
+	dnode *n = q->data.lval->h;
 
 	// read data from symbol tree
 	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
@@ -5548,61 +5457,20 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	rel = rel_matrixrqr(sql->sa, t1, t2);
 
-	list *lobe = NULL;
-	list *robe = NULL;
-	int lnrcols = 0;
-	int rnrcols = 0;
-
-	// set orderby for left relation
-	if (tab2) {
-		lobe = rel_order_by(sql, &rel, tab2, 0);
-	}
-
-	// set orderby for right relation
-	if (tab5) {
-		sql_rel *t = rel->l;
-		rel->l = rel->r;
-		rel->r = t;
-		robe = rel_order_by(sql, &rel, tab5, 0);
-		t = rel->l;
-		rel->l = rel->r;
-		rel->r = t;
-	}
-
-	rel->lord = lobe;
-	rel->rord = robe;
-
-	// set application part of left relation
-	for (en = tab3->h; en; en = en->next, lnrcols++) {
-		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->lexps, ce);
-	}
-
-	// set application part of right relation
-	for (en = tab6->h; en; en = en->next, rnrcols++) {
-		sql_exp *ce = rel_column_exp(sql, &t2, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->rexps, ce);
-	}
-
-	if (lnrcols != rnrcols) {
-		sql_error(sql, 02, "MATRIX RQR: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(t1)?rel_name(t1):"", rel_name(t2)?rel_name(t2):"");
-		rel_destroy(rel);
-		return NULL;
-	}
+	set_left_orderby(&rel, tab2);
+	set_right_orderby(&rel, tab5);
+	set_left_application_part(&rel, tab3);
+	set_right_application_part(&rel, tab6);
 
 	// set number of attributes in the result relation
-	rel->nrcols = lnrcols;
+	rel->nrcols = list_length(rel->lexps) + 2;
 	fprintf(stderr, ">>> [rel_matrixrqrquery] nrcols: %d\n", rel->nrcols);
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append(exps, order_column());
 	append(exps, schema_column());
-	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
+	append_appl_part(exps, sql, rel->rexps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
@@ -5610,7 +5478,7 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 static sql_rel *
 rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q)
 {
-	dnode *en, *n = q->data.lval->h;
+	dnode *n = q->data.lval->h;
 
 	// read data from symbol tree
 	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
@@ -5622,43 +5490,30 @@ rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q)
 	if (!t1)
 		return NULL;
 
-	// create qqr relation
-	sql_rel *qqr_rel = rel_matrixqqrquery(sql, rel, q);
-	// remove the projection on top of the qqr relation
-	qqr_rel = qqr_rel->l;
+	// qqr relation
+	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, t1);
+
+	set_left_orderby(&qqr_rel, tab2);
+	set_left_application_part(&qqr_rel, tab3);
+
+	// rqr relation
 	rel = rel_matrixrqr(sql->sa, t1, qqr_rel);
 
-	list *lobe = NULL;
-	int lnrcols = 0;
+	set_left_orderby(&rel, tab2);
+	set_left_application_part(&rel, tab3);
 
-	// set orderby for left relation
-	if (tab2) {
-		lobe = rel_order_by(sql, &rel, tab2, 0);
-	}
-
-	rel->lord = lobe;
 	rel->rord = qqr_rel->lord;
-
-	// set application part of left relation
-	for (en = tab3->h; en; en = en->next, lnrcols++) {
-		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->lexps, ce);
-	}
-
-	// set application part of right relation
 	rel->rexps = qqr_rel->lexps;
 
 	// set number of attributes in the result relation
-	rel->nrcols = lnrcols;
+	rel->nrcols = list_length(rel->lexps) + 2;
 	fprintf(stderr, ">>> [rel_matrixrqrquery_simple] nrcols: %d\n", rel->nrcols);
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append(exps, order_column());
 	append(exps, schema_column());
-	append_appl_part(sql, rel->lexps, rel->rexps, &exps, false);
+	append_appl_part(exps, sql, rel->rexps);
 	rel = rel_project(sql->sa, rel, exps);
 
 	return rel;
@@ -5681,22 +5536,8 @@ rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	rel = rel_matrixsigmoid(sql->sa, t1);
 
-	list *lobe = NULL;
-
-	// set orderby for left relation
-	if (tab2) {
-		lobe = rel_order_by(sql, &rel, tab2, 0);
-	}
-
-	rel->lord = lobe;
-
-	// set application part of left relation
-	for (en = tab3->h; en; en = en->next) {
-		sql_exp *ce = rel_column_exp(sql, &t1, en->data.sym, sql_sel);
-
-		if (ce)
-			append(rel->lexps, ce);
-	}
+	set_left_orderby(&rel, tab2);
+	set_left_application_part(&rel, tab3);
 
 	// set number of attributes in the result relation
 	rel->nrcols = t1->nrcols;
@@ -5704,8 +5545,82 @@ rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// project necessary attributes for result relation
 	list *exps = new_exp_list(sql->sa);
-	append_desc_part(sql, t1, rel->lexps, &exps);
-	append_appl_part(sql, rel->lexps, NULL, &exps, false);
+	append_desc_part(exps, sql, t1, rel->lexps);
+	append_appl_part(exps, sql, rel->lexps);
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *en, *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
+	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *t1 = table_ref(sql, rel, tab1);
+	sql_rel *t2 = table_ref(sql, rel, tab4);
+	if (!t1 || !t2)
+		return NULL;
+
+	// qqr relation
+	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, t1);
+
+	set_left_orderby(&qqr_rel, tab2);
+	set_left_application_part(&qqr_rel, tab3);
+
+	// rqr relation
+	sql_rel *rqr_rel = rel_matrixrqr(sql->sa, t1, qqr_rel);
+
+	set_left_orderby(&rqr_rel, tab2);
+	set_left_application_part(&rqr_rel, tab3);
+
+	rqr_rel->rord = qqr_rel->rord;
+	rqr_rel->rexps = qqr_rel->lexps;
+
+	// inv relation
+	sql_rel *inv_rel = rel_matrixinv(sql->sa, rqr_rel);
+
+	// TODO: __order
+	// inv_rel->lord = rqr_rel->rord;
+	inv_rel->lexps = rqr_rel->rexps;
+
+	// qy relation
+	sql_rel *qy_rel = rel_matrixtransmul(sql->sa, qqr_rel, t2);
+
+	qy_rel->lord = qqr_rel->lord;
+	qy_rel->lexps = qqr_rel->lexps;
+
+	set_right_orderby(&qy_rel, tab5);
+	set_right_application_part(&qy_rel, tab6);
+
+	// result relation
+	rel = rel_matrixtransmul(sql->sa, inv_rel, qy_rel);
+
+	// TODO: __order
+	// rel->lord = inv_rel->lord;
+	rel->lexps = inv_rel->lexps;
+
+	// TODO: __order
+	// rel->rord = qy_rel->rord;
+	rel->rexps = qy_rel->rexps;
+
+	// set number of attributes in the result relation
+	rel->nrcols = 3;
+	fprintf(stderr, ">>> [rel_matrixrqrquery] nrcols: %d\n", rel->nrcols);
+
+	// project necessary attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append(exps, order_column());
+	append(exps, schema_column());
+	append_appl_part(exps, sql, rel->rexps);
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }

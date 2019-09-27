@@ -2835,7 +2835,7 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_CROSS, l); }
 
- |  LINREG matrix_ref USING matrix_ref
+ |  LINREG matrix_ref FOR matrix_ref
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);

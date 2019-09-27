@@ -1946,6 +1946,7 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 	sql_exp *e;
 
 	fprintf(stderr, ">>> [split_exps_appl_desc]\n");
+
 	for (m = p->op4.lval->h; m; m = m->next) {
 		s = m->data;
 
@@ -1967,12 +1968,14 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 				continue;
 
 			fprintf(stderr, "    <A>  %s.%s\n", rnme ? rnme : "_", nme);
+
 			if (a) list_append(*a, column(sql->sa, s));
 			break;
 		}
 
 		if (!n) {
 			fprintf(stderr, "    <D>  %s.%s\n", rnme ? rnme : "_", nme);
+
 			if (d) list_append(*d, column(sql->sa, s));
 		}
 	}
@@ -1993,6 +1996,8 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
 	p->expected_cnt = list_length(s->op4.lval);
 	psub = stmt_list(sql->sa, p);
 	stmt_set_nrcols(psub);
+
+	fprintf(stderr, ">>> [gen_orderby_ids]\n");
 
 	// ordering of the order specification columns to know the final order of OIDs for
 	for (n = ord->h; n; n = n->next) {
@@ -2018,7 +2023,8 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
 
 		const char *tname = table_name(sql->sa, orderbycolstmt);
 		const char *cname = column_name(sql->sa, orderbycolstmt);
-		fprintf(stderr, ">>> [gen_orderby_ids] ordering: %s.%s\n", tname, cname);
+
+		fprintf(stderr, "    %s.%s\n", tname, cname);
 
 		*orderby_ids = stmt_result(sql->sa, orderby, 1);
 		orderby_grp = stmt_result(sql->sa, orderby, 2);
@@ -2029,6 +2035,8 @@ static void
 align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 {
 	node *n;
+
+	fprintf(stderr, ">>> [align_by_ids]\n");
 
 	for (n = l->h; n; n = n->next) {
 		stmt *c = n->data;
@@ -2043,7 +2051,7 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 			s = column(sql->sa, c);
 		s = stmt_alias(sql->sa, s, tname, cname);
 
-		fprintf(stderr, ">>> [align_by_ids] ordering: %s.%s\n", tname, cname);
+		fprintf(stderr, "    %s.%s\n", tname, cname);
 
 		if (ol)
 			list_append(*ol, s);

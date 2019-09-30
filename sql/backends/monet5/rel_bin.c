@@ -2682,6 +2682,7 @@ rel2bin_matrixpredict(mvc *sql, sql_rel *rel, list *refs)
 		}
 	}
 
+	// add y-intercept
 	s = stmt_atom_oid(sql->sa, i);
 	s = stmt_fetch(sql->sa, roa->h->data, s);
 	t = stmt_vectoradd(sql->sa, t, s);

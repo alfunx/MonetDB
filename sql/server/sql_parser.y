@@ -568,6 +568,7 @@ int yydebug=1;
 %token QQR
 %token RQR
 %token T MUL
+%token PREDICT
 %token SIGMOID
 
 /* operators */
@@ -2879,6 +2880,12 @@ joined_table:
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXRQR, l); }
+
+ |  PREDICT matrix_ref USING matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_symbol(l, $4);
+	  $$ = _symbol_create_list( SQL_MATRIXPREDICT, l); }
 
  |  SIGMOID matrix_ref
 	{ dlist *l = L();

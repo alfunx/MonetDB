@@ -296,6 +296,8 @@ op2string(operator_type op)
 		return "matrix qqr";
 	case op_matrixrqr:
 		return "matrix rqr";
+	case op_matrixpredict:
+		return "matrix predict";
 	case op_matrixsigmoid:
 		return "matrix sigmoid";
 	case op_insert: 
@@ -456,12 +458,16 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 	case op_matrixadd:
 	case op_matrixtransmul:
 	case op_matrixrqr:
+	case op_matrixpredict:
 		if (rel->op == op_matrixadd)
 			r = "matrix add";
 		if (rel->op == op_matrixtransmul)
 			r = "matrix trans mul";
 		if (rel->op == op_matrixrqr)
 			r = "matrix rqr";
+		if (rel->op == op_matrixpredict)
+			r = "matrix predict";
+
 		print_indent(sql, fout, depth, decorate);
 		if (need_distinct(rel))
 			mnstr_printf(fout, "distinct ");
@@ -623,6 +629,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 	case op_matrixadd: 
 	case op_matrixtransmul: 
 	case op_matrixrqr: 
+	case op_matrixpredict: 
 		rel_print_refs(sql, fout, rel->l, depth, refs, decorate);
 		rel_print_refs(sql, fout, rel->r, depth, refs, decorate);
 		if (rel_is_ref(rel->l) && !find_ref(refs, rel->l)) {

@@ -112,6 +112,7 @@ scanner_init_keywords(void)
 	keywords_insert("INV", INV);
 	keywords_insert("QQR", QQR);
 	keywords_insert("RQR", RQR);
+	keywords_insert("PREDICT", PREDICT);
 	keywords_insert("SIGMOID", SIGMOID);
 	keywords_insert("T", T);
 	keywords_insert("MUL", MUL);

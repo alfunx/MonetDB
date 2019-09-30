@@ -1418,6 +1418,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_matrixadd:
 	case op_matrixtransmul:
 	case op_matrixrqr:
+	case op_matrixpredict:
 
 	case op_apply: 
 	case op_semi: 
@@ -2605,6 +2606,84 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 	identity = list_reverse(sql, identity);
 
 	list_merge_destroy(l, identity, NULL);
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixpredict(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ra, *ld;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa, *roa;
+
+	// iterators
+	node *n, *m;
+
+	// counters
+	int i, j;
+
+	// temporary statements
+	stmt *s, *t;
+
+	stmt *left = NULL;
+	stmt *right = NULL;
+	stmt *orderby_idsl = NULL;
+	stmt *orderby_idsr = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+	right = subrel_bin(sql, rel->r, refs);
+	assert(left && right);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ra = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	roa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps && rel->rexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+	split_exps_appl_desc(sql, right, rel->rexps, &ra, NULL);
+
+	// generate the orderby ids
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsr, ra, &roa);
+
+	// prepare result statement
+	t = NULL;
+
+	// create predict stmts
+	for (m = loa->h, i = 0; m; m = m->next, i++) {
+		s = stmt_atom_oid(sql->sa, i);
+		s = stmt_fetch(sql->sa, roa->h->data, s);
+		s = stmt_vectormul(sql->sa, m->data, s);
+
+		if (t) {
+			t = stmt_vectoradd(sql->sa, t, s);
+		} else {
+			t = s;
+		}
+	}
+
+	s = stmt_atom_oid(sql->sa, i);
+	s = stmt_fetch(sql->sa, roa->h->data, s);
+	t = stmt_vectoradd(sql->sa, t, s);
+
+	t = stmt_alias(sql->sa, t, NULL, "prediction");
+	list_append(l, t);
 
 	return stmt_list(sql->sa, l);
 }
@@ -5466,6 +5545,11 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		fprintf(stderr, ">>> START: [subrel_bin]: matrixrqr\n");
 		s = rel2bin_matrixrqr(sql, rel, refs);
 		fprintf(stderr, ">>> END: [subrel_bin]: matrixrqr\n");
+		break;
+	case op_matrixpredict:
+		fprintf(stderr, ">>> START: [subrel_bin]: matrixpredict\n");
+		s = rel2bin_matrixpredict(sql, rel, refs);
+		fprintf(stderr, ">>> END: [subrel_bin]: matrixpredict\n");
 		break;
 	case op_matrixsigmoid:
 		fprintf(stderr, ">>> START: [subrel_bin]: matrixsigmoid\n");

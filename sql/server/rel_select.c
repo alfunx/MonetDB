@@ -62,6 +62,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_matrixadd:
 	case op_matrixtransmul:
 	case op_matrixrqr:
+	case op_matrixpredict:
 		exps = rel_table_projections( sql, rel->l, tname, level+1);
 		if (exps)
 			return exps;
@@ -227,6 +228,7 @@ static sql_rel * rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q);
 
@@ -429,6 +431,14 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_MATRIXRQR_SIMPLE:
 	{
 		sql_rel *tq = rel_matrixrqrquery_simple(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXPREDICT:
+	{
+		sql_rel *tq = rel_matrixpredictquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3713,6 +3723,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_matrixadd:
 	case op_matrixtransmul:
 	case op_matrixrqr:
+	case op_matrixpredict:
 		exps = rel_projections_(sql, rel->l);
 		rexps = rel_projections_(sql, rel->r);
 		exps = list_merge( exps, rexps, (fdup)NULL);
@@ -5621,6 +5632,46 @@ rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
 	append(exps, order_column());
 	append(exps, schema_column());
 	append_appl_part(exps, sql, rel->rexps);
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
+	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *t1 = table_ref(sql, rel, tab1);
+	sql_rel *t2 = table_ref(sql, rel, tab4);
+	if (!t1 || !t2)
+		return NULL;
+
+	rel = rel_matrixpredict(sql->sa, t1, t2);
+
+	set_left_orderby(&rel, tab2);
+	set_right_orderby(&rel, tab5);
+	set_left_application_part(&rel, tab3);
+	set_right_application_part(&rel, tab6);
+
+	// project necessary attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append_desc_part(exps, sql, t1, rel->lexps);
+	// TODO: fix and remove this ugly hack
+	append(exps, exp_alias_or_copy(sql, NULL, "prediction", t1, rel->lexps->h->data));
+
+	// set number of attributes in the result relation
+	rel->nrcols = list_length(exps);
+	fprintf(stderr, ">>> [rel_matrixpredictquery] nrcols: %d\n", rel->nrcols);
+
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }

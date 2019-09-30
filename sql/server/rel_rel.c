@@ -415,147 +415,51 @@ rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join)
 	return rel;
 }
 
-sql_rel *
-rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r)
-{
-	sql_rel *rel = rel_create(sa);
+#define REL_MATRIX_UN(TYPE) \
+	sql_rel * \
+	rel_##TYPE(sql_allocator *sa, sql_rel *l) \
+	{ \
+		sql_rel *rel = rel_create(sa); \
+		rel->l = l; \
+		rel->r = NULL; \
+		rel->exps = new_exp_list(sa); \
+		rel->lexps = new_exp_list(sa); \
+		rel->rexps = NULL; \
+		rel->lord = NULL; \
+		rel->rord = NULL; \
+		rel->op = op_##TYPE; \
+		rel->card = CARD_MULTI; \
+		rel->nrcols = 0; \
+		return rel; \
+	}
 
-	rel->l = l;
-	rel->r = r;
-	rel->exps = new_exp_list(sa);
-	rel->lexps = new_exp_list(sa);
-	rel->rexps = new_exp_list(sa);
-	rel->lord = NULL;
-	rel->rord = NULL;
-	rel->op = op_matrixadd;
-	rel->card = CARD_MULTI;
-	rel->nrcols = l->nrcols;
-	return rel;
-}
+#define REL_MATRIX_BIN(TYPE) \
+	sql_rel * \
+	rel_##TYPE(sql_allocator *sa, sql_rel *l, sql_rel *r) \
+	{ \
+		sql_rel *rel = rel_create(sa); \
+		rel->l = l; \
+		rel->r = r; \
+		rel->exps = new_exp_list(sa); \
+		rel->lexps = new_exp_list(sa); \
+		rel->rexps = new_exp_list(sa); \
+		rel->lord = NULL; \
+		rel->rord = NULL; \
+		rel->op = op_##TYPE; \
+		rel->card = CARD_MULTI; \
+		rel->nrcols = 0; \
+		return rel; \
+	}
 
-sql_rel *
-rel_matrixtransmul(sql_allocator *sa, sql_rel *l, sql_rel *r)
-{
-	sql_rel *rel = rel_create(sa);
+REL_MATRIX_UN(matrixsqrt);
+REL_MATRIX_UN(matrixinv);
+REL_MATRIX_UN(matrixqqr);
+REL_MATRIX_UN(matrixsigmoid);
 
-	rel->l = l;
-	rel->r = r;
-	rel->exps = new_exp_list(sa);
-	rel->lexps = new_exp_list(sa);
-	rel->rexps = new_exp_list(sa);
-	rel->lord = NULL;
-	rel->rord = NULL;
-	rel->op = op_matrixtransmul;
-	rel->card = CARD_MULTI;
-	rel->nrcols = l->nrcols;
-	return rel;
-}
-
-sql_rel *
-rel_matrixsqrt(sql_allocator *sa, sql_rel *l)
-{
-	sql_rel *rel = rel_create(sa);
-
-	rel->l = l;
-	rel->r = NULL;
-	rel->exps = new_exp_list(sa);
-	rel->lexps = new_exp_list(sa);
-	rel->rexps = new_exp_list(sa);
-	rel->lord = NULL;
-	rel->rord = NULL;
-	rel->op = op_matrixsqrt;
-	rel->card = CARD_MULTI;
-	rel->nrcols = l->nrcols;
-	return rel;
-}
-
-sql_rel *
-rel_matrixinv(sql_allocator *sa, sql_rel *l)
-{
-	sql_rel *rel = rel_create(sa);
-
-	rel->l = l;
-	rel->r = NULL;
-	rel->exps = new_exp_list(sa);
-	rel->lexps = new_exp_list(sa);
-	rel->rexps = new_exp_list(sa);
-	rel->lord = NULL;
-	rel->rord = NULL;
-	rel->op = op_matrixinv;
-	rel->card = CARD_MULTI;
-	rel->nrcols = l->nrcols;
-	return rel;
-}
-
-sql_rel *
-rel_matrixqqr(sql_allocator *sa, sql_rel *l)
-{
-	sql_rel *rel = rel_create(sa);
-
-	rel->l = l;
-	rel->r = NULL;
-	rel->exps = new_exp_list(sa);
-	rel->lexps = new_exp_list(sa);
-	rel->rexps = new_exp_list(sa);
-	rel->lord = NULL;
-	rel->rord = NULL;
-	rel->op = op_matrixqqr;
-	rel->card = CARD_MULTI;
-	rel->nrcols = l->nrcols;
-	return rel;
-}
-
-sql_rel *
-rel_matrixrqr(sql_allocator *sa, sql_rel *l, sql_rel *r)
-{
-	sql_rel *rel = rel_create(sa);
-
-	rel->l = l;
-	rel->r = r;
-	rel->exps = new_exp_list(sa);
-	rel->lexps = new_exp_list(sa);
-	rel->rexps = new_exp_list(sa);
-	rel->lord = NULL;
-	rel->rord = NULL;
-	rel->op = op_matrixrqr;
-	rel->card = CARD_MULTI;
-	rel->nrcols = l->nrcols;
-	return rel;
-}
-
-sql_rel *
-rel_matrixpredict(sql_allocator *sa, sql_rel *l, sql_rel *r)
-{
-	sql_rel *rel = rel_create(sa);
-
-	rel->l = l;
-	rel->r = r;
-	rel->exps = new_exp_list(sa);
-	rel->lexps = new_exp_list(sa);
-	rel->rexps = new_exp_list(sa);
-	rel->lord = NULL;
-	rel->rord = NULL;
-	rel->op = op_matrixpredict;
-	rel->card = CARD_MULTI;
-	rel->nrcols = l->nrcols;
-	return rel;
-}
-
-sql_rel *
-rel_matrixsigmoid(sql_allocator *sa, sql_rel *l)
-{
-	sql_rel *rel = rel_create(sa);
-
-	rel->l = l;
-	rel->r = NULL;
-	rel->exps = new_exp_list(sa);
-	rel->lexps = new_exp_list(sa);
-	rel->rexps = new_exp_list(sa);
-	rel->op = op_matrixsigmoid;
-	rel->card = CARD_MULTI;
-	rel->nrcols = l->nrcols;
-	return rel;
-}
+REL_MATRIX_BIN(matrixadd);
+REL_MATRIX_BIN(matrixtransmul);
+REL_MATRIX_BIN(matrixrqr);
+REL_MATRIX_BIN(matrixpredict);
 
 sql_rel *
 rel_topn(sql_allocator *sa, sql_rel *l, list *exps )

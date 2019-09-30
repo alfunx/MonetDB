@@ -1941,43 +1941,42 @@ rel2bin_join( mvc *sql, sql_rel *rel, list *refs)
 static void
 split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 {
-	node *n, *en;
+	node *m, *n;
+	stmt *s;
+	sql_exp *e;
 
 	fprintf(stderr, ">>> [split_exps_appl_desc]\n");
-	for (n = p->op4.lval->h; n; n = n->next) {
-		stmt *c = n->data;
-		stmt *s;
-		bool desc = true;
-		const char *rnme = table_name(sql->sa, c);
-		const char *nme = column_name(sql->sa, c);
 
-		for (en = exps->h; en; en = en->next) {
-			sql_exp *exp = en->data;
+	for (m = p->op4.lval->h; m; m = m->next) {
+		s = m->data;
 
-			if (exp->l && exp->r) {
-				char *rname = exp->l;
-				char *name = exp->r;
+		const char *rnme = table_name(sql->sa, s);
+		const char *nme = column_name(sql->sa, s);
 
-				if (nme && strcmp(nme, name) == 0 && rnme && strcmp(rnme, rname) == 0) {
-					fprintf(stderr, "    %s.%s: application\n", rnme ? rnme : "_", nme);
+		for (n = exps->h; n; n = n->next) {
+			e = n->data;
 
-					s = column(sql->sa, c);
-					s = stmt_alias(sql->sa, s, rnme, nme);
+			if (!e->l || !e->r)
+				continue;
 
-					if (a)
-						list_append(*a, s);
-					desc = false;
-					break;
-				}
-			}
+			const char *rname = e->l;
+			const char *name = e->r;
+
+			if (nme && strcmp(nme, name) != 0)
+				continue;
+			if (rnme && strcmp(rnme, rname) != 0)
+				continue;
+
+			fprintf(stderr, "    <A>  %s.%s\n", rnme ? rnme : "_", nme);
+
+			if (a) list_append(*a, column(sql->sa, s));
+			break;
 		}
 
-		if (desc) {
-			fprintf(stderr, "    %s.%s: descriptive\n", rnme ? rnme : "_", nme);
-			s = column(sql->sa, c);
-			s = stmt_alias(sql->sa, s, rnme, nme);
-			if (d)
-				list_append(*d, s);
+		if (!n) {
+			fprintf(stderr, "    <D>  %s.%s\n", rnme ? rnme : "_", nme);
+
+			if (d) list_append(*d, column(sql->sa, s));
 		}
 	}
 }
@@ -1997,6 +1996,8 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
 	p->expected_cnt = list_length(s->op4.lval);
 	psub = stmt_list(sql->sa, p);
 	stmt_set_nrcols(psub);
+
+	fprintf(stderr, ">>> [gen_orderby_ids]\n");
 
 	// ordering of the order specification columns to know the final order of OIDs for
 	for (n = ord->h; n; n = n->next) {
@@ -2022,7 +2023,8 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
 
 		const char *tname = table_name(sql->sa, orderbycolstmt);
 		const char *cname = column_name(sql->sa, orderbycolstmt);
-		fprintf(stderr, ">>> [gen_orderby_ids] ordering: %s.%s\n", tname, cname);
+
+		fprintf(stderr, "    %s.%s\n", tname, cname);
 
 		*orderby_ids = stmt_result(sql->sa, orderby, 1);
 		orderby_grp = stmt_result(sql->sa, orderby, 2);
@@ -2033,6 +2035,8 @@ static void
 align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 {
 	node *n;
+
+	fprintf(stderr, ">>> [align_by_ids]\n");
 
 	for (n = l->h; n; n = n->next) {
 		stmt *c = n->data;
@@ -2047,7 +2051,7 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 			s = column(sql->sa, c);
 		s = stmt_alias(sql->sa, s, tname, cname);
 
-		fprintf(stderr, ">>> [align_by_ids] ordering: %s.%s\n", tname, cname);
+		fprintf(stderr, "    %s.%s\n", tname, cname);
 
 		if (ol)
 			list_append(*ol, s);
@@ -2678,6 +2682,7 @@ rel2bin_matrixpredict(mvc *sql, sql_rel *rel, list *refs)
 		}
 	}
 
+	// add y-intercept
 	s = stmt_atom_oid(sql->sa, i);
 	s = stmt_fetch(sql->sa, roa->h->data, s);
 	t = stmt_vectoradd(sql->sa, t, s);
@@ -5427,6 +5432,13 @@ rel2bin_ddl(mvc *sql, sql_rel *rel, list *refs)
 	return s;
 }
 
+#define SUBREL_BIN_MATRIX_CASE(TYPE) \
+	case op_##TYPE: \
+		fprintf(stderr, "\n>>> DO: [subrel_bin]: " #TYPE "\n"); \
+		s = rel2bin_##TYPE(sql, rel, refs); \
+		fprintf(stderr, ">>> END: [subrel_bin]: " #TYPE "\n"); \
+		break;
+
 static stmt *
 subrel_bin(mvc *sql, sql_rel *rel, list *refs) 
 {
@@ -5516,46 +5528,14 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	case op_ddl:
 		s = rel2bin_ddl(sql, rel, refs);
 		break;
-	case op_matrixadd:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixadd\n");
-		s = rel2bin_matrixadd(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixadd\n");
-		break;
-	case op_matrixtransmul:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixtransmul\n");
-		s = rel2bin_matrixtransmul(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixtransmul\n");
-		break;
-	case op_matrixsqrt:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixsqrt\n");
-		s = rel2bin_matrixsqrt(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixsqrt\n");
-		break;
-	case op_matrixinv:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixinv\n");
-		s = rel2bin_matrixinv(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixinv\n");
-		break;
-	case op_matrixqqr:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixqqr\n");
-		s = rel2bin_matrixqqr(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixqqr\n");
-		break;
-	case op_matrixrqr:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixrqr\n");
-		s = rel2bin_matrixrqr(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixrqr\n");
-		break;
-	case op_matrixpredict:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixpredict\n");
-		s = rel2bin_matrixpredict(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixpredict\n");
-		break;
-	case op_matrixsigmoid:
-		fprintf(stderr, ">>> START: [subrel_bin]: matrixsigmoid\n");
-		s = rel2bin_matrixsigmoid(sql, rel, refs);
-		fprintf(stderr, ">>> END: [subrel_bin]: matrixsigmoid\n");
-		break;
+	SUBREL_BIN_MATRIX_CASE(matrixadd);
+	SUBREL_BIN_MATRIX_CASE(matrixtransmul);
+	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
+	SUBREL_BIN_MATRIX_CASE(matrixinv);
+	SUBREL_BIN_MATRIX_CASE(matrixqqr);
+	SUBREL_BIN_MATRIX_CASE(matrixrqr);
+	SUBREL_BIN_MATRIX_CASE(matrixpredict);
+	SUBREL_BIN_MATRIX_CASE(matrixsigmoid);
 	}
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);

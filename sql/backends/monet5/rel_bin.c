@@ -1416,6 +1416,8 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_right: 
 	case op_full: 
 	case op_matrixadd:
+	case op_matrixsub:
+	case op_matrixemul:
 	case op_matrixtransmul:
 	case op_matrixrqr:
 	case op_matrixpredict:
@@ -2263,6 +2265,126 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	// create vectoradd stmts
 	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {
 		s = stmt_vectoradd(sql->sa, n->data, m->data);
+		list_append(l, s);
+	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixsub(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ra, *ld, *rd;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa, *roa;
+
+	// iterators
+	node *n, *m, *p, *q;
+
+	// temporary statement
+	stmt *s;
+
+	stmt *left = NULL;
+	stmt *right = NULL;
+	stmt *orderby_idsl = NULL;
+	stmt *orderby_idsr = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+	right = subrel_bin(sql, rel->r, refs);
+	assert(left && right);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ra = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	rd = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	roa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps && rel->rexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
+
+	// generate the orderby ids
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsr, rd, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsr, ra, &roa);
+
+	// create vectorsub stmts
+	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {
+		s = stmt_vectorsub(sql->sa, n->data, m->data);
+		list_append(l, s);
+	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixemul(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ra, *ld, *rd;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa, *roa;
+
+	// iterators
+	node *n, *m, *p, *q;
+
+	// temporary statement
+	stmt *s;
+
+	stmt *left = NULL;
+	stmt *right = NULL;
+	stmt *orderby_idsl = NULL;
+	stmt *orderby_idsr = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+	right = subrel_bin(sql, rel->r, refs);
+	assert(left && right);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ra = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	rd = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	roa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps && rel->rexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
+
+	// generate the orderby ids
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsr, rd, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsr, ra, &roa);
+
+	// create vectormul stmts
+	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {
+		s = stmt_vectormul(sql->sa, n->data, m->data);
 		list_append(l, s);
 	}
 
@@ -5612,9 +5734,8 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		s = rel2bin_ddl(sql, rel, refs);
 		break;
 	SUBREL_BIN_MATRIX_CASE(matrixadd);
-	// TODO: implement rel2bin_matrixsub and rel2bin_matrixemul
-	//SUBREL_BIN_MATRIX_CASE(matrixsub);
-	//SUBREL_BIN_MATRIX_CASE(matrixemul);
+	SUBREL_BIN_MATRIX_CASE(matrixsub);
+	SUBREL_BIN_MATRIX_CASE(matrixemul);
 	SUBREL_BIN_MATRIX_CASE(matrixtransmul);
 	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
 	SUBREL_BIN_MATRIX_CASE(matrixinv);

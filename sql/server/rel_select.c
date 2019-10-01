@@ -60,6 +60,8 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_right:
 	case op_full:
 	case op_matrixadd:
+	case op_matrixsub:
+	case op_matrixemul:
 	case op_matrixtransmul:
 	case op_matrixrqr:
 	case op_matrixpredict:
@@ -3740,6 +3742,8 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_right:
 	case op_full:
 	case op_matrixadd:
+	case op_matrixsub:
+	case op_matrixemul:
 	case op_matrixtransmul:
 	case op_matrixrqr:
 	case op_matrixpredict:

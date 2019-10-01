@@ -236,6 +236,7 @@ static sql_rel * rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q);
 
 static sql_rel *
 rel_table_optname(mvc *sql, sql_rel *sq, symbol *optname)
@@ -380,6 +381,14 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_MATRIXLINREG:
 	{
 		sql_rel *tq = rel_matrixlinregquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXLOGREG:
+	{
+		sql_rel *tq = rel_matrixlogregquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -5746,6 +5755,35 @@ rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
 	rel->nrcols = list_length(exps);
 
 	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *en, *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
+	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *x_rel = table_ref(sql, rel, tab1);
+	sql_rel *y_rel = table_ref(sql, rel, tab4);
+	if (!x_rel || !y_rel)
+		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
+
+	// parameters for logistic regression
+	int stepsize = n->next->next->data.i_val;
+	int iterations = n->next->next->next->data.i_val;
+
 	return rel;
 }
 

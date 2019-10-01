@@ -564,6 +564,9 @@ int yydebug=1;
 %token GATHER
 %token SQRT
 %token LINREG
+%token LOGREG
+%token ITERATE
+%token STEPSIZE
 %token INV
 %token QQR
 %token RQR
@@ -2843,6 +2846,14 @@ joined_table:
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXLINREG, l); }
+
+ |  LOGREG matrix_ref FOR matrix_ref STEPSIZE intval ITERATE intval
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_symbol(l, $4);
+	  append_int(l, $6);
+	  append_int(l, $8);
+	  $$ = _symbol_create_list( SQL_MATRIXLOGREG, l); }
 
  |  matrix_ref ADD matrix_ref opt_no_optimize
 	{ dlist *l = L();

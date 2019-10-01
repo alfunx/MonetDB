@@ -109,6 +109,9 @@ scanner_init_keywords(void)
 	keywords_insert("GATHER", GATHER);
 	keywords_insert("SQRT", SQRT);
 	keywords_insert("LINREG", LINREG);
+	keywords_insert("LOGREG", LOGREG);
+	keywords_insert("ITERATE", ITERATE);
+	keywords_insert("STEPSIZE", STEPSIZE);
 	keywords_insert("INV", INV);
 	keywords_insert("QQR", QQR);
 	keywords_insert("RQR", RQR);

@@ -230,6 +230,8 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_right: 
 	case op_full: 
 	case op_matrixadd: 
+	case op_matrixsub:
+	case op_matrixemul:
 	case op_matrixtransmul: 
 	case op_matrixrqr: 
 	case op_matrixpredict:
@@ -277,6 +279,8 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_right: 
 	case op_full: 
 	case op_matrixadd: 
+	case op_matrixsub:
+	case op_matrixemul:
 	case op_matrixtransmul: 
 	case op_matrixrqr: 
 	case op_matrixpredict:
@@ -5076,8 +5080,6 @@ use_triangular_inv(int *changes, mvc *sql, sql_rel *rel)
 		return rel;
 	}
 
-	fprintf(stderr, ">>> [use_triangular_inv] done\n");
-
 	p = rel;
 	rel = rel_matrixinvtriangular(sql->sa, p->l);
 	rel->lord = p->lord;
@@ -7818,6 +7820,8 @@ rewrite(mvc *sql, sql_rel *rel, rewrite_fptr rewriter, int *has_changes)
 	case op_right: 
 	case op_full: 
 	case op_matrixadd: 
+	case op_matrixsub:
+	case op_matrixemul:
 	case op_matrixtransmul: 
 	case op_matrixrqr: 
 	case op_matrixpredict:

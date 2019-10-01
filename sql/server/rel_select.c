@@ -60,6 +60,8 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_right:
 	case op_full:
 	case op_matrixadd:
+	case op_matrixsub:
+	case op_matrixemul:
 	case op_matrixtransmul:
 	case op_matrixrqr:
 	case op_matrixpredict:
@@ -223,6 +225,8 @@ static sql_rel * rel_crossquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *sq);
 
 static sql_rel * rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixsubquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixemulquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q);
@@ -384,6 +388,22 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_MATRIXADD:
 	{
 		sql_rel *tq = rel_matrixaddquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXSUB:
+	{
+		sql_rel *tq = rel_matrixsubquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXEMUL:
+	{
+		sql_rel *tq = rel_matrixemulquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3722,6 +3742,8 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_right:
 	case op_full:
 	case op_matrixadd:
+	case op_matrixsub:
+	case op_matrixemul:
 	case op_matrixtransmul:
 	case op_matrixrqr:
 	case op_matrixpredict:
@@ -5298,6 +5320,94 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	if (list_length(rel->lexps) != list_length(rel->rexps)) {
 		sql_error(sql, 02, "MATRIX ADD: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(t1)?rel_name(t1):"", rel_name(t2)?rel_name(t2):"");
+		rel_destroy(rel);
+		return NULL;
+	}
+
+	// select attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append_exps_except(exps, sql, t1, rel->lexps);
+	append_exps_except(exps, sql, t2, rel->rexps);
+	append_exps(exps, sql, rel->lexps);
+
+	// set number of attributes in the result relation
+	rel->nrcols = list_length(exps);
+
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixsubquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
+	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *t1 = table_ref(sql, rel, tab1);
+	sql_rel *t2 = table_ref(sql, rel, tab4);
+	if (!t1 || !t2)
+		return NULL;
+
+	rel = rel_matrixsub(sql->sa, t1, t2);
+	set_left_orderby(&rel, tab2);
+	set_right_orderby(&rel, tab5);
+	set_left_application_part(&rel, tab3);
+	set_right_application_part(&rel, tab6);
+
+	if (list_length(rel->lexps) != list_length(rel->rexps)) {
+		sql_error(sql, 02, "MATRIX SUB: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(t1)?rel_name(t1):"", rel_name(t2)?rel_name(t2):"");
+		rel_destroy(rel);
+		return NULL;
+	}
+
+	// select attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append_exps_except(exps, sql, t1, rel->lexps);
+	append_exps_except(exps, sql, t2, rel->rexps);
+	append_exps(exps, sql, rel->lexps);
+
+	// set number of attributes in the result relation
+	rel->nrcols = list_length(exps);
+
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixemulquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
+	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *t1 = table_ref(sql, rel, tab1);
+	sql_rel *t2 = table_ref(sql, rel, tab4);
+	if (!t1 || !t2)
+		return NULL;
+
+	rel = rel_matrixemul(sql->sa, t1, t2);
+	set_left_orderby(&rel, tab2);
+	set_right_orderby(&rel, tab5);
+	set_left_application_part(&rel, tab3);
+	set_right_application_part(&rel, tab6);
+
+	if (list_length(rel->lexps) != list_length(rel->rexps)) {
+		sql_error(sql, 02, "MATRIX EMUL: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(t1)?rel_name(t1):"", rel_name(t2)?rel_name(t2):"");
 		rel_destroy(rel);
 		return NULL;
 	}

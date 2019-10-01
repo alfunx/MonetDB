@@ -292,6 +292,8 @@ op2string(operator_type op)
 		return "matrix sqrt";
 	case op_matrixinv:
 		return "matrix inv";
+	case op_matrixinvtriangular:
+		return "matrix inv triangular";
 	case op_matrixqqr:
 		return "matrix qqr";
 	case op_matrixrqr:
@@ -496,15 +498,18 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 
 	case op_matrixsqrt:
 	case op_matrixinv:
+	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 		if (rel->op == op_matrixsqrt)
 			r = "matrix sqrt";
 		if (rel->op == op_matrixinv)
 			r = "matrix inv";
+		if (rel->op == op_matrixinvtriangular)
+			r = "matrix inv triangular";
 		if (rel->op == op_matrixqqr)
 			r = "matrix qqr";
-		if (rel->op == op_matrixqqr)
+		if (rel->op == op_matrixsigmoid)
 			r = "matrix sigmoid";
 
 		print_indent(sql, fout, depth, decorate);
@@ -643,6 +648,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 		break;
 	case op_matrixsqrt:
 	case op_matrixinv:
+	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_project:

@@ -1435,6 +1435,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 			args = exps2bin_args(sql, rel->r, args);
 	case op_matrixsqrt:
 	case op_matrixinv:
+	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_project:
@@ -2526,7 +2527,7 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 }
 
 static stmt *
-rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
+rel2bin_matrixinvtriangular(mvc *sql, sql_rel *rel, list *refs)
 {
 	// list of all statements (result)
 	list *l;
@@ -2544,7 +2545,7 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 	node *ol, *or, *il, *ir;
 
 	// counters
-	int i, j, d;
+	int i, d;
 
 	// temporary statement
 	stmt *s, *t, *tl, *tr;
@@ -2594,7 +2595,7 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 		ol->data = stmt_vectordiv(sql->sa, ol->data, s);
 		or->data = stmt_vectordiv(sql->sa, or->data, s);
 
-		for (il = ol->next, ir = or->next, j = i - 1; il && ir; il = il->next, ir = ir->next, j--) {
+		for (il = ol->next, ir = or->next; il && ir; il = il->next, ir = ir->next) {
 			t = stmt_atom_oid(sql->sa, i);
 			t = stmt_fetch(sql->sa, il->data, t);
 
@@ -2608,6 +2609,88 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 
 	// reverse statements
 	identity = list_reverse(sql, identity);
+
+	list_merge_destroy(l, identity, NULL);
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ld;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa;
+
+	// identity matrix
+	list *identity;
+
+	// iterators
+	node *ol, *or, *il, *ir;
+
+	// counters
+	int i;
+
+	// temporary statement
+	stmt *s, *t, *tl, *tr;
+
+	stmt *left = NULL;
+	stmt *orderby_idsl = NULL;
+
+	left = subrel_bin(sql, rel->l, refs);
+	assert(left);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps);
+	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
+
+	// generate the orderby ids
+	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, &l);
+	align_by_ids(sql, orderby_idsl, la, &loa);
+
+	// generate identity matrix
+	identity = identity_matrix(sql, loa);
+
+	// append schema and order stmt
+	list_append(l, stmt_schema_column(sql, loa));
+	list_append(l, stmt_order_column(sql, loa));
+
+	// create matrix inverse stmts
+	for (ol = loa->h, or = identity->h, i = 0; ol && or; ol = ol->next, or = or->next, i++) {
+		s = stmt_atom_oid(sql->sa, i);
+		s = stmt_fetch(sql->sa, ol->data, s);
+
+		ol->data = stmt_vectordiv(sql->sa, ol->data, s);
+		or->data = stmt_vectordiv(sql->sa, or->data, s);
+
+		for (il = loa->h, ir = identity->h; il && ir; il = il->next, ir = ir->next) {
+			if (ol == il)
+				continue;
+
+			t = stmt_atom_oid(sql->sa, i);
+			t = stmt_fetch(sql->sa, il->data, t);
+
+			tl = stmt_vectormul(sql->sa, t, ol->data);
+			tr = stmt_vectormul(sql->sa, t, or->data);
+
+			il->data = stmt_vectorsub(sql->sa, il->data, tl);
+			ir->data = stmt_vectorsub(sql->sa, ir->data, tr);
+		}
+	}
 
 	list_merge_destroy(l, identity, NULL);
 
@@ -5532,6 +5615,7 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	SUBREL_BIN_MATRIX_CASE(matrixtransmul);
 	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
 	SUBREL_BIN_MATRIX_CASE(matrixinv);
+	SUBREL_BIN_MATRIX_CASE(matrixinvtriangular);
 	SUBREL_BIN_MATRIX_CASE(matrixqqr);
 	SUBREL_BIN_MATRIX_CASE(matrixrqr);
 	SUBREL_BIN_MATRIX_CASE(matrixpredict);

@@ -246,6 +246,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 		break;
 	case op_matrixsqrt:
 	case op_matrixinv:
+	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_project:
@@ -291,6 +292,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 
 	case op_matrixsqrt:
 	case op_matrixinv:
+	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_project:
@@ -5024,8 +5026,9 @@ push_select_exps_to_matrix(int *changes, mvc *sql, sql_rel *rel)
 		return rel;
 
 	sql_rel *p = rel->l;
-	list *exps = rel->exps;
-	node *n;
+
+	while (p && is_project(p->op))
+		p = p->l;
 
 	if (!p || !is_matrixadd(p->op))
 		return rel;
@@ -5035,7 +5038,7 @@ push_select_exps_to_matrix(int *changes, mvc *sql, sql_rel *rel)
 		return rel;
 	}
 
-	for (n = exps->h; n; n = n->next) {
+	for (node *n = rel->exps->h; n; n = n->next) {
 		sql_exp *e = n->data;
 		sql_exp *l = e->l;
 		sql_exp *r = e->r;
@@ -5050,6 +5053,36 @@ push_select_exps_to_matrix(int *changes, mvc *sql, sql_rel *rel)
 		list_append(p->exps, e);
 		list_remove_node(rel->exps, n);
 	}
+
+	return rel;
+}
+
+static sql_rel *
+use_triangular_inv(int *changes, mvc *sql, sql_rel *rel)
+{
+	if (!is_matrixinv(rel->op))
+		return rel;
+
+	sql_rel *p = rel->l;
+
+	while (p && is_project(p->op))
+		p = p->l;
+
+	if (!p || !is_matrixrqr(p->op))
+		return rel;
+
+	if (p->noopt) {
+		fprintf(stderr, ">>> [use_triangular_inv] no-optimization flag is set\n");
+		return rel;
+	}
+
+	fprintf(stderr, ">>> [use_triangular_inv] done\n");
+
+	p = rel;
+	rel = rel_matrixinvtriangular(sql->sa, p->l);
+	rel->lord = p->lord;
+	rel->lexps = p->lexps;
+	rel->exps = p->exps;
 
 	return rel;
 }
@@ -7801,6 +7834,7 @@ rewrite(mvc *sql, sql_rel *rel, rewrite_fptr rewriter, int *has_changes)
 		break;
 	case op_matrixsqrt:
 	case op_matrixinv:
+	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_project:
@@ -8024,6 +8058,9 @@ _rel_optimizer(mvc *sql, sql_rel *rel, int level)
 
 	if (gp.cnt[op_select])
 		rel = rewrite(sql, rel, &push_select_exps_to_matrix, &changes);
+
+	if (gp.cnt[op_matrixinv])
+		rel = rewrite(sql, rel, &use_triangular_inv, &changes);
 
 	/* Remove unused expressions */
 	if (level <= 0)

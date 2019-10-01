@@ -69,6 +69,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 		return rel_table_projections( sql, rel->r, tname, level+1);
 	case op_matrixsqrt:
 	case op_matrixinv:
+	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_apply:
@@ -3777,6 +3778,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 
 	case op_matrixsqrt:
 	case op_matrixinv:
+	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_select:
@@ -5585,7 +5587,7 @@ rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_rel *rqr_rel = rel_matrixrqr(sql->sa, t1, qqr_rel);
 	set_left_orderby(&rqr_rel, tab2);
 	set_left_application_part(&rqr_rel, tab3);
-	rqr_rel->rord = qqr_rel->rord;
+	rqr_rel->rord = qqr_rel->lord;
 	rqr_rel->rexps = qqr_rel->lexps;
 
 	// inv relation

@@ -567,7 +567,9 @@ int yydebug=1;
 %token INV
 %token QQR
 %token RQR
-%token T MUL
+%token TMUL
+%token EMUL
+%token SUBTRACT
 %token PREDICT
 %token SIGMOID
 
@@ -2849,10 +2851,22 @@ joined_table:
 	  append_int(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
 
- |  matrix_ref T MUL matrix_ref
+ |  matrix_ref SUBTRACT matrix_ref
 	{ dlist *l = L();
 	  append_symbol(l, $1);
-	  append_symbol(l, $4);
+	  append_symbol(l, $3);
+	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
+
+ |  matrix_ref EMUL matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $1);
+	  append_symbol(l, $3);
+	  $$ = _symbol_create_list( SQL_MATRIXADD, l); }
+
+ |  matrix_ref TMUL matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $1);
+	  append_symbol(l, $3);
 	  $$ = _symbol_create_list( SQL_MATRIXTRANSMUL, l); }
 
  |  SQRT matrix_ref

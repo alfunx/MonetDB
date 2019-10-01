@@ -5080,8 +5080,6 @@ use_triangular_inv(int *changes, mvc *sql, sql_rel *rel)
 		return rel;
 	}
 
-	fprintf(stderr, ">>> [use_triangular_inv] done\n");
-
 	p = rel;
 	rel = rel_matrixinvtriangular(sql->sa, p->l);
 	rel->lord = p->lord;

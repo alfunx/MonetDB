@@ -462,6 +462,8 @@ REL_MATRIX_UN(matrixqqr);
 REL_MATRIX_UN(matrixsigmoid);
 
 REL_MATRIX_BIN(matrixadd);
+REL_MATRIX_BIN(matrixsub);
+REL_MATRIX_BIN(matrixemul);
 REL_MATRIX_BIN(matrixtransmul);
 REL_MATRIX_BIN(matrixrqr);
 REL_MATRIX_BIN(matrixpredict);

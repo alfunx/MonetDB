@@ -5612,6 +5612,9 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 		s = rel2bin_ddl(sql, rel, refs);
 		break;
 	SUBREL_BIN_MATRIX_CASE(matrixadd);
+	// TODO: implement rel2bin_matrixsub and rel2bin_matrixemul
+	//SUBREL_BIN_MATRIX_CASE(matrixsub);
+	//SUBREL_BIN_MATRIX_CASE(matrixemul);
 	SUBREL_BIN_MATRIX_CASE(matrixtransmul);
 	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
 	SUBREL_BIN_MATRIX_CASE(matrixinv);

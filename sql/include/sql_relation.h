@@ -135,7 +135,7 @@ typedef struct expression {
 #define DDL_ALTER_TABLE_DEL_TABLE  64
 #define DDL_ALTER_TABLE_SET_ACCESS  65
 
-#define MAXOPS 30
+#define MAXOPS 32
 
 typedef enum operator_type {
 	op_basetable = 0,
@@ -161,6 +161,8 @@ typedef enum operator_type {
 	op_delete, 	/* delete(l=table, r delete expression) */
 
 	op_matrixadd,
+	op_matrixsub,
+	op_matrixemul,
 	op_matrixtransmul,
 	op_matrixsqrt,
 	op_matrixinv,

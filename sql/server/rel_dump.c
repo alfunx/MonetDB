@@ -469,6 +469,10 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 	case op_matrixpredict:
 		if (rel->op == op_matrixadd)
 			r = "matrix add";
+		if (rel->op == op_matrixsub)
+			r = "matrix sub";
+		if (rel->op == op_matrixemul)
+			r = "matrix elem mul";
 		if (rel->op == op_matrixtransmul)
 			r = "matrix trans mul";
 		if (rel->op == op_matrixrqr)

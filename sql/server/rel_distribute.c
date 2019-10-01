@@ -169,6 +169,7 @@ replica(mvc *sql, sql_rel *rel, char *uri)
 	case op_matrixemul:
 	case op_matrixtransmul: 
 	case op_matrixrqr: 
+	case op_matrixpredict: 
 
 	case op_union: 
 	case op_inter: 

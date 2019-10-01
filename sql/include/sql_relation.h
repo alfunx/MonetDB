@@ -234,6 +234,10 @@ typedef enum operator_type {
 	(op == op_sample)
 #define is_matrixadd(op) \
 	(op == op_matrixadd)
+#define is_matrixsub(op) \
+	(op == op_matrixsub)
+#define is_matrixemul(op) \
+	(op == op_matrixemul)
 #define is_matrixtransmul(op) \
 	(op == op_matrixtransmul)
 #define is_matrixsqrt(op) \

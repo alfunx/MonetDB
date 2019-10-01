@@ -5784,6 +5784,47 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	int stepsize = n->next->next->data.i_val;
 	int iterations = n->next->next->next->data.i_val;
 
+	// qqr relation
+	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, x_rel);
+	qqr_rel->lord = gen_orderby(sql, x_rel, tab2);
+	qqr_rel->lexps = gen_exps_list(sql, x_rel, tab3);
+
+	// rqr relation
+	sql_rel *rqr_rel = rel_matrixrqr(sql->sa, x_rel, qqr_rel);
+	rqr_rel->lord = qqr_rel->lord;
+	rqr_rel->lexps = qqr_rel->lexps;
+	rqr_rel->rord = qqr_rel->lord;
+	rqr_rel->rexps = qqr_rel->lexps;
+
+	// inv relation
+	sql_rel *inv_rel = rel_matrixinv(sql->sa, rqr_rel);
+	// TODO: inv_rel->lord = rqr_rel->rord;
+	inv_rel->lexps = rqr_rel->rexps;
+
+	// qy relation
+	sql_rel *qy_rel = rel_matrixtransmul(sql->sa, qqr_rel, y_rel);
+	qy_rel->lord = qqr_rel->lord;
+	qy_rel->lexps = qqr_rel->lexps;
+	qy_rel->rord = gen_orderby(sql, y_rel, tab5);
+	qy_rel->rexps = gen_exps_list(sql, y_rel, tab6);
+
+	// result relation
+	rel = rel_matrixtransmul(sql->sa, inv_rel, qy_rel);
+	// TODO: rel->lord = inv_rel->lord;
+	rel->lexps = inv_rel->lexps;
+	// TODO: rel->rord = qy_rel->rord;
+	rel->rexps = qy_rel->rexps;
+
+	// select attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append(exps, order_column());
+	append(exps, schema_column());
+	append_exps(exps, sql, rel->rexps);
+
+	// set number of attributes in the result relation
+	rel->nrcols = list_length(exps);
+
+	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
 

@@ -429,7 +429,7 @@ rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join)
 		rel->l = l; \
 		rel->r = NULL; \
 		rel->exps = new_exp_list(sa); \
-		rel->lexps = new_exp_list(sa); \
+		rel->lexps = NULL; \
 		rel->rexps = NULL; \
 		rel->lord = NULL; \
 		rel->rord = NULL; \
@@ -448,8 +448,8 @@ rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join)
 		rel->l = l; \
 		rel->r = r; \
 		rel->exps = new_exp_list(sa); \
-		rel->lexps = new_exp_list(sa); \
-		rel->rexps = new_exp_list(sa); \
+		rel->lexps = NULL; \
+		rel->rexps = NULL; \
 		rel->lord = NULL; \
 		rel->rord = NULL; \
 		rel->op = op_##TYPE; \

@@ -2065,7 +2065,7 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
 static stmt * rel2bin_predicate(mvc *sql);
 
 static stmt *
-select_on_matrixadd(mvc *sql, stmt *sub, list *exps, list *refs)
+bin_select(mvc *sql, stmt *sub, list *exps, list *refs)
 {
 	list *l;
 	node *en, *n;
@@ -2245,7 +2245,7 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 		// create selection stmt on concatenated stmt-list
 		list_merge_destroy(l, loa, NULL);
 		list_merge_destroy(l, roa, NULL);
-		stmt *sel = select_on_matrixadd(sql, stmt_list(sql->sa, l), rel->exps, refs);
+		stmt *sel = bin_select(sql, stmt_list(sql->sa, l), rel->exps, refs);
 
 		list_destroy(l);
 		l = sa_list(sql->sa);
@@ -2322,6 +2322,43 @@ rel2bin_matrixsub(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, la, &loa);
 	align_by_ids(sql, orderby_idsr, ra, &roa);
 
+	// perform selection on concatenated matrices
+	if (rel->exps && rel->exps->h) {
+		list *lexps = list_dup(rel->lexps, NULL);
+		list *rexps = list_dup(rel->rexps, NULL);
+
+		// create vectorsub stmts, which are referenced from predicates
+		for (n = loa->h, m = roa->h, p = lexps->h, q = rexps->h; n && m && p && q; n = n->next, m = m->next, p = p->next, q = q->next) {
+			if (!exp_in_predicate(p->data, rel->exps))
+				continue;
+			stmt *s = stmt_vectorsub(sql->sa, n->data, m->data);
+			list_append(l, s);
+			list_remove_node(loa, n);
+			list_remove_node(roa, m);
+			list_remove_node(lexps, p);
+			list_remove_node(rexps, q);
+		}
+
+		// create selection stmt on concatenated stmt-list
+		list_merge_destroy(l, loa, NULL);
+		list_merge_destroy(l, roa, NULL);
+		stmt *sel = bin_select(sql, stmt_list(sql->sa, l), rel->exps, refs);
+
+		list_destroy(l);
+		l = sa_list(sql->sa);
+		loa = sa_list(sql->sa);
+		roa = sa_list(sql->sa);
+
+		// recreate application part
+		split_exps_appl_desc(sql, sel, lexps, &loa, NULL);
+		split_exps_appl_desc(sql, sel, rexps, &roa, NULL);
+
+		// recreate descriptive part
+		list_merge_destroy(lexps, rexps, NULL);
+		split_exps_appl_desc(sql, sel, lexps, NULL, &l);
+		list_destroy(lexps);
+	}
+
 	// create vectorsub stmts
 	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {
 		s = stmt_vectorsub(sql->sa, n->data, m->data);
@@ -2381,6 +2418,43 @@ rel2bin_matrixemul(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsr, rd, &l);
 	align_by_ids(sql, orderby_idsl, la, &loa);
 	align_by_ids(sql, orderby_idsr, ra, &roa);
+
+	// perform selection on concatenated matrices
+	if (rel->exps && rel->exps->h) {
+		list *lexps = list_dup(rel->lexps, NULL);
+		list *rexps = list_dup(rel->rexps, NULL);
+
+		// create vectormul stmts, which are referenced from predicates
+		for (n = loa->h, m = roa->h, p = lexps->h, q = rexps->h; n && m && p && q; n = n->next, m = m->next, p = p->next, q = q->next) {
+			if (!exp_in_predicate(p->data, rel->exps))
+				continue;
+			stmt *s = stmt_vectormul(sql->sa, n->data, m->data);
+			list_append(l, s);
+			list_remove_node(loa, n);
+			list_remove_node(roa, m);
+			list_remove_node(lexps, p);
+			list_remove_node(rexps, q);
+		}
+
+		// create selection stmt on concatenated stmt-list
+		list_merge_destroy(l, loa, NULL);
+		list_merge_destroy(l, roa, NULL);
+		stmt *sel = bin_select(sql, stmt_list(sql->sa, l), rel->exps, refs);
+
+		list_destroy(l);
+		l = sa_list(sql->sa);
+		loa = sa_list(sql->sa);
+		roa = sa_list(sql->sa);
+
+		// recreate application part
+		split_exps_appl_desc(sql, sel, lexps, &loa, NULL);
+		split_exps_appl_desc(sql, sel, rexps, &roa, NULL);
+
+		// recreate descriptive part
+		list_merge_destroy(lexps, rexps, NULL);
+		split_exps_appl_desc(sql, sel, lexps, NULL, &l);
+		list_destroy(lexps);
+	}
 
 	// create vectormul stmts
 	for (n = loa->h, m = roa->h; n && m; n = n->next, m = m->next) {

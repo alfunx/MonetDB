@@ -5034,7 +5034,7 @@ push_select_exps_to_matrix(int *changes, mvc *sql, sql_rel *rel)
 	while (p && is_project(p->op))
 		p = p->l;
 
-	if (!p || !is_matrixadd(p->op))
+	if (!p || !is_matrixadd(p->op) && !is_matrixsub(p->op) && !is_matrixemul(p->op))
 		return rel;
 
 	if (p->noopt) {
@@ -5114,8 +5114,11 @@ rel_push_project_up(int *changes, mvc *sql, sql_rel *rel)
 		    (r->op == op_project && (!r->l || r->r || project_unsafe(r))))))) 
 			return rel;
 
-		/* Don't rewrite projection of matrixadd */
-		if (is_project(l->op) && l->l && is_matrixadd(((sql_rel*)l->l)->op)) {
+		/* Don't rewrite projection of matrix operations */
+		if (is_project(l->op) && l->l &&
+				(is_matrixadd(((sql_rel*)l->l)->op) ||
+				 is_matrixsub(((sql_rel*)l->l)->op) ||
+				 is_matrixemul(((sql_rel*)l->l)->op))) {
 			fprintf(stderr, ">>> [rel_push_project_up] no action\n");
 			return rel;
 		}

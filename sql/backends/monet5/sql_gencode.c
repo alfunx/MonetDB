@@ -1987,6 +1987,17 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_count:{
+			int l;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, aggrRef, "count");
+			q = pushArgument(mb, q, l);
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_sigmoid:{
 			int l, res;
 

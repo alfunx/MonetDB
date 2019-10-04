@@ -1942,13 +1942,13 @@ rel2bin_join( mvc *sql, sql_rel *rel, list *refs)
 }
 
 static void
-split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
+partition_appl_desc(mvc *sql, stmt *p, list *exps, list *a, list *d)
 {
 	node *m, *n;
 	stmt *s;
 	sql_exp *e;
 
-	fprintf(stderr, ">>> [split_exps_appl_desc]\n");
+	fprintf(stderr, ">>> [partition_appl_desc]\n");
 
 	for (m = p->op4.lval->h; m; m = m->next) {
 		s = m->data;
@@ -1961,38 +1961,34 @@ split_exps_appl_desc(mvc *sql, stmt *p, list *exps, list **a, list **d)
 
 			if (!e->l || !e->r)
 				continue;
-
-			const char *rname = e->l;
-			const char *name = e->r;
-
-			if (nme && strcmp(nme, name) != 0)
+			if (rnme && strcmp(rnme, e->l) != 0)
 				continue;
-			if (rnme && strcmp(rnme, rname) != 0)
+			if (nme && strcmp(nme, e->r) != 0)
 				continue;
 
 			fprintf(stderr, "    <A>  %s.%s\n", rnme ? rnme : "_", nme);
 
-			if (a) list_append(*a, column(sql->sa, s));
+			if (a) list_append(a, s);
 			break;
 		}
 
 		if (!n) {
 			fprintf(stderr, "    <D>  %s.%s\n", rnme ? rnme : "_", nme);
 
-			if (d) list_append(*d, column(sql->sa, s));
+			if (d) list_append(d, s);
 		}
 	}
 }
 
-static void
-gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
+static stmt *
+gen_orderby_ids(mvc *sql, stmt *s, list *ord)
 {
 	if (!ord)
-		return;
+		return NULL;
 
-	node *n;
 	list *p;
 	stmt *psub = NULL;
+	stmt *orderby_ids = NULL;
 	stmt *orderby_grp = NULL;
 
 	p = sa_list(sql->sa);
@@ -2003,24 +1999,24 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
 	fprintf(stderr, ">>> [gen_orderby_ids]\n");
 
 	// ordering of the order specification columns to know the final order of OIDs for
-	for (n = ord->h; n; n = n->next) {
+	for (node *n = ord->h; n; n = n->next) {
 		stmt *orderby = NULL;
 		sql_exp *orderbycole = n->data;
 		stmt *orderbycolstmt = exp_bin(sql, orderbycole, s, psub, NULL, NULL, NULL, NULL);
 
 		if (!orderbycolstmt) {
 			assert(0);
-			return;
+			return NULL;
 		}
 
 		/* single values don't need sorting */
 		if (orderbycolstmt->nrcols == 0) {
-			*orderby_ids = NULL;
+			orderby_ids = NULL;
 			break;
 		}
 
-		if (*orderby_ids)
-			orderby = stmt_reorder(sql->sa, orderbycolstmt, is_ascending(orderbycole), *orderby_ids, orderby_grp);
+		if (orderby_ids)
+			orderby = stmt_reorder(sql->sa, orderbycolstmt, is_ascending(orderbycole), orderby_ids, orderby_grp);
 		else
 			orderby = stmt_order(sql->sa, orderbycolstmt, is_ascending(orderbycole));
 
@@ -2029,35 +2025,35 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord, stmt **orderby_ids)
 
 		fprintf(stderr, "    %s.%s\n", tname, cname);
 
-		*orderby_ids = stmt_result(sql->sa, orderby, 1);
+		orderby_ids = stmt_result(sql->sa, orderby, 1);
 		orderby_grp = stmt_result(sql->sa, orderby, 2);
 	}
+
+	return orderby_ids;
 }
 
 static void
-align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list **ol)
+align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list *ol)
 {
-	node *n;
+	if (!orderby_ids) {
+		list_merge(ol, l, NULL);
+		return;
+	}
 
 	fprintf(stderr, ">>> [align_by_ids]\n");
 
-	for (n = l->h; n; n = n->next) {
-		stmt *c = n->data;
-		stmt *s;
+	for (node *n = l->h; n; n = n->next) {
+		stmt *s = n->data;
 
-		const char *tname = table_name(sql->sa, c);
-		const char *cname = column_name(sql->sa, c);
+		const char *tname = table_name(sql->sa, s);
+		const char *cname = column_name(sql->sa, s);
 
-		if (orderby_ids)
-			s = stmt_project(sql->sa, orderby_ids, c);
-		else
-			s = column(sql->sa, c);
+		s = stmt_project(sql->sa, orderby_ids, s);
 		s = stmt_alias(sql->sa, s, tname, cname);
 
 		fprintf(stderr, "    %s.%s\n", tname, cname);
 
-		if (ol)
-			list_append(*ol, s);
+		list_append(ol, s);
 	}
 }
 
@@ -2192,14 +2188,14 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statement
 	stmt *s;
 
-	stmt *left = NULL;
-	stmt *right = NULL;
-	stmt *orderby_idsl = NULL;
-	stmt *orderby_idsr = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
-	right = subrel_bin(sql, rel->r, refs);
+	// process sub-relations
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	stmt *right = subrel_bin(sql, rel->r, refs);
 	assert(left && right);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	stmt *orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2212,18 +2208,14 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
-	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
+	partition_appl_desc(sql, right, rel->rexps, ra, rd);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsr, rd, &l);
-	align_by_ids(sql, orderby_idsl, la, &loa);
-	align_by_ids(sql, orderby_idsr, ra, &roa);
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsr, rd, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsr, ra, roa);
 
 	// perform selection on concatenated matrices
 	if (rel->exps && rel->exps->h) {
@@ -2253,12 +2245,12 @@ rel2bin_matrixadd(mvc *sql, sql_rel *rel, list *refs)
 		roa = sa_list(sql->sa);
 
 		// recreate application part
-		split_exps_appl_desc(sql, sel, lexps, &loa, NULL);
-		split_exps_appl_desc(sql, sel, rexps, &roa, NULL);
+		partition_appl_desc(sql, sel, lexps, loa, NULL);
+		partition_appl_desc(sql, sel, rexps, roa, NULL);
 
 		// recreate descriptive part
 		list_merge_destroy(lexps, rexps, NULL);
-		split_exps_appl_desc(sql, sel, lexps, NULL, &l);
+		partition_appl_desc(sql, sel, lexps, NULL, l);
 		list_destroy(lexps);
 	}
 
@@ -2289,14 +2281,14 @@ rel2bin_matrixsub(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statement
 	stmt *s;
 
-	stmt *left = NULL;
-	stmt *right = NULL;
-	stmt *orderby_idsl = NULL;
-	stmt *orderby_idsr = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
-	right = subrel_bin(sql, rel->r, refs);
+	// process sub-relations
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	stmt *right = subrel_bin(sql, rel->r, refs);
 	assert(left && right);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	stmt *orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2309,18 +2301,14 @@ rel2bin_matrixsub(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
-	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
+	partition_appl_desc(sql, right, rel->rexps, ra, rd);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsr, rd, &l);
-	align_by_ids(sql, orderby_idsl, la, &loa);
-	align_by_ids(sql, orderby_idsr, ra, &roa);
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsr, rd, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsr, ra, roa);
 
 	// perform selection on concatenated matrices
 	if (rel->exps && rel->exps->h) {
@@ -2350,12 +2338,12 @@ rel2bin_matrixsub(mvc *sql, sql_rel *rel, list *refs)
 		roa = sa_list(sql->sa);
 
 		// recreate application part
-		split_exps_appl_desc(sql, sel, lexps, &loa, NULL);
-		split_exps_appl_desc(sql, sel, rexps, &roa, NULL);
+		partition_appl_desc(sql, sel, lexps, loa, NULL);
+		partition_appl_desc(sql, sel, rexps, roa, NULL);
 
 		// recreate descriptive part
 		list_merge_destroy(lexps, rexps, NULL);
-		split_exps_appl_desc(sql, sel, lexps, NULL, &l);
+		partition_appl_desc(sql, sel, lexps, NULL, l);
 		list_destroy(lexps);
 	}
 
@@ -2386,14 +2374,14 @@ rel2bin_matrixemul(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statement
 	stmt *s;
 
-	stmt *left = NULL;
-	stmt *right = NULL;
-	stmt *orderby_idsl = NULL;
-	stmt *orderby_idsr = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
-	right = subrel_bin(sql, rel->r, refs);
+	// process sub-relations
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	stmt *right = subrel_bin(sql, rel->r, refs);
 	assert(left && right);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	stmt *orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2406,18 +2394,14 @@ rel2bin_matrixemul(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-	split_exps_appl_desc(sql, right, rel->rexps, &ra, &rd);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
-	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
+	partition_appl_desc(sql, right, rel->rexps, ra, rd);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsr, rd, &l);
-	align_by_ids(sql, orderby_idsl, la, &loa);
-	align_by_ids(sql, orderby_idsr, ra, &roa);
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsr, rd, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsr, ra, roa);
 
 	// perform selection on concatenated matrices
 	if (rel->exps && rel->exps->h) {
@@ -2447,12 +2431,12 @@ rel2bin_matrixemul(mvc *sql, sql_rel *rel, list *refs)
 		roa = sa_list(sql->sa);
 
 		// recreate application part
-		split_exps_appl_desc(sql, sel, lexps, &loa, NULL);
-		split_exps_appl_desc(sql, sel, rexps, &roa, NULL);
+		partition_appl_desc(sql, sel, lexps, loa, NULL);
+		partition_appl_desc(sql, sel, rexps, roa, NULL);
 
 		// recreate descriptive part
 		list_merge_destroy(lexps, rexps, NULL);
-		split_exps_appl_desc(sql, sel, lexps, NULL, &l);
+		partition_appl_desc(sql, sel, lexps, NULL, l);
 		list_destroy(lexps);
 	}
 
@@ -2483,14 +2467,14 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statements
 	stmt *s, *t, *e;
 
-	stmt *left = NULL;
-	stmt *right = NULL;
-	stmt *orderby_idsl = NULL;
-	stmt *orderby_idsr = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
-	right = subrel_bin(sql, rel->r, refs);
+	// process sub-relations
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	stmt *right = subrel_bin(sql, rel->r, refs);
 	assert(left && right);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	stmt *orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2501,16 +2485,12 @@ rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, NULL);
-	split_exps_appl_desc(sql, right, rel->rexps, &ra, NULL);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
-	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
+	partition_appl_desc(sql, left, rel->lexps, la, NULL);
+	partition_appl_desc(sql, right, rel->rexps, ra, NULL);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, la, &loa);
-	align_by_ids(sql, orderby_idsr, ra, &roa);
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsr, ra, roa);
 
 	// zero stmt
 	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
@@ -2554,11 +2534,12 @@ rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statements
 	stmt *s, *t;
 
-	stmt *left = NULL;
-	stmt *orderby_idsl = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
+	// process sub-relation
+	stmt *left = subrel_bin(sql, rel->l, refs);
 	assert(left);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2568,14 +2549,11 @@ rel2bin_matrixqqr(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
 
 	// create qqr stmts
 	for (n = loa->h; n; n = n->next) {
@@ -2611,14 +2589,14 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statements
 	stmt *s, *t, *e;
 
-	stmt *left = NULL;
-	stmt *right = NULL;
-	stmt *orderby_idsl = NULL;
-	stmt *orderby_idsr = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
-	right = subrel_bin(sql, rel->r, refs);
+	// process sub-relations
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	stmt *right = subrel_bin(sql, rel->r, refs);
 	assert(left && right);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	stmt *orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2629,16 +2607,12 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, NULL);
-	split_exps_appl_desc(sql, right, rel->rexps, &ra, NULL);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
-	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
+	partition_appl_desc(sql, left, rel->lexps, la, NULL);
+	partition_appl_desc(sql, right, rel->rexps, ra, NULL);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, la, &loa);
-	align_by_ids(sql, orderby_idsr, ra, &roa);
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsr, ra, roa);
 
 	// zero stmt
 	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
@@ -2686,11 +2660,12 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statement
 	stmt *s;
 
-	stmt *left = NULL;
-	stmt *orderby_idsl = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
+	// process sub-relation
+	stmt *left = subrel_bin(sql, rel->l, refs);
 	assert(left);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2702,16 +2677,13 @@ rel2bin_matrixsqrt(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-	split_exps_appl_desc(sql, left, rel->rexps, &lg, NULL);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
+	partition_appl_desc(sql, left, rel->rexps, lg, NULL);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsl, la, &loa);
-	align_by_ids(sql, orderby_idsl, lg, &log);
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsl, lg, log);
 
 	// create matrixsqrt stmts
 	for (n = loa->h, m = log->h; n && m; n = n->next, m = m->next) {
@@ -2746,11 +2718,12 @@ rel2bin_matrixinvtriangular(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statement
 	stmt *s, *t, *tl, *tr;
 
-	stmt *left = NULL;
-	stmt *orderby_idsl = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
+	// process sub-relation
+	stmt *left = subrel_bin(sql, rel->l, refs);
 	assert(left);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2760,14 +2733,11 @@ rel2bin_matrixinvtriangular(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
 
 	// reverse application part
 	loa_rev = list_reverse(sql, loa);
@@ -2835,11 +2805,12 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statement
 	stmt *s, *t, *tl, *tr;
 
-	stmt *left = NULL;
-	stmt *orderby_idsl = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
+	// process sub-relation
+	stmt *left = subrel_bin(sql, rel->l, refs);
 	assert(left);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2849,14 +2820,11 @@ rel2bin_matrixinv(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
 
 	// generate identity matrix
 	identity = identity_matrix(sql, loa);
@@ -2914,14 +2882,14 @@ rel2bin_matrixpredict(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statements
 	stmt *s, *t;
 
-	stmt *left = NULL;
-	stmt *right = NULL;
-	stmt *orderby_idsl = NULL;
-	stmt *orderby_idsr = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
-	right = subrel_bin(sql, rel->r, refs);
+	// process sub-relations
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	stmt *right = subrel_bin(sql, rel->r, refs);
 	assert(left && right);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	stmt *orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -2933,17 +2901,13 @@ rel2bin_matrixpredict(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps && rel->rexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-	split_exps_appl_desc(sql, right, rel->rexps, &ra, NULL);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
-	gen_orderby_ids(sql, right, rel->rord, &orderby_idsr);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
+	partition_appl_desc(sql, right, rel->rexps, ra, NULL);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsl, la, &loa);
-	align_by_ids(sql, orderby_idsr, ra, &roa);
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsr, ra, roa);
 
 	// prepare result statement
 	t = NULL;
@@ -2990,11 +2954,12 @@ rel2bin_matrixsigmoid(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statements
 	stmt *s;
 
-	stmt *left = NULL;
-	stmt *orderby_idsl = NULL;
-
-	left = subrel_bin(sql, rel->l, refs);
+	// process sub-relation
+	stmt *left = subrel_bin(sql, rel->l, refs);
 	assert(left);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
@@ -3004,14 +2969,11 @@ rel2bin_matrixsigmoid(mvc *sql, sql_rel *rel, list *refs)
 
 	// split into application and descriptive part lists
 	assert(rel->lexps);
-	split_exps_appl_desc(sql, left, rel->lexps, &la, &ld);
-
-	// generate the orderby ids
-	gen_orderby_ids(sql, left, rel->lord, &orderby_idsl);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, &l);
-	align_by_ids(sql, orderby_idsl, la, &loa);
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
 
 	// create sigmoid stmts
 	for (n = loa->h; n; n = n->next) {

@@ -5212,22 +5212,20 @@ append_exps_except(list *l, mvc *sql, sql_rel *rel, list *exps)
 		return;
 
 	sql_exp *e;
-	int nr = ++sql->label;
-	char name[16], *rname;
-	rname = number2name(name, 16, nr);
 
 	for (node *n = all->h; n; n = n->next) {
 		e = n->data;
-		const char *name = e->name;
 
 		// ignore any leftover schema and order columns
-		if (strcmp(name, "__schema") == 0 || strcmp(name, "__order") == 0)
+		if (strcmp(e->name, "__schema") == 0)
+			continue;
+		if (strcmp(e->name, "__order") == 0)
 			continue;
 
-		if (!exps_bind_column(exps, name, NULL)) {
-			fprintf(stderr, ">>> [rel] add: %s.%s\n", rname, name);
-			exp_setname(sql->sa, e, rname, sa_strdup(sql->sa, name));
+		if (!exps_bind_column(exps, e->name, NULL)) {
+			exp_setrelname(sql->sa, e, sql->label);
 			append(l, e);
+			fprintf(stderr, ">>> [rel] add: %s.%s\n", e->rname, e->name);
 		}
 	}
 }
@@ -5236,23 +5234,21 @@ static void
 append_exps(list *l, mvc *sql, list *exps)
 {
 	sql_exp *e;
-	int nr = ++sql->label;
-	char name[16], *rname;
-	rname = number2name(name, 16, nr);
 
 	for (node *n = exps->h; n; n = n->next) {
 		e = n->data;
-		const char *name = e->name;
 
-		fprintf(stderr, ">>> [rel] add: %s.%s\n", rname, name);
-		exp_setname(sql->sa, e, rname, sa_strdup(sql->sa, name));
+		exp_setrelname(sql->sa, e, sql->label);
 		append(l, e);
+		fprintf(stderr, ">>> [rel] add: %s.%s\n", e->rname, e->name);
 	}
 }
 
 static list *
 gen_orderby(mvc *sql, sql_rel *rel, symbol *s)
 {
+	if (!s)
+		return NULL;
 	sql_rel *r = rel_project(sql->sa, rel, sa_list(sql->sa));
 	return rel_order_by(sql, &r, s, 0);
 }
@@ -5290,6 +5286,9 @@ rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_rel *r_rel = table_ref(sql, rel, tab4);
 	if (!l_rel || !r_rel)
 		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
 
 	rel = rel_matrixadd(sql->sa, l_rel, r_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
@@ -5338,6 +5337,9 @@ rel_matrixsubquery(mvc *sql, sql_rel *rel, symbol *q)
 	if (!l_rel || !r_rel)
 		return NULL;
 
+	// for relation name
+	int nr = ++sql->label;
+
 	rel = rel_matrixsub(sql->sa, l_rel, r_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
 	rel->rord = gen_orderby(sql, r_rel, tab5);
@@ -5381,6 +5383,9 @@ rel_matrixemulquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_rel *r_rel = table_ref(sql, rel, tab4);
 	if (!l_rel || !r_rel)
 		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
 
 	rel = rel_matrixemul(sql->sa, l_rel, r_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
@@ -5426,6 +5431,9 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 	if (!l_rel || !r_rel)
 		return NULL;
 
+	// for relation name
+	int nr = ++sql->label;
+
 	rel = rel_matrixtransmul(sql->sa, l_rel, r_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
 	rel->rord = gen_orderby(sql, r_rel, tab5);
@@ -5461,6 +5469,9 @@ rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q)
 	if (!l_rel)
 		return NULL;
 
+	// for relation name
+	int nr = ++sql->label;
+
 	rel = rel_matrixsqrt(sql->sa, l_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
 	rel->lexps = gen_exps_list(sql, l_rel, tab3);
@@ -5492,6 +5503,9 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_rel *l_rel = table_ref(sql, rel, tab1);
 	if (!l_rel)
 		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
 
 	rel = rel_matrixinv(sql->sa, l_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
@@ -5525,6 +5539,9 @@ rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_rel *l_rel = table_ref(sql, rel, tab1);
 	if (!l_rel)
 		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
 
 	rel = rel_matrixqqr(sql->sa, l_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
@@ -5561,6 +5578,9 @@ rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q)
 	if (!l_rel || !r_rel)
 		return NULL;
 
+	// for relation name
+	int nr = ++sql->label;
+
 	rel = rel_matrixrqr(sql->sa, l_rel, r_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
 	rel->rord = gen_orderby(sql, r_rel, tab5);
@@ -5594,6 +5614,9 @@ rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q)
 	sql_rel *l_rel = table_ref(sql, rel, tab1);
 	if (!l_rel)
 		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
 
 	// qqr relation
 	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, l_rel);
@@ -5635,6 +5658,9 @@ rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q)
 	if (!l_rel)
 		return NULL;
 
+	// for relation name
+	int nr = ++sql->label;
+
 	rel = rel_matrixsigmoid(sql->sa, l_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
 	rel->lexps = gen_exps_list(sql, l_rel, tab3);
@@ -5669,6 +5695,9 @@ rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_rel *y_rel = table_ref(sql, rel, tab4);
 	if (!x_rel || !y_rel)
 		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
 
 	// qqr relation
 	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, x_rel);
@@ -5732,6 +5761,9 @@ rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_rel *r_rel = table_ref(sql, rel, tab4);
 	if (!l_rel || !r_rel)
 		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
 
 	rel = rel_matrixpredict(sql->sa, l_rel, r_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);

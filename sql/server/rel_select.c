@@ -5346,6 +5346,9 @@ rel_matrixsubquery(mvc *sql, sql_rel *rel, symbol *q)
 	rel->lexps = gen_exps_list(sql, l_rel, tab3);
 	rel->rexps = gen_exps_list(sql, r_rel, tab6);
 
+	// set no-optimization flag
+	rel->noopt = n->next->next->data.i_val;
+
 	if (list_length(rel->lexps) != list_length(rel->rexps)) {
 		sql_error(sql, 02, "MATRIX SUB: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(l_rel)?rel_name(l_rel):"", rel_name(r_rel)?rel_name(r_rel):"");
 		rel_destroy(rel);
@@ -5392,6 +5395,9 @@ rel_matrixemulquery(mvc *sql, sql_rel *rel, symbol *q)
 	rel->rord = gen_orderby(sql, r_rel, tab5);
 	rel->lexps = gen_exps_list(sql, l_rel, tab3);
 	rel->rexps = gen_exps_list(sql, r_rel, tab6);
+
+	// set no-optimization flag
+	rel->noopt = n->next->next->data.i_val;
 
 	if (list_length(rel->lexps) != list_length(rel->rexps)) {
 		sql_error(sql, 02, "MATRIX EMUL: number of selected columns from tables '%s' and '%s' don\'t match", rel_name(l_rel)?rel_name(l_rel):"", rel_name(r_rel)?rel_name(r_rel):"");

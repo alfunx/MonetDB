@@ -2913,16 +2913,14 @@ rel2bin_matrixpredict(mvc *sql, sql_rel *rel, list *refs)
 	t = NULL;
 
 	// create predict stmts
-	for (m = loa->h, i = 0; m; m = m->next, i++) {
+	for (m = loa->h, i = 0; m && m->next; m = m->next, i++) {
 		s = stmt_atom_oid(sql->sa, i);
 		s = stmt_fetch(sql->sa, roa->h->data, s);
 		s = stmt_vectormul(sql->sa, m->data, s);
-
-		if (t) {
+		if (t)
 			t = stmt_vectoradd(sql->sa, t, s);
-		} else {
+		else
 			t = s;
-		}
 	}
 
 	// add y-intercept

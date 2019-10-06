@@ -1440,6 +1440,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
+	case op_matrixlogreg:
 	case op_project:
 	case op_select: 
 	case op_topn: 
@@ -2978,6 +2979,127 @@ rel2bin_matrixsigmoid(mvc *sql, sql_rel *rel, list *refs)
 		s = stmt_sigmoid(sql->sa, n->data);
 		list_append(l, s);
 	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *xa, *ya, *ld;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa, *xoa, *yoa;
+
+	// iterators
+	node *n, *m;
+
+	// counters
+	int i, j;
+
+	// temporary statements
+	stmt *s, *p, *c, *d, *t;
+
+	// extract sub-relations
+	sql_rel *x_rel = ((list*)rel->r)->h->data;
+	sql_rel *y_rel = ((list*)rel->r)->h->next->data;
+	list *x_ord = ((list*)rel->rord)->h->data;
+	list *y_ord = ((list*)rel->rord)->h->next->data;
+	list *x_exps = ((list*)rel->rexps)->h->data;
+	list *y_exps = ((list*)rel->rexps)->h->next->data;
+
+	// process sub-relations
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	stmt *x = subrel_bin(sql, x_rel, refs);
+	stmt *y = subrel_bin(sql, y_rel, refs);
+	assert(left && x && y);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	stmt *orderby_idsx = gen_orderby_ids(sql, x, x_ord);
+	stmt *orderby_idsy = gen_orderby_ids(sql, y, y_ord);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	xa = sa_list(sql->sa);
+	ya = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	xoa = sa_list(sql->sa);
+	yoa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps && x_exps && y_exps);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
+	partition_appl_desc(sql, x, x_exps, xa, NULL);
+	partition_appl_desc(sql, y, y_exps, ya, NULL);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsx, xa, xoa);
+	align_by_ids(sql, orderby_idsy, ya, yoa);
+
+	// coefficients
+	c = loa->h->data;
+
+	// calculate target
+	t = yoa->h->data;
+	s = stmt_atom_dbl(sql->sa, 0.5);
+	t = stmt_stepfunction(sql->sa, t, s);
+
+	for (j = 0; j < 100; j++) {
+		// prepare prediction statement
+		p = NULL;
+
+		// prediction ( ŷ )
+		for (m = xoa->h, i = 0; m && m->next; m = m->next, i++) {
+			s = stmt_atom_oid(sql->sa, i);
+			s = stmt_fetch(sql->sa, c, s);
+			s = stmt_vectormul(sql->sa, m->data, s);
+			if (p)
+				p = stmt_vectoradd(sql->sa, p, s);
+			else
+				p = s;
+		}
+
+		// add y-intercept
+		s = stmt_atom_oid(sql->sa, i);
+		s = stmt_fetch(sql->sa, c, s);
+		p = stmt_vectoradd(sql->sa, p, s);
+
+		// apply sigmoid ( sigmoid(ŷ) )
+		p = stmt_sigmoid(sql->sa, p);
+
+		// calculate difference ( sigmoid(ŷ)-y )
+		p = stmt_vectorsub(sql->sa, p, t);
+
+		// calculate batch gradient ( X^T*(sigmoid(ŷ)-y) )
+		d = stmt_temp(sql->sa, tail_type(xoa->h->data));
+		for (m = xoa->h, i = 0; m; m = m->next, i++) {
+			s = stmt_dotproduct(sql->sa, m->data, p);
+			d = stmt_append(sql->sa, d, s);
+		}
+
+		// normalize ( X^T*(sigmoid(ŷ)-y)/n )
+		s = stmt_count(sql->sa, xoa->h->data);
+		d = stmt_vectordiv(sql->sa, d, s);
+
+		// apply stepsize
+		s = stmt_atom_dbl(sql->sa, 0.01);
+		d = stmt_vectormul(sql->sa, d, s);
+
+		// update coefficients
+		c = stmt_vectorsub(sql->sa, c, d);
+	}
+
+	c = stmt_alias(sql->sa, c, table_name(sql->sa, xoa->h->data), "coefficient");
+	list_append(l, c);
 
 	return stmt_list(sql->sa, l);
 }
@@ -5778,6 +5900,7 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	SUBREL_BIN_MATRIX_CASE(matrixrqr);
 	SUBREL_BIN_MATRIX_CASE(matrixpredict);
 	SUBREL_BIN_MATRIX_CASE(matrixsigmoid);
+	SUBREL_BIN_MATRIX_CASE(matrixlogreg);
 	}
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);

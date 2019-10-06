@@ -74,6 +74,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
+	case op_matrixlogreg:
 	case op_apply:
 	case op_semi:
 	case op_anti:
@@ -3812,6 +3813,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
+	case op_matrixlogreg:
 	case op_select:
 	case op_topn:
 	case op_sample:
@@ -5808,18 +5810,37 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	qy_rel->rord = gen_orderby(sql, y_rel, tab5);
 	qy_rel->rexps = gen_exps_list(sql, y_rel, tab6);
 
-	// result relation
-	rel = rel_matrixtransmul(sql->sa, inv_rel, qy_rel);
-	// TODO: rel->lord = inv_rel->lord;
-	rel->lexps = inv_rel->lexps;
-	// TODO: rel->rord = qy_rel->rord;
-	rel->rexps = qy_rel->rexps;
+	// linreg relation
+	sql_rel *lin_rel = rel_matrixtransmul(sql->sa, inv_rel, qy_rel);
+	// TODO: lin_rel->lord = inv_rel->lord;
+	lin_rel->lexps = inv_rel->lexps;
+	// TODO: lin_rel->rord = qy_rel->rord;
+	lin_rel->rexps = qy_rel->rexps;
+
+	// linreg projection
+	list *lin_exps = new_exp_list(sql->sa);
+	append(lin_exps, order_column());
+	append(lin_exps, schema_column());
+	append_exps(lin_exps, sql, lin_rel->rexps);
+
+	// logreg relation
+	rel = rel_matrixlogreg(sql->sa, lin_rel);
+	rel->lexps = lin_exps;
+	rel->r = sa_list(sql->sa);
+	list_append(rel->r, x_rel);
+	list_append(rel->r, y_rel);
+	rel->rord = sa_list(sql->sa);
+	list_append(rel->rord, qqr_rel->lord);
+	list_append(rel->rord, qy_rel->rord);
+	rel->rexps = sa_list(sql->sa);
+	list_append(rel->rexps, qqr_rel->lexps);
+	list_append(rel->rexps, qy_rel->rexps);
 
 	// select attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append(exps, order_column());
 	append(exps, schema_column());
-	append_exps(exps, sql, rel->rexps);
+	append(exps, exp_alias_or_copy(sql, NULL, "coefficient", x_rel, qqr_rel->lexps->h->data));
 
 	// set number of attributes in the result relation
 	rel->nrcols = list_length(exps);

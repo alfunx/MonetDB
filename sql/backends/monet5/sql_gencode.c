@@ -2025,17 +2025,27 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			q = pushArgument(mb, q, l);
 			res = getDestVar(q);
 
+			q = newStmt(mb, batcalcRef, "max");
+			q = pushArgument(mb, q, res);
+			q = pushDbl(mb, q, -700.0);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batcalcRef, "min");
+			q = pushArgument(mb, q, res);
+			q = pushDbl(mb, q, 700.0);
+			res = getDestVar(q);
+
 			q = newStmt(mb, batmmathRef, "exp");
 			q = pushArgument(mb, q, res);
 			res = getDestVar(q);
 
 			q = newStmt(mb, batcalcRef, "+");
 			q = pushArgument(mb, q, res);
-			q = pushInt(mb, q, 1);
+			q = pushDbl(mb, q, 1.0);
 			res = getDestVar(q);
 
 			q = newStmt(mb, batcalcRef, "/");
-			q = pushInt(mb, q, 1);
+			q = pushDbl(mb, q, 1.0);
 			q = pushArgument(mb, q, res);
 			s->nr = getDestVar(q);
 		}

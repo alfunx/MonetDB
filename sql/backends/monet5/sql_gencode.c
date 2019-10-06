@@ -1987,6 +1987,23 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_stepfunction:{
+			int  l, r, res;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			r = _dumpstmt(sql, mb, s->op2);
+			assert(l >= 0 && r >= 0);
+
+			q = newStmt(mb, batcalcRef, ">");
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, r);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batcalcRef, "dbl");
+			q = pushArgument(mb, q, res);
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_count:{
 			int l;
 

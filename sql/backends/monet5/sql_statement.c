@@ -358,6 +358,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_vectorsub:
 			case st_vectormul:
 			case st_vectordiv:
+			case st_stepfunction:
 			case st_count:
 			case st_sigmoid:
 			case st_fetch:
@@ -946,6 +947,16 @@ stmt_vectordiv(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
+stmt_stepfunction(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_stepfunction);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
 stmt_count(sql_allocator *sa, stmt *op1)
 {
 	stmt *s = stmt_create(sa, st_count);
@@ -1363,6 +1374,7 @@ tail_type(stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
+	case st_stepfunction:
 	case st_count:
 	case st_sigmoid:
 	case st_fetch:
@@ -1527,6 +1539,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
+	case st_stepfunction:
 	case st_count:
 	case st_sigmoid:
 	case st_fetch:
@@ -1609,6 +1622,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
+	case st_stepfunction:
 	case st_count:
 	case st_sigmoid:
 	case st_fetch:
@@ -1677,6 +1691,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
+	case st_stepfunction:
 	case st_count:
 	case st_sigmoid:
 	case st_fetch:

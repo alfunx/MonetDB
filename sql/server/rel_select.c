@@ -5785,6 +5785,7 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	// parameters for logistic regression
 	double stepsize = strtod(n->next->next->data.sval, NULL);
 	int iterations = n->next->next->next->data.i_val;
+	double tolerance = strtod(n->next->next->next->next->data.sval, NULL);
 
 	// qqr relation
 	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, x_rel);

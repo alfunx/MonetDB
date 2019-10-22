@@ -112,6 +112,7 @@ scanner_init_keywords(void)
 	keywords_insert("LOGREG", LOGREG);
 	keywords_insert("ITERATE", ITERATE);
 	keywords_insert("STEPSIZE", STEPSIZE);
+	keywords_insert("TOL", TOL);
 	keywords_insert("INV", INV);
 	keywords_insert("QQR", QQR);
 	keywords_insert("RQR", RQR);

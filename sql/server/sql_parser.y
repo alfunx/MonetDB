@@ -2847,11 +2847,11 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXLINREG, l); }
 
- |  LOGREG matrix_ref FOR matrix_ref STEPSIZE intval ITERATE intval
+ |  LOGREG matrix_ref FOR matrix_ref STEPSIZE INTNUM ITERATE intval
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
-	  append_int(l, $6);
+	  append_string(l, $6);
 	  append_int(l, $8);
 	  $$ = _symbol_create_list( SQL_MATRIXLOGREG, l); }
 

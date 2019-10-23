@@ -334,6 +334,8 @@ int yydebug=1;
 	forest_element_name
 	XML_namespace_prefix
 	XML_PI_target
+	opt_stepsize_clause
+	opt_tolerance_clause
 
 %type <l>
 	passwd_schema
@@ -475,6 +477,7 @@ int yydebug=1;
 	window_frame_units
 	window_frame_exclusion
 	subgeometry_type
+	opt_iterate_clause
 
 %type <w_val>
 	wrdval
@@ -567,7 +570,7 @@ int yydebug=1;
 %token LOGREG
 %token ITERATE
 %token STEPSIZE
-%token TOL
+%token TOLERANCE
 %token INV
 %token QQR
 %token RQR
@@ -2816,6 +2819,21 @@ opt_no_optimize:
  |  NOOPTIMIZE		{ $$ = TRUE; }
  ;
 
+opt_stepsize_clause:
+    /* empty */			{ $$ = NULL; }
+ |  STEPSIZE INTNUM		{ $$ = $2; }
+ ;
+
+opt_iterate_clause:
+    /* empty */			{ $$ = NULL; }
+ |  ITERATE intval		{ $$ = $2; }
+ ;
+
+opt_tolerance_clause:
+    /* empty */			{ $$ = NULL; }
+ |  TOLERANCE INTNUM	{ $$ = $2; }
+ ;
+
 opt_gather_clause:
     /* empty */ 	{ $$ = NULL; }
  |  GATHER selection	{ $$ = _symbol_create_list(SQL_GATHER, $2); }
@@ -2848,13 +2866,13 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXLINREG, l); }
 
- |  LOGREG matrix_ref FOR matrix_ref STEPSIZE INTNUM ITERATE intval TOL INTNUM
+ |  LOGREG matrix_ref FOR matrix_ref opt_stepsize_clause opt_iterate_clause opt_tolerance_clause
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
-	  append_string(l, $6);
-	  append_int(l, $8);
-	  append_string(l, $10);
+	  append_string(l, $5);
+	  append_int(l, $6);
+	  append_string(l, $7);
 	  $$ = _symbol_create_list( SQL_MATRIXLOGREG, l); }
 
  |  matrix_ref ADD matrix_ref opt_no_optimize

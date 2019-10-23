@@ -5783,9 +5783,10 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	int nr = ++sql->label;
 
 	// parameters for logistic regression
-	double stepsize = strtod(n->next->next->data.sval, NULL);
+	double stepsize = 0.0, tolerance = 0.0;
+	if (n->next->next->data.sval != NULL) stepsize = strtod(n->next->next->data.sval, NULL);
 	int iterations = n->next->next->next->data.i_val;
-	double tolerance = strtod(n->next->next->next->next->data.sval, NULL);
+	if (n->next->next->next->next->data.sval != NULL) tolerance = strtod(n->next->next->next->next->data.sval, NULL);
 
 	// qqr relation
 	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, x_rel);

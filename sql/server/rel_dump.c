@@ -308,6 +308,8 @@ op2string(operator_type op)
 		return "matrix sigmoid";
 	case op_matrixlogreg:
 		return "matrix logreg";
+	case op_matrixyintercept:
+		return "matrix yintercept";
 	case op_insert: 
 	case op_update: 
 	case op_delete: 
@@ -514,6 +516,7 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
+	case op_matrixyintercept:
 		if (rel->op == op_matrixsqrt)
 			r = "matrix sqrt";
 		if (rel->op == op_matrixinv)
@@ -526,6 +529,8 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 			r = "matrix sigmoid";
 		if (rel->op == op_matrixlogreg)
 			r = "matrix logreg";
+		if (rel->op == op_matrixyintercept)
+			r = "matrix yintercept";
 
 		print_indent(sql, fout, depth, decorate);
 		if (need_distinct(rel))
@@ -669,6 +674,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
+	case op_matrixyintercept:
 	case op_project:
 	case op_select: 
 	case op_groupby: 

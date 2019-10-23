@@ -1441,6 +1441,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
+	case op_matrixyintercept:
 	case op_project:
 	case op_select: 
 	case op_topn: 
@@ -3092,6 +3093,30 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 	list_append(l, c);
 
 	return stmt_list(sql->sa, l);
+}
+
+static stmt *rel2bin_matrixyintercept(mvc *sql, sql_rel *rel, list *refs) {
+  // list of all statements (result)
+  list *l;
+
+  // temporary statements
+  stmt *s;
+
+  // process sub-relation
+  stmt *left = subrel_bin(sql, rel->l, refs);
+  assert(left);
+
+  // construct list of statements
+  l = sa_list(sql->sa);
+
+  list_merge(l, left->op4.lval, NULL);
+
+  // add y-intercept
+  s = stmt_one(sql->sa, l->h->data);
+  s = stmt_alias(sql->sa, s, NULL, "y_intercept");
+  list_append(l, s);
+
+  return stmt_list(sql->sa, l);
 }
 
 static stmt *
@@ -5891,7 +5916,8 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	SUBREL_BIN_MATRIX_CASE(matrixpredict);
 	SUBREL_BIN_MATRIX_CASE(matrixsigmoid);
 	SUBREL_BIN_MATRIX_CASE(matrixlogreg);
-	}
+  SUBREL_BIN_MATRIX_CASE(matrixyintercept);
+        }
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);
 		list_append(refs, s);

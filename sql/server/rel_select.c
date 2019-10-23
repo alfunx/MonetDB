@@ -75,6 +75,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
+	case op_matrixyintercept:
 	case op_apply:
 	case op_semi:
 	case op_anti:
@@ -3814,6 +3815,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
+	case op_matrixyintercept:
 	case op_select:
 	case op_topn:
 	case op_sample:
@@ -5706,6 +5708,7 @@ rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
 	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
 	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
 	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
+	int noyintercept = n->next->next->data.i_val;
 
 	// resolve table refs
 	sql_rel *x_rel = table_ref(sql, rel, tab1);
@@ -5716,10 +5719,19 @@ rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
 	// for relation name
 	int nr = ++sql->label;
 
+	// y-intercept
+	list *yintercept = new_exp_list(sql->sa);
+	if (noyintercept == 0) {
+		x_rel = rel_matrixyintercept(sql->sa, x_rel);
+		sql_exp *ce = rel_column_exp(sql, &x_rel, tab3->h->data.sym, sql_sel);
+		list_append(yintercept, exp_alias_or_copy(sql, NULL, "y_intercept", x_rel, ce));
+	}
+
 	// qqr relation
 	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, x_rel);
 	qqr_rel->lord = gen_orderby(sql, x_rel, tab2);
 	qqr_rel->lexps = gen_exps_list(sql, x_rel, tab3);
+	list_merge(qqr_rel->lexps, yintercept, NULL);
 
 	// rqr relation
 	sql_rel *rqr_rel = rel_matrixrqr(sql->sa, x_rel, qqr_rel);
@@ -5782,10 +5794,21 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	// for relation name
 	int nr = ++sql->label;
 
+	int noyintercept = n->next->next->next->next->next->data.i_val;
+
+	// y-intercept
+	list *yintercept = new_exp_list(sql->sa);
+	if (noyintercept == 0) {
+		x_rel = rel_matrixyintercept(sql->sa, x_rel);
+		sql_exp *ce = rel_column_exp(sql, &x_rel, tab3->h->data.sym, sql_sel);
+		list_append(yintercept, exp_alias_or_copy(sql, NULL, "y_intercept", x_rel, ce));
+	}
+
 	// qqr relation
 	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, x_rel);
 	qqr_rel->lord = gen_orderby(sql, x_rel, tab2);
 	qqr_rel->lexps = gen_exps_list(sql, x_rel, tab3);
+	list_merge(qqr_rel->lexps, yintercept, NULL);
 
 	// rqr relation
 	sql_rel *rqr_rel = rel_matrixrqr(sql->sa, x_rel, qqr_rel);

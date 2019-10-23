@@ -366,6 +366,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_dotproduct:
 			case st_normalize:
 			case st_orthogonalize:
+			case st_one:
 				if (s->op1)
 					push(s->op1);
 				if (s->op2)
@@ -1023,6 +1024,13 @@ stmt_orthogonalize(sql_allocator *sa, stmt *op1, stmt *op2)
 	return s;
 }
 
+stmt *stmt_one(sql_allocator *sa, stmt *op1) {
+  stmt *s = stmt_create(sa, st_one);
+  s->op1 = op1;
+  s->nrcols = 1;
+  return s;
+}
+
 stmt *
 stmt_join(sql_allocator *sa, stmt *op1, stmt *op2, comp_type cmptype)
 {
@@ -1382,6 +1390,7 @@ tail_type(stmt *st)
 	case st_dotproduct:
 	case st_normalize:
 	case st_orthogonalize:
+	case st_one:
 		return tail_type(st->op1);
 
 	case st_list:
@@ -1547,6 +1556,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_dotproduct:
 	case st_normalize:
 	case st_orthogonalize:
+	case st_one:
 		return column_name(sa, st->op1);
 	case st_Nop:
 	{
@@ -1630,6 +1640,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_dotproduct:
 	case st_normalize:
 	case st_orthogonalize:
+	case st_one:
 		return table_name(sa, st->op1);
 
 	case st_table_clear:
@@ -1699,6 +1710,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_dotproduct:
 	case st_normalize:
 	case st_orthogonalize:
+	case st_one:
 		return schema_name(sa, st->op1);
 	case st_alias:
 		/* there are no schema aliases, ie look into the base column */

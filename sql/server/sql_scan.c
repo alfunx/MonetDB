@@ -106,6 +106,7 @@ scanner_init_keywords(void)
 	keywords_insert("COUNT", AGGR);
 
 	keywords_insert("NOOPTIMIZE", NOOPTIMIZE);
+	keywords_insert("NOYINTERCEPT", NOYINTERCEPT);
 	keywords_insert("GATHER", GATHER);
 	keywords_insert("SQRT", SQRT);
 	keywords_insert("LINREG", LINREG);

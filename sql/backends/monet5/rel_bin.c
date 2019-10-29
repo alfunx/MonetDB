@@ -2914,7 +2914,7 @@ rel2bin_matrixpredict(mvc *sql, sql_rel *rel, list *refs)
 	t = NULL;
 
 	// create predict stmts
-	for (m = loa->h, i = 0; m && m->next; m = m->next, i++) {
+	for (m = loa->h, i = 0; m; m = m->next, i++) {
 		s = stmt_atom_oid(sql->sa, i);
 		s = stmt_fetch(sql->sa, roa->h->data, s);
 		s = stmt_vectormul(sql->sa, m->data, s);
@@ -2923,11 +2923,6 @@ rel2bin_matrixpredict(mvc *sql, sql_rel *rel, list *refs)
 		else
 			t = s;
 	}
-
-	// add y-intercept
-	s = stmt_atom_oid(sql->sa, i);
-	s = stmt_fetch(sql->sa, roa->h->data, s);
-	t = stmt_vectoradd(sql->sa, t, s);
 
 	t = stmt_alias(sql->sa, t, NULL, "prediction");
 	list_append(l, t);
@@ -3058,7 +3053,7 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 		p = NULL;
 
 		// prediction ( ŷ )
-		for (m = xoa->h, i = 0; m && m->next; m = m->next, i++) {
+		for (m = xoa->h, i = 0; m; m = m->next, i++) {
 			s = stmt_atom_oid(sql->sa, i);
 			s = stmt_fetch(sql->sa, c, s);
 			s = stmt_vectormul(sql->sa, m->data, s);
@@ -3067,11 +3062,6 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 			else
 				p = s;
 		}
-
-		// add y-intercept
-		s = stmt_atom_oid(sql->sa, i);
-		s = stmt_fetch(sql->sa, c, s);
-		p = stmt_vectoradd(sql->sa, p, s);
 
 		// apply sigmoid ( sigmoid(ŷ) )
 		p = stmt_sigmoid(sql->sa, p);

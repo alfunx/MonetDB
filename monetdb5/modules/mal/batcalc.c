@@ -1493,6 +1493,14 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		rval[n] = cval[n];
 	}
 
+	double error = DBL_MAX;
+	double tolerance = 0.01;
+	double stepsize = 0.001;
+	double iterate = 100000;
+
+	// gradient descend loop
+	while (error > tolerance && 0 <= --iterate) {
+
 	// dependent variable
 	ybid = getArgReference_bat(stk, pci, 2);
 	ybat = BATdescriptor(*ybid);
@@ -1519,9 +1527,13 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	}
 
 	// difference / error
+	error = 0.0;
 	for (i = 0; i < cnt; i++) {
 		t[i] = sigmoid(t[i]) - yval[i];
+		error += pow(t[i], 2);
 	}
+	error /= cnt;
+	fprintf(stderr, "error is %f\n", error);
 
 	// batch gradient, normalize, update coefficients
 	for (n = 3; n < argc; n++) {
@@ -1534,8 +1546,12 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		for (i = 0; i < cnt; i++) {
 			g += xval[i] * t[i];
 		}
-		rval[n - 3] -= g * 0.01 / cnt;
+		rval[n - 3] -= g * stepsize / cnt;
 	}
+
+	}
+
+	free(t);
 
 	return MAL_SUCCEED;
 }

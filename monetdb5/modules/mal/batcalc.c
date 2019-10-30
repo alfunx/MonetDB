@@ -11,6 +11,7 @@
 #include "math.h"
 #include "mal_exception.h"
 #include "mal_interpreter.h"
+#include "gdk_cand.h"
 
 static str
 mythrow(enum malexception type, const char *fcn, const char *msg)
@@ -1429,5 +1430,112 @@ CMDifthen(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		return mythrow(MAL, "batcalc.ifthenelse", OPERATION_FAILED);
 	}
 	BBPkeepref(*ret = bn->batCacheid);
+	return MAL_SUCCEED;
+}
+
+#define sigmoid(a) (1.0 / (1.0 + exp(-(a < 700 ? a > -700 ? a : -700 : 700))))
+
+mal_export str CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
+
+str
+CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int argc = pci->argc;
+	BAT *s = NULL;
+	BAT *rbat, *cbat, *ybat, *xbat, *b, *bn;
+	bat *rbid, *cbid, *ybid, *xbid, *bid;
+	double *rval, *cval, *yval, *xval, *result;
+
+	// prediction
+	double *AT, *t;
+
+	BUN cnt, start, end;
+	BUN p, q;
+	const oid *cand = NULL, *candend = NULL;
+
+	BATiter bi;
+	int tp, i, j, n;
+
+	// check BATs
+	for (n = 1; n < argc; n++) {
+		tp = stk->stk[getArg(pci, n)].vtype;
+		assert(tp == TYPE_bat || isaBatType(tp));
+
+		xbid = getArgReference_bat(stk, pci, n);
+		xbat = BATdescriptor(*xbid);
+
+		assert(xbat != NULL && xbat->T->type == TYPE_dbl);
+		assert(BAThdense(xbat));
+	}
+
+	// coefficients
+	cbid = getArgReference_bat(stk, pci, 1);
+	cbat = BATdescriptor(*cbid);
+	cval = (double*) Tloc(cbat, BUNfirst(cbat));
+	CANDINIT(cbat, s, start, end, cnt, cand, candend);
+	assert(cnt == argc - 3);
+
+	// result (coefficients)
+	rbid = getArgReference_bat(stk, pci, 0);
+	rbat = BATnew(TYPE_void, cbat->T->type, cnt, TRANSIENT);
+	rval = (double*) Tloc(rbat, BUNfirst(cbat));
+
+	// prepare result BAT
+	BATsetcount(rbat, cnt);
+	BATseqbase(rbat, cbat->H->seq);
+	rbat->T->sorted = 0;
+	rbat->T->revsorted = 0;
+	rbat->T->key = 0;
+	BBPkeepref(*rbid = rbat->batCacheid);
+
+	// copy coefficients
+	for (n = 0; n < cnt; n++) {
+		rval[n] = cval[n];
+	}
+
+	// dependent variable
+	ybid = getArgReference_bat(stk, pci, 2);
+	ybat = BATdescriptor(*ybid);
+	yval = (double*) Tloc(ybat, BUNfirst(ybat));
+	CANDINIT(ybat, s, start, end, cnt, cand, candend);
+
+	// prepare prediction
+	t = (double*) calloc(cnt, sizeof(double));
+	if (t == NULL) {
+		fprintf(stderr, "Memory for prediction array is not allocated.");
+		return NULL;
+	}
+
+	// prediction
+	for (n = 3; n < argc; n++) {
+		xbid = getArgReference_bat(stk, pci, n);
+		xbat = BATdescriptor(*xbid);
+		xval = (double*) Tloc(xbat, BUNfirst(xbat));
+		CANDINIT(xbat, s, start, end, cnt, cand, candend);
+
+		for (i = 0; i < cnt; i++) {
+			t[i] += xval[i] * rval[n - 3];
+		}
+	}
+
+	// difference / error
+	for (i = 0; i < cnt; i++) {
+		t[i] = sigmoid(t[i]) - yval[i];
+	}
+
+	// batch gradient, normalize, update coefficients
+	for (n = 3; n < argc; n++) {
+		xbid = getArgReference_bat(stk, pci, n);
+		xbat = BATdescriptor(*xbid);
+		xval = (double*) Tloc(xbat, BUNfirst(xbat));
+		CANDINIT(xbat, s, start, end, cnt, cand, candend);
+
+		double g = 0.0;
+		for (i = 0; i < cnt; i++) {
+			g += xval[i] * t[i];
+		}
+		rval[n - 3] -= g * 0.01 / cnt;
+	}
+
 	return MAL_SUCCEED;
 }

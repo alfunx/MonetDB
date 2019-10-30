@@ -21117,6 +21117,10 @@ pattern ifthenelse(b:bat[:bit], b1:bat[:any_1], b2:bat[:any_1]) :bat[:any_1]
 address CMDifthen
 comment "If-then-else operation to assemble a conditional result";
 
+pattern logreg(b1:bat[:dbl]...) (b2:bat[:dbl])
+address CMDbatLOGREGsignal
+comment "Return BATs after LOGREG, overflow causes NIL value";
+
 pattern !(b1:bat[:flt],b2:bat[:flt]) :bat[:flt]
 address CMDbatGSQRTsignal
 comment "Return sqrt(B2), grouped by B1, signal error on overflow";

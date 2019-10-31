@@ -5869,6 +5869,9 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 		rel->tolerance = MAX(strtod(n->next->next->next->next->data.sval, NULL), rel->tolerance);	
 	}
 
+	// set no-optimization flag, use old implementation if set
+	rel->noopt = n->next->next->next->next->next->data.i_val;
+
 	// select attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	append(exps, order_column());

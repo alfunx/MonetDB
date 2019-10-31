@@ -2983,7 +2983,7 @@ static stmt *
 rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 {
 	// list of all statements (result)
-	list *l;
+	list *l, *lr;
 
 	// application part and description part columns
 	list *la, *xa, *ya, *ld;
@@ -3043,54 +3043,68 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 
 	// coefficients
 	c = loa->h->data;
+	c = stmt_alias(sql->sa, c, table_name(sql->sa, loa->h->data), "coefficient");
 
 	// calculate target
 	t = yoa->h->data;
 	s = stmt_atom_dbl(sql->sa, 0.5);
 	t = stmt_stepfunction(sql->sa, t, s);
+	t = stmt_alias(sql->sa, t, table_name(sql->sa, yoa->h->data), column_name(sql->sa, yoa->h->data));
 
-	for (j = 0; j < rel->iterations; j++) {
-		// prepare prediction statement
-		p = NULL;
+	if (!rel->noopt) {
+		// logreg list
+		lr = sa_list(sql->sa);
+		list_append(lr, c);
+		list_append(lr, t);
+		list_merge(lr, xoa, NULL);
 
-		// prediction ( ŷ )
-		for (m = xoa->h, i = 0; m; m = m->next, i++) {
-			s = stmt_atom_oid(sql->sa, i);
-			s = stmt_fetch(sql->sa, c, s);
-			s = stmt_vectormul(sql->sa, m->data, s);
-			if (p)
-				p = stmt_vectoradd(sql->sa, p, s);
-			else
-				p = s;
+		p = stmt_logreg(sql->sa, lr);
+		p = stmt_alias(sql->sa, p, table_name(sql->sa, xoa->h->data), "coefficient");
+		list_append(l, p);
+	} else {
+		for (j = 0; j < rel->iterations; j++) {
+			// prepare prediction statement
+			p = NULL;
+
+			// prediction ( ŷ )
+			for (m = xoa->h, i = 0; m; m = m->next, i++) {
+				s = stmt_atom_oid(sql->sa, i);
+				s = stmt_fetch(sql->sa, c, s);
+				s = stmt_vectormul(sql->sa, m->data, s);
+				if (p)
+					p = stmt_vectoradd(sql->sa, p, s);
+				else
+					p = s;
+			}
+
+			// apply sigmoid ( sigmoid(ŷ) )
+			p = stmt_sigmoid(sql->sa, p);
+
+			// calculate difference ( sigmoid(ŷ)-y )
+			p = stmt_vectorsub(sql->sa, p, t);
+
+			// calculate batch gradient ( X^T*(sigmoid(ŷ)-y) )
+			d = stmt_temp(sql->sa, tail_type(xoa->h->data));
+			for (m = xoa->h; m; m = m->next) {
+				s = stmt_dotproduct(sql->sa, m->data, p);
+				d = stmt_append(sql->sa, d, s);
+			}
+
+			// normalize ( X^T*(sigmoid(ŷ)-y)/n )
+			s = stmt_count(sql->sa, xoa->h->data);
+			d = stmt_vectordiv(sql->sa, d, s);
+
+			// apply stepsize
+			s = stmt_atom_dbl(sql->sa, rel->stepsize);
+			d = stmt_vectormul(sql->sa, d, s);
+
+			// update coefficients
+			c = stmt_vectorsub(sql->sa, c, d);
 		}
 
-		// apply sigmoid ( sigmoid(ŷ) )
-		p = stmt_sigmoid(sql->sa, p);
-
-		// calculate difference ( sigmoid(ŷ)-y )
-		p = stmt_vectorsub(sql->sa, p, t);
-
-		// calculate batch gradient ( X^T*(sigmoid(ŷ)-y) )
-		d = stmt_temp(sql->sa, tail_type(xoa->h->data));
-		for (m = xoa->h, i = 0; m; m = m->next, i++) {
-			s = stmt_dotproduct(sql->sa, m->data, p);
-			d = stmt_append(sql->sa, d, s);
-		}
-
-		// normalize ( X^T*(sigmoid(ŷ)-y)/n )
-		s = stmt_count(sql->sa, xoa->h->data);
-		d = stmt_vectordiv(sql->sa, d, s);
-
-		// apply stepsize
-		s = stmt_atom_dbl(sql->sa, rel->stepsize);
-		d = stmt_vectormul(sql->sa, d, s);
-
-		// update coefficients
-		c = stmt_vectorsub(sql->sa, c, d);
+		c = stmt_alias(sql->sa, c, table_name(sql->sa, xoa->h->data), "coefficient");
+		list_append(l, c);
 	}
-
-	c = stmt_alias(sql->sa, c, table_name(sql->sa, xoa->h->data), "coefficient");
-	list_append(l, c);
 
 	return stmt_list(sql->sa, l);
 }

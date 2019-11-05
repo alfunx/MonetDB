@@ -141,8 +141,8 @@ typedef enum operator_type {
 	op_basetable = 0,
 	op_table,
 	op_ddl,
-	op_project, /* includes order by */
-	op_select,
+	op_project, 		/* includes order by */
+	op_select,	
 	op_join,
 	op_left,
 	op_right,
@@ -153,12 +153,12 @@ typedef enum operator_type {
 	op_union,
 	op_inter,
 	op_except,
-	op_groupby,
+	op_groupby,	
 	op_topn,
 	op_sample,
-	op_insert, /* insert(l=table, r insert expressions) */
-	op_update, /* update(l=table, r update expressions) */
-	op_delete, /* delete(l=table, r delete expression) */
+	op_insert, 	/* insert(l=table, r insert expressions) */ 
+	op_update, 	/* update(l=table, r update expressions) */
+	op_delete, 	/* delete(l=table, r delete expression) */
 
 	op_matrixadd,
 	op_matrixsub,

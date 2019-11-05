@@ -358,6 +358,8 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_vectorsub:
 			case st_vectormul:
 			case st_vectordiv:
+			case st_stepfunction:
+			case st_count:
 			case st_sigmoid:
 			case st_fetch:
 			case st_gathersqrt:
@@ -945,6 +947,34 @@ stmt_vectordiv(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
+stmt_stepfunction(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_stepfunction);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
+stmt_count(sql_allocator *sa, stmt *op1)
+{
+	stmt *s = stmt_create(sa, st_count);
+	s->op1 = op1;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
+stmt_sigmoid(sql_allocator *sa, stmt *op1)
+{
+	stmt *s = stmt_create(sa, st_sigmoid);
+	s->op1 = op1;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
 stmt_fetch(sql_allocator *sa, stmt *op1, stmt *op2)
 {
 	stmt *s = stmt_create(sa, st_fetch);
@@ -965,6 +995,16 @@ stmt_gathersqrt(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
+stmt_dotproduct(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_dotproduct);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
 stmt_normalize(sql_allocator *sa, stmt *op1)
 {
 	stmt *s = stmt_create(sa, st_normalize);
@@ -974,28 +1014,9 @@ stmt_normalize(sql_allocator *sa, stmt *op1)
 }
 
 stmt *
-stmt_sigmoid(sql_allocator *sa, stmt *op1)
-{
-	stmt *s = stmt_create(sa, st_sigmoid);
-	s->op1 = op1;
-	s->nrcols = 1;
-	return s;
-}
-
-stmt *
 stmt_orthogonalize(sql_allocator *sa, stmt *op1, stmt *op2)
 {
 	stmt *s = stmt_create(sa, st_orthogonalize);
-	s->op1 = op1;
-	s->op2 = op2;
-	s->nrcols = 1;
-	return s;
-}
-
-stmt *
-stmt_dotproduct(sql_allocator *sa, stmt *op1, stmt *op2)
-{
-	stmt *s = stmt_create(sa, st_dotproduct);
 	s->op1 = op1;
 	s->op2 = op2;
 	s->nrcols = 1;
@@ -1353,6 +1374,8 @@ tail_type(stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
+	case st_stepfunction:
+	case st_count:
 	case st_sigmoid:
 	case st_fetch:
 	case st_gathersqrt:
@@ -1516,6 +1539,8 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
+	case st_stepfunction:
+	case st_count:
 	case st_sigmoid:
 	case st_fetch:
 	case st_gathersqrt:
@@ -1597,6 +1622,8 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
+	case st_stepfunction:
+	case st_count:
 	case st_sigmoid:
 	case st_fetch:
 	case st_gathersqrt:
@@ -1664,6 +1691,8 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_vectorsub:
 	case st_vectormul:
 	case st_vectordiv:
+	case st_stepfunction:
+	case st_count:
 	case st_sigmoid:
 	case st_fetch:
 	case st_gathersqrt:

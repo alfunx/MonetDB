@@ -306,6 +306,8 @@ op2string(operator_type op)
 		return "matrix predict";
 	case op_matrixsigmoid:
 		return "matrix sigmoid";
+	case op_matrixlogreg:
+		return "matrix logreg";
 	case op_insert: 
 	case op_update: 
 	case op_delete: 
@@ -511,6 +513,7 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
+	case op_matrixlogreg:
 		if (rel->op == op_matrixsqrt)
 			r = "matrix sqrt";
 		if (rel->op == op_matrixinv)
@@ -521,6 +524,8 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 			r = "matrix qqr";
 		if (rel->op == op_matrixsigmoid)
 			r = "matrix sigmoid";
+		if (rel->op == op_matrixlogreg)
+			r = "matrix logreg";
 
 		print_indent(sql, fout, depth, decorate);
 		if (need_distinct(rel))
@@ -663,6 +668,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
+	case op_matrixlogreg:
 	case op_project:
 	case op_select: 
 	case op_groupby: 

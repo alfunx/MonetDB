@@ -127,6 +127,7 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 	case op_matrixtransmul:
 	case op_matrixpredict:
 	case op_matrixsigmoid:
+	case op_matrixlogreg:
 		rel->exps = (i->exps)?list_dup(i->exps, (fdup)NULL):NULL;
 		rel->lexps = (i->lexps)?list_dup(i->lexps, (fdup)NULL):NULL;
 		rel->rexps = (i->rexps)?list_dup(i->rexps, (fdup)NULL):NULL;
@@ -251,6 +252,7 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_matrixtransmul:
 	case op_matrixpredict:
 	case op_matrixsigmoid:
+	case op_matrixlogreg:
 		// TODO: matrixadd
 		if (rel->exps && exps_bind_column(rel->exps, cname, &ambiguous))
 			return rel;
@@ -464,6 +466,7 @@ REL_MATRIX_UN(matrixinv);
 REL_MATRIX_UN(matrixinvtriangular);
 REL_MATRIX_UN(matrixqqr);
 REL_MATRIX_UN(matrixsigmoid);
+REL_MATRIX_UN(matrixlogreg);
 
 REL_MATRIX_BIN(matrixadd);
 REL_MATRIX_BIN(matrixsub);
@@ -895,6 +898,7 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_matrixinvtriangular:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
+	case op_matrixlogreg:
 	case op_select:
 	case op_topn:
 	case op_sample:
@@ -954,6 +958,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_matrixtransmul:
 	case op_matrixpredict:
 	case op_matrixsigmoid:
+	case op_matrixlogreg:
 		found = rel_bind_path_(rel->l, e, path);
 		break;
 

@@ -135,7 +135,7 @@ typedef struct expression {
 #define DDL_ALTER_TABLE_DEL_TABLE  64
 #define DDL_ALTER_TABLE_SET_ACCESS  65
 
-#define MAXOPS 32
+#define MAXOPS 33
 
 typedef enum operator_type {
 	op_basetable = 0,
@@ -171,6 +171,7 @@ typedef enum operator_type {
 	op_matrixrqr,
 	op_matrixpredict,
 	op_matrixsigmoid,
+	op_matrixlogreg,
 } operator_type;
 
 #define is_atom(et) \
@@ -254,6 +255,8 @@ typedef enum operator_type {
 	(op == op_matrixpredict)
 #define is_matrixsigmoid(op) \
 	(op == op_matrixsigmoid)
+#define is_matrixlogreg(op) \
+	(op == op_matrixlogreg)
 
 /* NO NIL semantics of aggr operations */
 #define need_no_nil(e) \
@@ -320,6 +323,9 @@ typedef struct relation {
 	list *lord;
 	list *rord;
 	int noopt;
+	double stepsize; /* the stepsize to be used within logistic regression */
+	double tolerance; /* the tolerance to be used within logistic regression */
+	int iterations; /* the no. of iterations to be used within gradient descent (logistic regression) */
 	int nrcols;	/* nr of cols */	
 	char flag;	/* EXP_DISTINCT */ 
 	char card;	/* 0, 1 (row), 2 aggr, 3 */

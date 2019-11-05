@@ -2874,17 +2874,17 @@ joined_table:
 	  append_int(l, $5);
 	  $$ = _symbol_create_list( SQL_MATRIXLINREG, l); }
 
- |  LOGREG matrix_ref FOR matrix_ref opt_stepsize_clause
-				     opt_iterate_clause
-				     opt_tolerance_clause
-				     opt_no_y_intercept
-				     opt_no_optimize
+ |  LOGREG matrix_ref FOR matrix_ref opt_tolerance_clause
+                                     opt_stepsize_clause
+                                     opt_iterate_clause
+                                     opt_no_y_intercept
+                                     opt_no_optimize
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
 	  append_string(l, $5);
-	  append_int(l, $6);
-	  append_string(l, $7);
+	  append_string(l, $6);
+	  append_int(l, $7);
 	  append_int(l, $8);
 	  $$ = _symbol_create_list( SQL_MATRIXLOGREG, l); }
 

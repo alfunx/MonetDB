@@ -5856,17 +5856,17 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	list_append(rel->rexps, qy_rel->rexps);
 
 	// parameters for logistic regression
-	rel->iterations = 100;	// default no. of iterations
-	if (n->next->next->next->data.i_val > 0) {
-		rel->iterations = n->next->next->next->data.i_val;
+	rel->tolerance = 0.01; // default tolerance
+	if (n->next->next->data.sval != NULL) {
+		rel->tolerance = MAX(strtod(n->next->next->data.sval, NULL), rel->tolerance);
 	}
 	rel->stepsize = 0.01; // default stepsize
-	if (n->next->next->data.sval != NULL) {
-		rel->stepsize = MAX(strtod(n->next->next->data.sval, NULL), rel->stepsize);
+	if (n->next->next->next->data.sval != NULL) {
+		rel->stepsize = MAX(strtod(n->next->next->next->data.sval, NULL), rel->stepsize);
 	}
-	rel->tolerance = 0.01; // default tolerance
-	if (n->next->next->next->next->data.sval != NULL) {
-		rel->tolerance = MAX(strtod(n->next->next->next->next->data.sval, NULL), rel->tolerance);	
+	rel->iterations = 100; // default no. of iterations
+	if (n->next->next->next->next->data.i_val > 0) {
+		rel->iterations = n->next->next->next->next->data.i_val;
 	}
 
 	// set no-optimization flag, use old implementation if set

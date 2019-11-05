@@ -5782,12 +5782,6 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	// for relation name
 	int nr = ++sql->label;
 
-	// parameters for logistic regression
-	double stepsize = 0.0, tolerance = 0.0;
-	if (n->next->next->data.sval != NULL) stepsize = strtod(n->next->next->data.sval, NULL);
-	int iterations = n->next->next->next->data.i_val;
-	if (n->next->next->next->next->data.sval != NULL) tolerance = strtod(n->next->next->next->next->data.sval, NULL);
-
 	// qqr relation
 	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, x_rel);
 	qqr_rel->lord = gen_orderby(sql, x_rel, tab2);
@@ -5837,6 +5831,20 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	rel->rexps = sa_list(sql->sa);
 	list_append(rel->rexps, qqr_rel->lexps);
 	list_append(rel->rexps, qy_rel->rexps);
+
+	// parameters for logistic regression
+	rel->iterations = 100;	// default no. of iterations
+	if (n->next->next->next->data.i_val > 0) {
+		rel->iterations = n->next->next->next->data.i_val;
+	}
+	rel->stepsize = 0.01; // default stepsize
+	if (n->next->next->data.sval != NULL) {
+		rel->stepsize = MAX(strtod(n->next->next->data.sval, NULL), rel->stepsize);
+	}
+	rel->tolerance = 0.01; // default tolerance
+	if (n->next->next->next->next->data.sval != NULL) {
+		rel->tolerance = MAX(strtod(n->next->next->next->next->data.sval, NULL), rel->tolerance);	
+	}
 
 	// select attributes for result relation
 	list *exps = new_exp_list(sql->sa);

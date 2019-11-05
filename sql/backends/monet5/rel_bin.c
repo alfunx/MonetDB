@@ -3048,7 +3048,7 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 	s = stmt_atom_dbl(sql->sa, 0.5);
 	t = stmt_stepfunction(sql->sa, t, s);
 
-	for (j = 0; j < 100; j++) {
+	for (j = 0; j < rel->iterations; j++) {
 		// prepare prediction statement
 		p = NULL;
 
@@ -3081,7 +3081,7 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 		d = stmt_vectordiv(sql->sa, d, s);
 
 		// apply stepsize
-		s = stmt_atom_dbl(sql->sa, 0.01);
+		s = stmt_atom_dbl(sql->sa, rel->stepsize);
 		d = stmt_vectormul(sql->sa, d, s);
 
 		// update coefficients

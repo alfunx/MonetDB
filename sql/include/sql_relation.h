@@ -323,6 +323,9 @@ typedef struct relation {
 	list *lord;
 	list *rord;
 	int noopt;
+	double stepsize; /* the stepsize to be used within logistic regression */
+	double tolerance; /* the tolerance to be used within logistic regression */
+	int iterations; /* the no. of iterations to be used within gradient descent (logistic regression) */
 	int nrcols;	/* nr of cols */	
 	char flag;	/* EXP_DISTINCT */ 
 	char card;	/* 0, 1 (row), 2 aggr, 3 */

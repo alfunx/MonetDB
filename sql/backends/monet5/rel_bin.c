@@ -3054,6 +3054,9 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 	if (!rel->noopt) {
 		// logreg list
 		lr = sa_list(sql->sa);
+		list_append(lr, stmt_atom_dbl(sql->sa, rel->tolerance));
+		list_append(lr, stmt_atom_dbl(sql->sa, rel->stepsize));
+		list_append(lr, stmt_atom_int(sql->sa, rel->iterations));
 		list_append(lr, c);
 		list_append(lr, t);
 		list_merge(lr, xoa, NULL);

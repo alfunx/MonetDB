@@ -1940,7 +1940,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 
 			q = newStmt(mb, batcalcRef, "logreg");
 
-			// push input BATs
+			// push input parameters and BATs
 			for (n = s->op4.lval->h; n; n = n->next) {
 				l = _dumpstmt(sql, mb, n->data);
 				assert (l >= 0);

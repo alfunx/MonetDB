@@ -1462,13 +1462,19 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	double error = DBL_MAX;
 	double correction;
 
-	// constants
-	double tolerance = 0.01;
-	double stepsize = 0.01;
-	double iterate = 1000;
+	// parameters
+	tp = stk->stk[getArg(pci, 1)].vtype;
+	assert(tp == TYPE_dbl);
+	dbl *tolerance = getArgReference_dbl(stk, pci, 1);
+	tp = stk->stk[getArg(pci, 2)].vtype;
+	assert(tp == TYPE_dbl);
+	dbl *stepsize = getArgReference_dbl(stk, pci, 2);
+	tp = stk->stk[getArg(pci, 3)].vtype;
+	assert(tp == TYPE_int);
+	int *iterate = getArgReference_int(stk, pci, 3);
 
 	// check BATs
-	for (k = 1; k < argc; ++k) {
+	for (k = 4; k < argc; ++k) {
 		tp = stk->stk[getArg(pci, k)].vtype;
 		assert(tp == TYPE_bat || isaBatType(tp));
 
@@ -1480,11 +1486,11 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	}
 
 	// coefficients
-	cbid = getArgReference_bat(stk, pci, 1);
+	cbid = getArgReference_bat(stk, pci, 4);
 	cbat = BATdescriptor(*cbid);
 	cval = (double*) Tloc(cbat, BUNfirst(cbat));
 	n = BATcount(cbat);
-	assert(n+3 == argc);
+	assert(n+6 == argc);
 
 	// result (coefficients)
 	rbid = getArgReference_bat(stk, pci, 0);
@@ -1505,7 +1511,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	}
 
 	// dependent variable
-	ybid = getArgReference_bat(stk, pci, 2);
+	ybid = getArgReference_bat(stk, pci, 5);
 	ybat = BATdescriptor(*ybid);
 	yval = (double*) Tloc(ybat, BUNfirst(ybat));
 	m = BATcount(ybat);
@@ -1520,7 +1526,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	// independent variables
 	xval = malloc(n * sizeof (double*));
 	for (k = 0; k < n; ++k) {
-		xbid = getArgReference_bat(stk, pci, k+3);
+		xbid = getArgReference_bat(stk, pci, k+6);
 		xbat = BATdescriptor(*xbid);
 		xval[k] = (double*) Tloc(xbat, BUNfirst(xbat));
 		assert(m == BATcount(xbat));
@@ -1531,7 +1537,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	}
 
 	// gradient descend loop
-	for (e = 0; error > tolerance && e < iterate; ++e) {
+	for (e = 0; error > *tolerance && e < *iterate; ++e) {
 
 		// prediction
 		for (i = 0; i < m; pval[i++] = 0.0);
@@ -1556,7 +1562,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			for (i = 0; i < m; ++i) {
 				correction += xval[k][i] * pval[i];
 			}
-			rval[k] -= correction * stepsize / m;
+			rval[k] -= correction * *stepsize / m;
 		}
 
 	}

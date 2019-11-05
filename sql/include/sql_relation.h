@@ -141,8 +141,8 @@ typedef enum operator_type {
 	op_basetable = 0,
 	op_table,
 	op_ddl,
-	op_project, /* includes order by */
-	op_select,
+	op_project, 		/* includes order by */
+	op_select,	
 	op_join,
 	op_left,
 	op_right,
@@ -153,12 +153,12 @@ typedef enum operator_type {
 	op_union,
 	op_inter,
 	op_except,
-	op_groupby,
+	op_groupby,	
 	op_topn,
 	op_sample,
-	op_insert, /* insert(l=table, r insert expressions) */
-	op_update, /* update(l=table, r update expressions) */
-	op_delete, /* delete(l=table, r delete expression) */
+	op_insert, 	/* insert(l=table, r insert expressions) */ 
+	op_update, 	/* update(l=table, r update expressions) */
+	op_delete, 	/* delete(l=table, r delete expression) */
 
 	op_matrixadd,
 	op_matrixsub,
@@ -321,20 +321,22 @@ typedef struct relation {
 	void *l;
 	void *r;
 	list *exps; 
-	list *lexps; 
-	list *rexps; 
-	list *lord;
-	list *rord;
-	int noopt;
-	double stepsize; /* the stepsize to be used within logistic regression */
-	double tolerance; /* the tolerance to be used within logistic regression */
-	int iterations; /* the no. of iterations to be used within gradient descent (logistic regression) */
 	int nrcols;	/* nr of cols */	
 	char flag;	/* EXP_DISTINCT */ 
 	char card;	/* 0, 1 (row), 2 aggr, 3 */
 	char processed; /* fully processed or still in the process of building */
 	char subquery;	/* is this part a subquery, this is needed for proper name binding */
 	void *p;	/* properties for the optimizer, distribution */
+
+	list *lexps;      /* left application part */
+	list *rexps;      /* right application part */
+	list *lord;       /* left order by part */
+	list *rord;       /* right order by part */
+
+	int noopt;        /* flag to turn off optimizations */
+	double tolerance; /* the tolerance to be used within logistic regression */
+	double stepsize;  /* the stepsize to be used within logistic regression */
+	int iterations;   /* the no. of iterations to be used within gradient descent (logistic regression) */
 } sql_rel;
 
 #endif /* SQL_RELATION_H */

@@ -2145,6 +2145,23 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_one: {
+			int l, res;
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, batcalcRef, "*");
+			q = pushArgument(mb, q, l);
+			q = pushDbl(mb, q, 0.0);
+			res = getDestVar(q);
+
+			q = newStmt(mb, batcalcRef, "+");
+			q = pushArgument(mb, q, res);
+			q = pushDbl(mb, q, 1.0);
+
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_group:{
 			int cnt = 0, ext = 0, grp = 0, o1;
 

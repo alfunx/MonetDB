@@ -135,14 +135,14 @@ typedef struct expression {
 #define DDL_ALTER_TABLE_DEL_TABLE  64
 #define DDL_ALTER_TABLE_SET_ACCESS  65
 
-#define MAXOPS 33
+#define MAXOPS 34
 
 typedef enum operator_type {
 	op_basetable = 0,
 	op_table,
 	op_ddl,
-	op_project, 		/* includes order by */
-	op_select,	
+	op_project, /* includes order by */
+	op_select,
 	op_join,
 	op_left,
 	op_right,
@@ -153,12 +153,12 @@ typedef enum operator_type {
 	op_union,
 	op_inter,
 	op_except,
-	op_groupby,	
+	op_groupby,
 	op_topn,
 	op_sample,
-	op_insert, 	/* insert(l=table, r insert expressions) */ 
-	op_update, 	/* update(l=table, r update expressions) */
-	op_delete, 	/* delete(l=table, r delete expression) */
+	op_insert, /* insert(l=table, r insert expressions) */
+	op_update, /* update(l=table, r update expressions) */
+	op_delete, /* delete(l=table, r delete expression) */
 
 	op_matrixadd,
 	op_matrixsub,
@@ -172,6 +172,7 @@ typedef enum operator_type {
 	op_matrixpredict,
 	op_matrixsigmoid,
 	op_matrixlogreg,
+	op_matrixyintercept,
 } operator_type;
 
 #define is_atom(et) \
@@ -257,6 +258,8 @@ typedef enum operator_type {
 	(op == op_matrixsigmoid)
 #define is_matrixlogreg(op) \
 	(op == op_matrixlogreg)
+#define is_matrixyintercept(op) \
+	(op == op_matrixyintercept)
 
 /* NO NIL semantics of aggr operations */
 #define need_no_nil(e) \

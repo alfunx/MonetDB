@@ -510,6 +510,7 @@ int yydebug=1;
 	tz
 
 	opt_no_optimize
+	opt_no_y_intercept
 
 %right <sval> STRING
 %right <sval> X_BODY
@@ -564,6 +565,7 @@ int yydebug=1;
 
 /* MATRIX tokens */
 %token NOOPTIMIZE
+%token NOYINTERCEPT
 %token GATHER
 %token SQRT
 %token LINREG
@@ -2832,6 +2834,10 @@ opt_iterate_clause:
 opt_tolerance_clause:
     /* empty */			{ $$ = NULL; }
  |  TOLERANCE INTNUM	{ $$ = $2; }
+
+opt_no_y_intercept:
+    /* emtpy */ 	{ $$ = FALSE; }
+ |  NOYINTERCEPT	{ $$ = TRUE; }
  ;
 
 opt_gather_clause:
@@ -2860,19 +2866,21 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_CROSS, l); }
 
- |  LINREG matrix_ref FOR matrix_ref
+ |  LINREG matrix_ref FOR matrix_ref opt_no_y_intercept
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
+	  append_int(l, $5);
 	  $$ = _symbol_create_list( SQL_MATRIXLINREG, l); }
 
- |  LOGREG matrix_ref FOR matrix_ref opt_stepsize_clause opt_iterate_clause opt_tolerance_clause
+ |  LOGREG matrix_ref FOR matrix_ref opt_stepsize_clause opt_iterate_clause opt_tolerance_clause opt_no_y_intercept
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
 	  append_string(l, $5);
 	  append_int(l, $6);
 	  append_string(l, $7);
+	  append_int(l, $8);
 	  $$ = _symbol_create_list( SQL_MATRIXLOGREG, l); }
 
  |  matrix_ref ADD matrix_ref opt_no_optimize

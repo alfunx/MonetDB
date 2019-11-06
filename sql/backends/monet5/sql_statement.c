@@ -354,6 +354,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 
 			case st_uselect:
 			case st_uselect2:
+			case st_logreg:
 			case st_vectoradd:
 			case st_vectorsub:
 			case st_vectormul:
@@ -908,6 +909,16 @@ stmt_tinter(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
+stmt_logreg(sql_allocator *sa, list *l)
+{
+	stmt *s = stmt_create(sa, st_logreg);
+	s->op1 = stmt_list(sa, l);
+	s->op4.lval = l;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
 stmt_vectoradd(sql_allocator *sa, stmt *op1, stmt *op2)
 {
 	stmt *s = stmt_create(sa, st_vectoradd);
@@ -1378,6 +1389,7 @@ tail_type(stmt *st)
 	case st_alias:
 	case st_gen_group:
 	case st_order:
+	case st_logreg:
 	case st_vectoradd:
 	case st_vectorsub:
 	case st_vectormul:
@@ -1544,6 +1556,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_tdiff:
 	case st_tinter:
 	case st_convert:
+	case st_logreg:
 	case st_vectoradd:
 	case st_vectorsub:
 	case st_vectormul:
@@ -1628,6 +1641,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_tdiff:
 	case st_tinter:
 	case st_aggr:
+	case st_logreg:
 	case st_vectoradd:
 	case st_vectorsub:
 	case st_vectormul:
@@ -1698,6 +1712,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_convert:
 	case st_Nop:
 	case st_aggr:
+	case st_logreg:
 	case st_vectoradd:
 	case st_vectorsub:
 	case st_vectormul:

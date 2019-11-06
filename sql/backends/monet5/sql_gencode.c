@@ -1935,6 +1935,21 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			renameVariable(mb, getArg(q, 1), "r1_%d", s->nr);
 			break;
 		}
+		case st_logreg:{
+			int l;
+
+			q = newStmt(mb, batcalcRef, "logreg");
+
+			// push input parameters and BATs
+			for (n = s->op4.lval->h; n; n = n->next) {
+				l = _dumpstmt(sql, mb, n->data);
+				assert (l >= 0);
+				q  = pushArgument(mb, q, l);
+			}
+
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_vectoradd:{
 			int  l, r;
 

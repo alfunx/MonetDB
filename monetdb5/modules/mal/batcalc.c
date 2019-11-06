@@ -1431,3 +1431,144 @@ CMDifthen(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	BBPkeepref(*ret = bn->batCacheid);
 	return MAL_SUCCEED;
 }
+
+#define sigmoid(a) \
+	({ __auto_type _a = (a); \
+	   1.0 / (1.0 + exp(-((_a) < 700 ? (_a) > -700 ? (_a) : -700 : 700))); })
+
+mal_export str CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
+
+str
+CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int argc = pci->argc;
+	int tp;
+
+	// BATs
+	BAT *ibat, *cbat, *ybat, *xbat;
+	bat *ibid, *cbid, *ybid, *xbid;
+
+	// BAT tails
+	double *ival, *cval, *yval, *pval;
+	double **xval;
+
+	// matrix dimensions
+	BUN n, m;
+
+	// iterators
+	int e, i, j, k;
+
+	// error
+	double error = DBL_MAX;
+	double correction;
+
+	// parameters
+	tp = stk->stk[getArg(pci, 1)].vtype;
+	assert(tp == TYPE_dbl);
+	dbl *tolerance = getArgReference_dbl(stk, pci, 1);
+	tp = stk->stk[getArg(pci, 2)].vtype;
+	assert(tp == TYPE_dbl);
+	dbl *stepsize = getArgReference_dbl(stk, pci, 2);
+	tp = stk->stk[getArg(pci, 3)].vtype;
+	assert(tp == TYPE_int);
+	int *iterate = getArgReference_int(stk, pci, 3);
+
+	// check BATs
+	for (k = 4; k < argc; ++k) {
+		tp = stk->stk[getArg(pci, k)].vtype;
+		assert(tp == TYPE_bat || isaBatType(tp));
+
+		xbid = getArgReference_bat(stk, pci, k);
+		xbat = BATdescriptor(*xbid);
+
+		assert(xbat != NULL && xbat->T->type == TYPE_dbl);
+		assert(BAThdense(xbat));
+	}
+
+	// initial coefficients
+	ibid = getArgReference_bat(stk, pci, 4);
+	ibat = BATdescriptor(*ibid);
+	ival = (double*) Tloc(ibat, BUNfirst(ibat));
+	n = BATcount(ibat);
+	assert(n+6 == argc);
+
+	// result coefficients
+	cbid = getArgReference_bat(stk, pci, 0);
+	cbat = BATnew(TYPE_void, ibat->T->type, n, TRANSIENT);
+	cval = (double*) Tloc(cbat, BUNfirst(ibat));
+
+	// prepare result BAT
+	BATsetcount(cbat, n);
+	BATseqbase(cbat, ibat->H->seq);
+	cbat->T->sorted = 0;
+	cbat->T->revsorted = 0;
+	cbat->T->key = 0;
+	BBPkeepref(*cbid = cbat->batCacheid);
+
+	// copy coefficients
+	for (k = 0; k < n; ++k) {
+		cval[k] = ival[k];
+	}
+
+	// dependent variable
+	ybid = getArgReference_bat(stk, pci, 5);
+	ybat = BATdescriptor(*ybid);
+	yval = (double*) Tloc(ybat, BUNfirst(ybat));
+	m = BATcount(ybat);
+
+	// prepare prediction array
+	pval = calloc(m, sizeof (double));
+	if (pval == NULL) {
+		fprintf(stderr, "Memory for prediction array is not allocated.");
+		return NULL;
+	}
+
+	// independent variables
+	xval = malloc(n * sizeof (double*));
+	if (xval == NULL) {
+		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (k = 0; k < n; ++k) {
+		xbid = getArgReference_bat(stk, pci, k+6);
+		xbat = BATdescriptor(*xbid);
+		xval[k] = (double*) Tloc(xbat, BUNfirst(xbat));
+		assert(m == BATcount(xbat));
+	}
+
+	// gradient descend loop
+	for (e = 0; error > *tolerance && e < *iterate; ++e) {
+
+		// prediction
+		for (i = 0; i < m; pval[i++] = 0.0);
+		for (k = 0; k < n; ++k) {
+			for (i = 0; i < m; ++i) {
+				pval[i] += xval[k][i] * cval[k];
+			}
+		}
+
+		// difference / error
+		error = 0.0;
+		for (i = 0; i < m; ++i) {
+			pval[i] = sigmoid(pval[i]) - yval[i];
+			error += pow(pval[i], 2);
+		}
+		error /= m;
+		fprintf(stderr, "error is %f\n", error);
+
+		// batch gradient, normalize, update coefficients
+		for (k = 0; k < n; ++k) {
+			correction = 0.0;
+			for (i = 0; i < m; ++i) {
+				correction += xval[k][i] * pval[i];
+			}
+			cval[k] -= correction * *stepsize / m;
+		}
+
+	}
+
+	free(pval);
+	free(xval);
+
+	return MAL_SUCCEED;
+}

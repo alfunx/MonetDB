@@ -2817,32 +2817,33 @@ opt_where_clause:
  ;
 
 opt_no_optimize:
-    /* empty */ 	{ $$ = FALSE; }
- |  NOOPTIMIZE		{ $$ = TRUE; }
+    /* empty */ 		{ $$ = FALSE; }
+ |  NOOPTIMIZE			{ $$ = TRUE; }
+ ;
+
+opt_no_y_intercept:
+    /* emtpy */ 		{ $$ = FALSE; }
+ |  NOYINTERCEPT		{ $$ = TRUE; }
  ;
 
 opt_stepsize_clause:
-    /* empty */			{ $$ = NULL; }
+    /* empty */ 		{ $$ = NULL; }
  |  STEPSIZE INTNUM		{ $$ = $2; }
  ;
 
 opt_iterate_clause:
-    /* empty */			{ $$ = NULL; }
+    /* empty */ 		{ $$ = NULL; }
  |  ITERATE intval		{ $$ = $2; }
  ;
 
 opt_tolerance_clause:
-    /* empty */			{ $$ = NULL; }
- |  TOLERANCE INTNUM	{ $$ = $2; }
-
-opt_no_y_intercept:
-    /* emtpy */ 	{ $$ = FALSE; }
- |  NOYINTERCEPT	{ $$ = TRUE; }
+    /* empty */ 		{ $$ = NULL; }
+ |  TOLERANCE INTNUM		{ $$ = $2; }
  ;
 
 opt_gather_clause:
-    /* empty */ 	{ $$ = NULL; }
- |  GATHER selection	{ $$ = _symbol_create_list(SQL_GATHER, $2); }
+    /* empty */ 		{ $$ = NULL; }
+ |  GATHER selection		{ $$ = _symbol_create_list(SQL_GATHER, $2); }
  ;
 
 matrix_ref:
@@ -2873,13 +2874,17 @@ joined_table:
 	  append_int(l, $5);
 	  $$ = _symbol_create_list( SQL_MATRIXLINREG, l); }
 
- |  LOGREG matrix_ref FOR matrix_ref opt_stepsize_clause opt_iterate_clause opt_tolerance_clause opt_no_y_intercept
+ |  LOGREG matrix_ref FOR matrix_ref opt_tolerance_clause
+                                     opt_stepsize_clause
+                                     opt_iterate_clause
+                                     opt_no_y_intercept
+                                     opt_no_optimize
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
 	  append_string(l, $5);
-	  append_int(l, $6);
-	  append_string(l, $7);
+	  append_string(l, $6);
+	  append_int(l, $7);
 	  append_int(l, $8);
 	  $$ = _symbol_create_list( SQL_MATRIXLOGREG, l); }
 

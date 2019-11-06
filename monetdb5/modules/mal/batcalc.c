@@ -1445,11 +1445,11 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	int tp;
 
 	// BATs
-	BAT *rbat, *cbat, *ybat, *xbat;
-	bat *rbid, *cbid, *ybid, *xbid;
+	BAT *ibat, *cbat, *ybat, *xbat;
+	bat *ibid, *cbid, *ybid, *xbid;
 
 	// BAT tails
-	double *rval, *cval, *yval, *pval;
+	double *ival, *cval, *yval, *pval;
 	double **xval;
 
 	// matrix dimensions
@@ -1485,29 +1485,29 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		assert(BAThdense(xbat));
 	}
 
-	// coefficients
-	cbid = getArgReference_bat(stk, pci, 4);
-	cbat = BATdescriptor(*cbid);
-	cval = (double*) Tloc(cbat, BUNfirst(cbat));
-	n = BATcount(cbat);
+	// initial coefficients
+	ibid = getArgReference_bat(stk, pci, 4);
+	ibat = BATdescriptor(*ibid);
+	ival = (double*) Tloc(ibat, BUNfirst(ibat));
+	n = BATcount(ibat);
 	assert(n+6 == argc);
 
-	// result (coefficients)
-	rbid = getArgReference_bat(stk, pci, 0);
-	rbat = BATnew(TYPE_void, cbat->T->type, n, TRANSIENT);
-	rval = (double*) Tloc(rbat, BUNfirst(cbat));
+	// result coefficients
+	cbid = getArgReference_bat(stk, pci, 0);
+	cbat = BATnew(TYPE_void, ibat->T->type, n, TRANSIENT);
+	cval = (double*) Tloc(cbat, BUNfirst(ibat));
 
 	// prepare result BAT
-	BATsetcount(rbat, n);
-	BATseqbase(rbat, cbat->H->seq);
-	rbat->T->sorted = 0;
-	rbat->T->revsorted = 0;
-	rbat->T->key = 0;
-	BBPkeepref(*rbid = rbat->batCacheid);
+	BATsetcount(cbat, n);
+	BATseqbase(cbat, ibat->H->seq);
+	cbat->T->sorted = 0;
+	cbat->T->revsorted = 0;
+	cbat->T->key = 0;
+	BBPkeepref(*cbid = cbat->batCacheid);
 
 	// copy coefficients
 	for (k = 0; k < n; ++k) {
-		rval[k] = cval[k];
+		cval[k] = ival[k];
 	}
 
 	// dependent variable
@@ -1525,15 +1525,15 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 
 	// independent variables
 	xval = malloc(n * sizeof (double*));
+	if (xval == NULL) {
+		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
+		return NULL;
+	}
 	for (k = 0; k < n; ++k) {
 		xbid = getArgReference_bat(stk, pci, k+6);
 		xbat = BATdescriptor(*xbid);
 		xval[k] = (double*) Tloc(xbat, BUNfirst(xbat));
 		assert(m == BATcount(xbat));
-	}
-	if (xval == NULL) {
-		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
-		return NULL;
 	}
 
 	// gradient descend loop
@@ -1543,7 +1543,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		for (i = 0; i < m; pval[i++] = 0.0);
 		for (k = 0; k < n; ++k) {
 			for (i = 0; i < m; ++i) {
-				pval[i] += xval[k][i] * rval[k];
+				pval[i] += xval[k][i] * cval[k];
 			}
 		}
 
@@ -1562,7 +1562,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			for (i = 0; i < m; ++i) {
 				correction += xval[k][i] * pval[i];
 			}
-			rval[k] -= correction * *stepsize / m;
+			cval[k] -= correction * *stepsize / m;
 		}
 
 	}

@@ -2941,10 +2941,11 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXRQR, l); }
 
- |  PREDICT matrix_ref USING matrix_ref
+ |  PREDICT matrix_ref USING matrix_ref opt_no_y_intercept
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
+	  append_int(l, $5);
 	  $$ = _symbol_create_list( SQL_MATRIXPREDICT, l); }
 
  |  SIGMOID matrix_ref

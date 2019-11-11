@@ -5708,7 +5708,6 @@ rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
 	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
 	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
 	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
-	int noyintercept = n->next->next->data.i_val;
 
 	// resolve table refs
 	sql_rel *x_rel = table_ref(sql, rel, tab1);
@@ -5720,8 +5719,9 @@ rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
 	int nr = ++sql->label;
 
 	// y-intercept
+	int noyintercept = n->next->next->data.i_val;
 	list *yintercept = new_exp_list(sql->sa);
-	if (noyintercept == 0) {
+	if (!noyintercept) {
 		x_rel = rel_matrixyintercept(sql->sa, x_rel);
 		sql_exp *ce = rel_column_exp(sql, &x_rel, tab3->h->data.sym, sql_sel);
 		list_append(yintercept, exp_alias_or_copy(sql, NULL, "y_intercept", x_rel, ce));
@@ -5794,11 +5794,10 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	// for relation name
 	int nr = ++sql->label;
 
-	int noyintercept = n->next->next->next->next->next->data.i_val;
-
 	// y-intercept
+	int noyintercept = n->next->next->next->next->next->data.i_val;
 	list *yintercept = new_exp_list(sql->sa);
-	if (noyintercept == 0) {
+	if (!noyintercept) {
 		x_rel = rel_matrixyintercept(sql->sa, x_rel);
 		sql_exp *ce = rel_column_exp(sql, &x_rel, tab3->h->data.sym, sql_sel);
 		list_append(yintercept, exp_alias_or_copy(sql, NULL, "y_intercept", x_rel, ce));
@@ -5907,10 +5906,20 @@ rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q)
 	// for relation name
 	int nr = ++sql->label;
 
+	// y-intercept
+	int noyintercept = n->next->next->data.i_val;
+	list *yintercept = new_exp_list(sql->sa);
+	if (!noyintercept) {
+		l_rel = rel_matrixyintercept(sql->sa, l_rel);
+		sql_exp *ce = rel_column_exp(sql, &l_rel, tab3->h->data.sym, sql_sel);
+		list_append(yintercept, exp_alias_or_copy(sql, NULL, "y_intercept", l_rel, ce));
+	}
+
 	rel = rel_matrixpredict(sql->sa, l_rel, r_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
 	rel->rord = gen_orderby(sql, r_rel, tab5);
 	rel->lexps = gen_exps_list(sql, l_rel, tab3);
+	list_merge(rel->lexps, yintercept, NULL);
 	rel->rexps = gen_exps_list(sql, r_rel, tab6);
 
 	// select attributes for result relation

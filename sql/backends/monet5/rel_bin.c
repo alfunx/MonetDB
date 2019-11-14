@@ -3112,28 +3112,30 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 	return stmt_list(sql->sa, l);
 }
 
-static stmt *rel2bin_matrixyintercept(mvc *sql, sql_rel *rel, list *refs) {
-  // list of all statements (result)
-  list *l;
+static stmt *
+rel2bin_matrixyintercept(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
 
-  // temporary statements
-  stmt *s;
+	// temporary statements
+	stmt *s;
 
-  // process sub-relation
-  stmt *left = subrel_bin(sql, rel->l, refs);
-  assert(left);
+	// process sub-relation
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	assert(left);
 
-  // construct list of statements
-  l = sa_list(sql->sa);
+	// construct list of statements
+	l = sa_list(sql->sa);
 
-  list_merge(l, left->op4.lval, NULL);
+	list_merge(l, left->op4.lval, NULL);
 
-  // add y-intercept
-  s = stmt_one(sql->sa, l->h->data);
-  s = stmt_alias(sql->sa, s, NULL, "y_intercept");
-  list_append(l, s);
+	// add y-intercept
+	s = stmt_one(sql->sa, l->h->data);
+	s = stmt_alias(sql->sa, s, NULL, "y_intercept");
+	list_append(l, s);
 
-  return stmt_list(sql->sa, l);
+	return stmt_list(sql->sa, l);
 }
 
 static stmt *

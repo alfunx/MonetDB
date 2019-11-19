@@ -1436,6 +1436,15 @@ CMDifthen(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	({ __auto_type _a = (a); \
 	   1.0 / (1.0 + exp(-((_a) < 700.0 ? (_a) > -700.0 ? (_a) : -700.0 : 700.0))); })
 
+#define abs(a) \
+	({ __auto_type _a = (a); \
+	   _a < 0.0 ? -_a : _a; })
+
+#define cost(p, y) \
+	({ __auto_type _p = (p); \
+	   __auto_type _y = (y); \
+	   -(_y) * log(_p) - (1-_y) * log(1-_p); })
+
 mal_export str CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
 
 str
@@ -1445,23 +1454,25 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	int tp;
 
 	// BATs
-	BAT *ibat, *cbat, *ybat, *xbat;
-	bat *ibid, *cbid, *ybid, *xbid;
+	BAT *ibat, *obat, *ybat, *xbat;
+	bat *ibid, *obid, *ybid, *xbid;
 
 	// BAT tails
-	double *ival, *cval, *yval;
-	double **xval;
+	const double *ival, *yval;
+	const double **xval;
+	double *oval;
 
 	// other arrays
-	double *pval, *sval;
+	double *cval, *pval, *sval;
 
 	// matrix dimensions
 	BUN n, m;
 
 	// iterators
-	int e, i, j;
+	int i, j, k;
 
 	// error
+	double delta = DBL_MAX;
 	double error = DBL_MAX;
 	double slope;
 
@@ -1491,38 +1502,40 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	// initial coefficients
 	ibid = getArgReference_bat(stk, pci, 4);
 	ibat = BATdescriptor(*ibid);
-	ival = (double*) Tloc(ibat, BUNfirst(ibat));
+	ival = (const double*) Tloc(ibat, BUNfirst(ibat));
 	n = BATcount(ibat);
 	assert(n+6 == argc);
 
 	// result coefficients
-	cbid = getArgReference_bat(stk, pci, 0);
-	cbat = BATnew(TYPE_void, ibat->T->type, n, TRANSIENT);
-	cval = (double*) Tloc(cbat, BUNfirst(ibat));
+	obid = getArgReference_bat(stk, pci, 0);
+	obat = BATnew(TYPE_void, ibat->T->type, n, TRANSIENT);
+	oval = (double*) Tloc(obat, BUNfirst(ibat));
 
 	// prepare result BAT
-	BATsetcount(cbat, n);
-	BATseqbase(cbat, ibat->H->seq);
-	cbat->T->sorted = 0;
-	cbat->T->revsorted = 0;
-	cbat->T->key = 0;
-	BBPkeepref(*cbid = cbat->batCacheid);
-
-	// copy coefficients
-	for (j = 0; j < n; ++j) {
-		cval[j] = ival[j];
-	}
+	BATsetcount(obat, n);
+	BATseqbase(obat, ibat->H->seq);
+	obat->T->sorted = 0;
+	obat->T->revsorted = 0;
+	obat->T->key = 0;
+	BBPkeepref(*obid = obat->batCacheid);
 
 	// dependent variable
 	ybid = getArgReference_bat(stk, pci, 5);
 	ybat = BATdescriptor(*ybid);
-	yval = (double*) Tloc(ybat, BUNfirst(ybat));
+	yval = (const double*) Tloc(ybat, BUNfirst(ybat));
 	m = BATcount(ybat);
 
 	// prediction array
 	pval = calloc(m, sizeof (double));
 	if (pval == NULL) {
 		fprintf(stderr, "Memory for prediction array is not allocated.");
+		return NULL;
+	}
+
+	// sigmoid array
+	sval = calloc(m, sizeof (double));
+	if (sval == NULL) {
+		fprintf(stderr, "Memory for sigmoid array is not allocated.");
 		return NULL;
 	}
 
@@ -1535,33 +1548,59 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	for (j = 0; j < n; ++j) {
 		xbid = getArgReference_bat(stk, pci, j+6);
 		xbat = BATdescriptor(*xbid);
-		xval[j] = (double*) Tloc(xbat, BUNfirst(xbat));
+		xval[j] = (const double*) Tloc(xbat, BUNfirst(xbat));
 		assert(m == BATcount(xbat));
 	}
 
-	// normalize stepsize
-	sval = calloc(n, sizeof (double));
-	if (sval == NULL) {
-		fprintf(stderr, "Memory for stepsize array is not allocated.");
+	// temporary coefficients array
+	cval = calloc(n, sizeof (double));
+	if (cval == NULL) {
+		fprintf(stderr, "Memory for prediction array is not allocated.");
 		return NULL;
 	}
+
+	// copy coefficients & calculate error
+	error = 0.0;
 	for (j = 0; j < n; ++j) {
-		double min = DBL_MAX, max = DBL_MIN;
+		oval[j] = cval[j] = ival[j];
 		for (i = 0; i < m; ++i) {
-			if (xval[j][i] < min)
-				min = xval[j][i];
-			if (xval[j][i] > max)
-				max = xval[j][i];
+			pval[i] += xval[j][i] * cval[j];
 		}
-		if (max - min > 0.0)
-			sval[j] = *stepsize / (max - min);
-		fprintf(stderr, "%3d → range:    [%f, %f]\n", j, min, max);
-		fprintf(stderr, "      factor:   %f\n", max - min);
-		fprintf(stderr, "      stepsize: %f\n\n", sval[j]);
 	}
+	for (i = 0; i < m; ++i) {
+		sval[i] = sigmoid(pval[i]);
+		pval[i] = sval[i] - yval[i];
+		error += cost(sval[i], yval[i]);
+	}
+	error /= m;
+	fprintf(stderr, "[0;92minitial error: %f[0m\n", error);
+	if (isnan(error)) error = DBL_MAX;
+
+	// b1: velocity, b2: decay, e: epsilon, d: delta
+	const double b1 = 0.9, b2 = 0.95, e = 1e-10;
+	double c, d;
 
 	// gradient descend loop
-	for (e = 0; error > *tolerance && e < *iterate; ++e) {
+	for (k = 0; delta > *tolerance && k < *iterate; ++k) {
+
+		// batch gradient, normalize, update coefficients
+		delta = DBL_MIN;
+		for (j = 0; j < n; ++j) {
+			slope = 0.0;
+			for (i = 0; i < m; ++i) {
+				slope += xval[j][i] * pval[i];
+			}
+			slope /= m;
+
+			// fixed stepsize
+			d = *stepsize * slope;
+
+			c = abs(d);
+			if (c > delta)
+				delta = c;
+
+			cval[j] -= d;
+		}
 
 		// prediction
 		for (i = 0; i < m; pval[i++] = 0.0);
@@ -1571,38 +1610,34 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			}
 		}
 
-		// difference / error
-		double old = error;
-		error = 0.0;
+		// average error
+		c = 0.0;
 		for (i = 0; i < m; ++i) {
-			double s = sigmoid(pval[i]);
-			pval[i] = s - yval[i];
-			error += (-yval[i]) * log(s) - (1-yval[i]) * log(1-s);
+			sval[i] = sigmoid(pval[i]);
+			pval[i] = sval[i] - yval[i];
+			c += cost(sval[i], yval[i]);
 		}
-		error /= m;
-		fprintf(stderr, error > old ? "[0;91merror: %f[0m\n" : "error: %f\n", error);
-		if (isnan(error))
-			error = DBL_MAX;
-
-		// batch gradient, normalize, update coefficients
-		for (j = 0; j < n; ++j) {
-			slope = 0.0;
-			for (i = 0; i < m; ++i) {
-				slope += xval[j][i] * pval[i];
+		c /= m;
+		fprintf(stderr, c > error ? "[0;91merror: %f[0m\n" : "error: %f\n", c);
+		if (isnan(c)) c = DBL_MAX;
+		if (c < error) {
+			error = c;
+			for (j = 0; j < n; ++j) {
+				oval[j] = cval[j];
 			}
-			cval[j] -= slope / m * sval[j];
 		}
 
 	}
 
 	fprintf(stderr, "\n[1;91mlogreg stats:[0m\n");
 	fprintf(stderr, "error:      %f\n", error);
+	fprintf(stderr, "delta:      %f\n", delta);
 	fprintf(stderr, "stepsize:   %f\n", *stepsize);
-	fprintf(stderr, "iterations: %d\n\n", e);
+	fprintf(stderr, "iterations: %d\n\n", k);
 
 	free(pval);
-	free(xval);
 	free(sval);
+	free(xval);
 
 	return MAL_SUCCEED;
 }

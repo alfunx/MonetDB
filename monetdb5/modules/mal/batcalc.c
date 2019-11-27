@@ -1434,7 +1434,16 @@ CMDifthen(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 
 #define sigmoid(a) \
 	({ __auto_type _a = (a); \
-	   1.0 / (1.0 + exp(-((_a) < 700 ? (_a) > -700 ? (_a) : -700 : 700))); })
+	   1.0 / (1.0 + exp(-((_a) < 700.0 ? (_a) > -700.0 ? (_a) : -700.0 : 700.0))); })
+
+#define abs(a) \
+	({ __auto_type _a = (a); \
+	   _a < 0.0 ? -_a : _a; })
+
+#define cost(p, y) \
+	({ __auto_type _p = (p); \
+	   __auto_type _y = (y); \
+	   -(_y) * log(_p) - (1-_y) * log(1-_p); })
 
 mal_export str CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
 
@@ -1445,22 +1454,27 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	int tp;
 
 	// BATs
-	BAT *ibat, *cbat, *ybat, *xbat;
-	bat *ibid, *cbid, *ybid, *xbid;
+	BAT *ibat, *obat, *ybat, *xbat;
+	bat *ibid, *obid, *ybid, *xbid;
 
 	// BAT tails
-	double *ival, *cval, *yval, *pval;
-	double **xval;
+	const double *ival, *yval;
+	const double **xval;
+	double *oval;
+
+	// other arrays
+	double *cval, *pval, *sval, *uval, *vval;
 
 	// matrix dimensions
 	BUN n, m;
 
 	// iterators
-	int e, i, j, k;
+	int i, j, k;
 
 	// error
+	double delta = DBL_MAX;
 	double error = DBL_MAX;
-	double correction;
+	double slope;
 
 	// parameters
 	tp = stk->stk[getArg(pci, 1)].vtype;
@@ -1474,11 +1488,11 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	int *iterate = getArgReference_int(stk, pci, 3);
 
 	// check BATs
-	for (k = 4; k < argc; ++k) {
-		tp = stk->stk[getArg(pci, k)].vtype;
+	for (i = 4; i < argc; ++i) {
+		tp = stk->stk[getArg(pci, i)].vtype;
 		assert(tp == TYPE_bat || isaBatType(tp));
 
-		xbid = getArgReference_bat(stk, pci, k);
+		xbid = getArgReference_bat(stk, pci, i);
 		xbat = BATdescriptor(*xbid);
 
 		assert(xbat != NULL && xbat->T->type == TYPE_dbl);
@@ -1488,38 +1502,40 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	// initial coefficients
 	ibid = getArgReference_bat(stk, pci, 4);
 	ibat = BATdescriptor(*ibid);
-	ival = (double*) Tloc(ibat, BUNfirst(ibat));
+	ival = (const double*) Tloc(ibat, BUNfirst(ibat));
 	n = BATcount(ibat);
 	assert(n+6 == argc);
 
 	// result coefficients
-	cbid = getArgReference_bat(stk, pci, 0);
-	cbat = BATnew(TYPE_void, ibat->T->type, n, TRANSIENT);
-	cval = (double*) Tloc(cbat, BUNfirst(ibat));
+	obid = getArgReference_bat(stk, pci, 0);
+	obat = BATnew(TYPE_void, ibat->T->type, n, TRANSIENT);
+	oval = (double*) Tloc(obat, BUNfirst(ibat));
 
 	// prepare result BAT
-	BATsetcount(cbat, n);
-	BATseqbase(cbat, ibat->H->seq);
-	cbat->T->sorted = 0;
-	cbat->T->revsorted = 0;
-	cbat->T->key = 0;
-	BBPkeepref(*cbid = cbat->batCacheid);
-
-	// copy coefficients
-	for (k = 0; k < n; ++k) {
-		cval[k] = ival[k];
-	}
+	BATsetcount(obat, n);
+	BATseqbase(obat, ibat->H->seq);
+	obat->T->sorted = 0;
+	obat->T->revsorted = 0;
+	obat->T->key = 0;
+	BBPkeepref(*obid = obat->batCacheid);
 
 	// dependent variable
 	ybid = getArgReference_bat(stk, pci, 5);
 	ybat = BATdescriptor(*ybid);
-	yval = (double*) Tloc(ybat, BUNfirst(ybat));
+	yval = (const double*) Tloc(ybat, BUNfirst(ybat));
 	m = BATcount(ybat);
 
-	// prepare prediction array
+	// prediction array
 	pval = calloc(m, sizeof (double));
 	if (pval == NULL) {
 		fprintf(stderr, "Memory for prediction array is not allocated.");
+		return NULL;
+	}
+
+	// sigmoid array
+	sval = calloc(m, sizeof (double));
+	if (sval == NULL) {
+		fprintf(stderr, "Memory for sigmoid array is not allocated.");
 		return NULL;
 	}
 
@@ -1529,46 +1545,148 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
 		return NULL;
 	}
-	for (k = 0; k < n; ++k) {
-		xbid = getArgReference_bat(stk, pci, k+6);
+	for (j = 0; j < n; ++j) {
+		xbid = getArgReference_bat(stk, pci, j+6);
 		xbat = BATdescriptor(*xbid);
-		xval[k] = (double*) Tloc(xbat, BUNfirst(xbat));
+		xval[j] = (const double*) Tloc(xbat, BUNfirst(xbat));
 		assert(m == BATcount(xbat));
 	}
 
+	// stepsize adjustment cache
+	uval = calloc(n, sizeof (double));
+	if (uval == NULL) {
+		fprintf(stderr, "Memory for stepsize cache array is not allocated.");
+		return NULL;
+	}
+
+	// stepsize adjustment velocity
+	vval = calloc(n, sizeof (double));
+	if (vval == NULL) {
+		fprintf(stderr, "Memory for stepsize velocity array is not allocated.");
+		return NULL;
+	}
+
+	// temporary coefficients array
+	cval = calloc(n, sizeof (double));
+	if (cval == NULL) {
+		fprintf(stderr, "Memory for prediction array is not allocated.");
+		return NULL;
+	}
+
+	// copy coefficients & calculate error
+	error = 0.0;
+	for (j = 0; j < n; ++j) {
+		oval[j] = cval[j] = ival[j];
+		for (i = 0; i < m; ++i) {
+			pval[i] += xval[j][i] * cval[j];
+		}
+	}
+	for (i = 0; i < m; ++i) {
+		sval[i] = sigmoid(pval[i]);
+		pval[i] = sval[i] - yval[i];
+		error += cost(sval[i], yval[i]);
+	}
+	error /= m;
+	fprintf(stderr, "[0;92minitial error: %f[0m\n", error);
+	if (isnan(error)) error = DBL_MAX;
+
+	// b1: velocity, b2: decay, e: epsilon, d: delta
+	const double b1 = 0.9, b2 = 0.95, e = 1e-10;
+	double c, d;
+
 	// gradient descend loop
-	for (e = 0; error > *tolerance && e < *iterate; ++e) {
+	for (k = 0; delta > *tolerance && k < *iterate; ++k) {
+
+		// batch gradient, normalize, update coefficients
+		delta = DBL_MIN;
+		for (j = 0; j < n; ++j) {
+			slope = 0.0;
+			for (i = 0; i < m; ++i) {
+				slope += xval[j][i] * pval[i];
+			}
+			slope /= m;
+
+			/*
+			// fixed stepsize
+			d = *stepsize * slope;
+			*/
+
+			/*
+			// Momentum
+			vval[j] = *stepsize * slope + b1 * vval[j];
+			d = vval[j];
+			*/
+
+			/*
+			// Adagrad
+			uval[j] += pow(slope, 2);
+			d = *stepsize * slope / (sqrt(uval[j]) + e);
+			*/
+
+			/*
+			// RMSprop
+			uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2);
+			d = *stepsize * slope / (sqrt(uval[j]) + e);
+			*/
+
+			// Adam
+			vval[j] = b1 * vval[j] + (1-b1) * slope;
+			uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2);
+			// d = *stepsize * (vval[j] / (1-pow(b1, i+1))) / (sqrt(uval[j] / (1-pow(b2, i+1))) + e);
+			d = *stepsize * (vval[j] / (1-b1)) / sqrt((uval[j] / (1-b2)) + e);
+
+			/*
+			// AMSGrad
+			vval[j] = b1 * vval[j] + (1-b1) * slope;
+			uval[j] = MAX(uval[j], b2 * uval[j] + (1-b2) * pow(slope, 2));
+			d = *stepsize * vval[j] / sqrt(uval[j] + e);
+			*/
+
+			c = abs(d);
+			if (c > delta)
+				delta = c;
+
+			cval[j] -= d;
+		}
 
 		// prediction
 		for (i = 0; i < m; pval[i++] = 0.0);
-		for (k = 0; k < n; ++k) {
+		for (j = 0; j < n; ++j) {
 			for (i = 0; i < m; ++i) {
-				pval[i] += xval[k][i] * cval[k];
+				pval[i] += xval[j][i] * cval[j];
 			}
 		}
 
-		// difference / error
-		error = 0.0;
+		// average error
+		c = 0.0;
 		for (i = 0; i < m; ++i) {
-			pval[i] = sigmoid(pval[i]) - yval[i];
-			error += pow(pval[i], 2);
+			sval[i] = sigmoid(pval[i]);
+			pval[i] = sval[i] - yval[i];
+			c += cost(sval[i], yval[i]);
 		}
-		error /= m;
-		fprintf(stderr, "error is %f\n", error);
-
-		// batch gradient, normalize, update coefficients
-		for (k = 0; k < n; ++k) {
-			correction = 0.0;
-			for (i = 0; i < m; ++i) {
-				correction += xval[k][i] * pval[i];
+		c /= m;
+		fprintf(stderr, c > error ? "[0;91merror: %f[0m\n" : "error: %f\n", c);
+		if (isnan(c)) c = DBL_MAX;
+		if (c < error) {
+			error = c;
+			for (j = 0; j < n; ++j) {
+				oval[j] = cval[j];
 			}
-			cval[k] -= correction * *stepsize / m;
 		}
 
 	}
 
+	fprintf(stderr, "\n[1;91mlogreg stats:[0m\n");
+	fprintf(stderr, "error:      %f\n", error);
+	fprintf(stderr, "delta:      %f\n", delta);
+	fprintf(stderr, "stepsize:   %f\n", *stepsize);
+	fprintf(stderr, "iterations: %d\n\n", k);
+
 	free(pval);
+	free(sval);
 	free(xval);
+	free(uval);
+	free(vval);
 
 	return MAL_SUCCEED;
 }

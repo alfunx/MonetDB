@@ -5855,15 +5855,15 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	list_append(rel->rexps, qy_rel->rexps);
 
 	// parameters for logistic regression
-	rel->tolerance = 0.01; // default tolerance
+	rel->tolerance = 0.0001; // default tolerance
 	if (n->next->next->data.sval != NULL) {
-		rel->tolerance = MAX(strtod(n->next->next->data.sval, NULL), rel->tolerance);
+		rel->tolerance = strtod(n->next->next->data.sval, NULL);
 	}
 	rel->stepsize = 0.01; // default stepsize
 	if (n->next->next->next->data.sval != NULL) {
-		rel->stepsize = MAX(strtod(n->next->next->next->data.sval, NULL), rel->stepsize);
+		rel->stepsize = strtod(n->next->next->next->data.sval, NULL);
 	}
-	rel->iterations = 100; // default no. of iterations
+	rel->iterations = 10000; // default no. of iterations
 	if (n->next->next->next->next->data.i_val > 0) {
 		rel->iterations = n->next->next->next->next->data.i_val;
 	}

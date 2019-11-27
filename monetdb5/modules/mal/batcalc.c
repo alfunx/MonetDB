@@ -1463,7 +1463,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	double *oval;
 
 	// other arrays
-	double *cval, *pval, *sval;
+	double *cval, *pval, *sval, *uval, *vval;
 
 	// matrix dimensions
 	BUN n, m;
@@ -1552,6 +1552,20 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		assert(m == BATcount(xbat));
 	}
 
+	// stepsize adjustment cache
+	uval = calloc(n, sizeof (double));
+	if (uval == NULL) {
+		fprintf(stderr, "Memory for stepsize cache array is not allocated.");
+		return NULL;
+	}
+
+	// stepsize adjustment velocity
+	vval = calloc(n, sizeof (double));
+	if (vval == NULL) {
+		fprintf(stderr, "Memory for stepsize velocity array is not allocated.");
+		return NULL;
+	}
+
 	// temporary coefficients array
 	cval = calloc(n, sizeof (double));
 	if (cval == NULL) {
@@ -1592,8 +1606,41 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			}
 			slope /= m;
 
+			/*
 			// fixed stepsize
 			d = *stepsize * slope;
+			*/
+
+			/*
+			// Momentum
+			vval[j] = *stepsize * slope + b1 * vval[j];
+			d = vval[j];
+			*/
+
+			/*
+			// Adagrad
+			uval[j] += pow(slope, 2);
+			d = *stepsize * slope / (sqrt(uval[j]) + e);
+			*/
+
+			/*
+			// RMSprop
+			uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2);
+			d = *stepsize * slope / (sqrt(uval[j]) + e);
+			*/
+
+			// Adam
+			vval[j] = b1 * vval[j] + (1-b1) * slope;
+			uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2);
+			// d = *stepsize * (vval[j] / (1-pow(b1, i+1))) / (sqrt(uval[j] / (1-pow(b2, i+1))) + e);
+			d = *stepsize * (vval[j] / (1-b1)) / sqrt((uval[j] / (1-b2)) + e);
+
+			/*
+			// AMSGrad
+			vval[j] = b1 * vval[j] + (1-b1) * slope;
+			uval[j] = MAX(uval[j], b2 * uval[j] + (1-b2) * pow(slope, 2));
+			d = *stepsize * vval[j] / sqrt(uval[j] + e);
+			*/
 
 			c = abs(d);
 			if (c > delta)
@@ -1638,6 +1685,8 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	free(pval);
 	free(sval);
 	free(xval);
+	free(uval);
+	free(vval);
 
 	return MAL_SUCCEED;
 }

@@ -235,7 +235,8 @@ static sql_rel * rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q);
-static sql_rel * rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixlinpredictquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixlogpredictquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsigmoidquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q);
@@ -468,17 +469,17 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 			return NULL;
 		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
 	}
-	case SQL_MATRIXPREDICT:
+	case SQL_MATRIXLINPREDICT:
 	{
-		sql_rel *tq = rel_matrixpredictquery(sql, r, q);
+		sql_rel *tq = rel_matrixlinpredictquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
 		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
 	}
-	case SQL_MATRIXSIGMOID:
+	case SQL_MATRIXLOGPREDICT:
 	{
-		sql_rel *tq = rel_matrixsigmoidquery(sql, r, q);
+		sql_rel *tq = rel_matrixlogpredictquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -5885,7 +5886,7 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 }
 
 static sql_rel *
-rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q)
+rel_matrixlinpredictquery(mvc *sql, sql_rel *rel, symbol *q)
 {
 	dnode *n = q->data.lval->h;
 
@@ -5915,6 +5916,7 @@ rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q)
 		list_append(yintercept, exp_alias_or_copy(sql, NULL, "y_intercept", l_rel, ce));
 	}
 
+	// prediction relation
 	rel = rel_matrixpredict(sql->sa, l_rel, r_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
 	rel->rord = gen_orderby(sql, r_rel, tab5);
@@ -5927,6 +5929,64 @@ rel_matrixpredictquery(mvc *sql, sql_rel *rel, symbol *q)
 	append_exps(exps, sql, rel->lord);
 	// TODO: fix and remove this ugly hack
 	append(exps, exp_alias_or_copy(sql, NULL, "prediction", l_rel, rel->lexps->h->data));
+
+	// set number of attributes in the result relation
+	rel->nrcols = list_length(exps);
+
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixlogpredictquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	symbol *tab4 = n->next->data.sym->data.lval->h->data.sym;
+	symbol *tab5 = n->next->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab6 = n->next->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *l_rel = table_ref(sql, rel, tab1);
+	sql_rel *r_rel = table_ref(sql, rel, tab4);
+	if (!l_rel || !r_rel)
+		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
+
+	// y-intercept
+	int noyintercept = n->next->next->data.i_val;
+	list *yintercept = new_exp_list(sql->sa);
+	if (!noyintercept) {
+		l_rel = rel_matrixyintercept(sql->sa, l_rel);
+		sql_exp *ce = rel_column_exp(sql, &l_rel, tab3->h->data.sym, sql_sel);
+		list_append(yintercept, exp_alias_or_copy(sql, NULL, "y_intercept", l_rel, ce));
+	}
+
+	// prediction relation
+	sql_rel *pred_rel = rel_matrixpredict(sql->sa, l_rel, r_rel);
+	pred_rel->lord = gen_orderby(sql, l_rel, tab2);
+	pred_rel->rord = gen_orderby(sql, r_rel, tab5);
+	pred_rel->lexps = gen_exps_list(sql, l_rel, tab3);
+	list_merge(pred_rel->lexps, yintercept, NULL);
+	pred_rel->rexps = gen_exps_list(sql, r_rel, tab6);
+
+	// sigmoid relation
+	rel = rel_matrixsigmoid(sql->sa, pred_rel);
+	// TODO: inv_rel->lord = pred_rel->lord;
+	rel->lexps = new_exp_list(sql->sa);
+	// TODO: fix and remove this ugly hack
+	append(rel->lexps, exp_alias_or_copy(sql, NULL, "prediction", l_rel, pred_rel->lexps->h->data));
+
+	// select attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append_exps(exps, sql, pred_rel->lord);
+	append_exps(exps, sql, rel->lexps);
 
 	// set number of attributes in the result relation
 	rel->nrcols = list_length(exps);

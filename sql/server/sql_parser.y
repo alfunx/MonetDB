@@ -579,8 +579,8 @@ int yydebug=1;
 %token TMUL
 %token EMUL
 %token SUB
-%token PREDICT
-%token SIGMOID
+%token LINPREDICT
+%token LOGPREDICT
 
 /* operators */
 %left UNION EXCEPT INTERSECT CORRESPONDING UNIONJOIN
@@ -2941,17 +2941,19 @@ joined_table:
 	  append_symbol(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXRQR, l); }
 
- |  PREDICT matrix_ref USING matrix_ref opt_no_y_intercept
+ |  LINPREDICT matrix_ref USING matrix_ref opt_no_y_intercept
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_symbol(l, $4);
 	  append_int(l, $5);
-	  $$ = _symbol_create_list( SQL_MATRIXPREDICT, l); }
+	  $$ = _symbol_create_list( SQL_MATRIXLINPREDICT, l); }
 
- |  SIGMOID matrix_ref
+ |  LOGPREDICT matrix_ref USING matrix_ref opt_no_y_intercept
 	{ dlist *l = L();
 	  append_symbol(l, $2);
-	  $$ = _symbol_create_list( SQL_MATRIXSIGMOID, l); }
+	  append_symbol(l, $4);
+	  append_int(l, $5);
+	  $$ = _symbol_create_list( SQL_MATRIXLOGPREDICT, l); }
 
  |  table_ref UNIONJOIN table_ref join_spec
 	{ dlist *l = L();

@@ -5831,6 +5831,7 @@ rel2bin_ddl(mvc *sql, sql_rel *rel, list *refs)
 	case op_##TYPE: \
 		fprintf(stderr, "\n>>> DO: [subrel_bin]: " #TYPE "\n"); \
 		s = rel2bin_##TYPE(sql, rel, refs); \
+		sql->type = Q_TABLE; \
 		fprintf(stderr, ">>> END: [subrel_bin]: " #TYPE "\n"); \
 		break;
 
@@ -5935,7 +5936,7 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	SUBREL_BIN_MATRIX_CASE(matrixpredict);
 	SUBREL_BIN_MATRIX_CASE(matrixsigmoid);
 	SUBREL_BIN_MATRIX_CASE(matrixlogreg);
-  SUBREL_BIN_MATRIX_CASE(matrixyintercept);
+	SUBREL_BIN_MATRIX_CASE(matrixyintercept);
         }
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);

@@ -5856,7 +5856,7 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	list_append(rel->rexps, qy_rel->rexps);
 
 	// parameters for logistic regression
-	rel->tolerance = 0.0001; // default tolerance
+	rel->tolerance = 0.001; // default tolerance
 	if (n->next->next->data.sval != NULL) {
 		rel->tolerance = strtod(n->next->next->data.sval, NULL);
 	}

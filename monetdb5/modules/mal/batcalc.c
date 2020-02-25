@@ -1438,12 +1438,12 @@ CMDifthen(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 
 #define abs(a) \
 	({ __auto_type _a = (a); \
-	   _a < 0.0 ? -_a : _a; })
+	   (_a) < 0.0 ? -(_a) : (_a); })
 
 #define cost(p, y) \
 	({ __auto_type _p = (p); \
 	   __auto_type _y = (y); \
-	   -(_y) * log(_p) - (1-_y) * log(1-_p); })
+	   -(_y) * log(_p) - (1-(_y)) * log(1-(_p)); })
 
 mal_export str CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
 

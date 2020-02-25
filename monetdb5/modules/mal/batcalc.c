@@ -1469,7 +1469,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	BUN n, m;
 
 	// iterators
-	int i, j, k;
+	int i, j, k, idlek;
 
 	// error
 	double delta = DBL_MAX;
@@ -1595,7 +1595,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	double c, d;
 
 	// gradient descend loop
-	for (k = 0; delta > *tolerance && k < *iterate; ++k) {
+	for (k = idlek = 0; delta > *tolerance && k < *iterate; ++k, ++idlek) {
 
 		// batch gradient, normalize, update coefficients
 		delta = DBL_MIN;
@@ -1672,15 +1672,18 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			for (j = 0; j < n; ++j) {
 				oval[j] = cval[j];
 			}
+			idlek = 0;
 		}
 
 	}
 
 	fprintf(stderr, "\n[1;91mlogreg stats:[0m\n");
-	fprintf(stderr, "error:      %f\n", error);
-	fprintf(stderr, "delta:      %f\n", delta);
-	fprintf(stderr, "stepsize:   %f\n", *stepsize);
-	fprintf(stderr, "iterations: %d\n\n", k);
+	fprintf(stderr, "error:      %f\n",   error);
+	fprintf(stderr, "delta:      %f\n",   delta);
+	fprintf(stderr, "tolerance:  %f\n",   *tolerance);
+	fprintf(stderr, "stepsize:   %f\n",   *stepsize);
+	fprintf(stderr, "iterations: %d\n",   k);
+	fprintf(stderr, "idle:       %d\n\n", idlek);
 
 	free(pval);
 	free(sval);

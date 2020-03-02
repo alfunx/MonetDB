@@ -1443,6 +1443,8 @@ CMDifthen(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 #define cost(p, y) \
 	({ __auto_type _p = (p); \
 	   __auto_type _y = (y); \
+	   if      (_p == 0) _p += DBL_EPSILON; \
+	   else if (_p == 1) _p -= DBL_EPSILON; \
 	   -(_y) * log(_p) - (1-(_y)) * log(1-(_p)); })
 
 mal_export str CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
@@ -1588,7 +1590,6 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	}
 	error /= m;
 	fprintf(stderr, "[0;92minitial error: %f[0m\n", error);
-	if (isnan(error)) error = DBL_MAX;
 
 	// b1: velocity, b2: decay, e: epsilon, d: delta
 	const double b1 = 0.9, b2 = 0.95, e = 1e-10;
@@ -1666,7 +1667,6 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		}
 		c /= m;
 		fprintf(stderr, c > error ? "[0;91merror: %f[0m\n" : "error: %f\n", c);
-		if (isnan(c)) c = DBL_MAX;
 		if (c < error) {
 			error = c;
 			for (j = 0; j < n; ++j) {

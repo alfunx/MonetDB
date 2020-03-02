@@ -1447,6 +1447,32 @@ CMDifthen(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	   else if (_p == 1) _p -= DBL_EPSILON; \
 	   -(_y) * log(_p) - (1-(_y)) * log(1-(_p)); })
 
+#define gd_fixed() \
+	d = *stepsize * slope;
+
+#define gd_momentum() \
+	vval[j] = *stepsize * slope + b1 * vval[j]; \
+	d = vval[j];
+
+#define gd_adagrad() \
+	uval[j] += pow(slope, 2); \
+	d = *stepsize * slope / (sqrt(uval[j]) + e);
+
+#define gd_rmsprop() \
+	uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2); \
+	d = *stepsize * slope / (sqrt(uval[j]) + e);
+
+#define gd_adam() \
+	vval[j] = b1 * vval[j] + (1-b1) * slope; \
+	uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2); \
+	d = *stepsize * (vval[j] / (1-b1)) / sqrt((uval[j] / (1-b2)) + e);
+	// d = *stepsize * (vval[j] / (1-pow(b1, i+1))) / (sqrt(uval[j] / (1-pow(b2, i+1))) + e);
+
+#define gd_amsgrad() \
+	vval[j] = b1 * vval[j] + (1-b1) * slope; \
+	uval[j] = MAX(uval[j], b2 * uval[j] + (1-b2) * pow(slope, 2)); \
+	d = *stepsize * vval[j] / sqrt(uval[j] + e);
+
 mal_export str CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
 
 str
@@ -1607,41 +1633,12 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			}
 			slope /= m;
 
-			/*
-			// fixed stepsize
-			d = *stepsize * slope;
-			*/
-
-			/*
-			// Momentum
-			vval[j] = *stepsize * slope + b1 * vval[j];
-			d = vval[j];
-			*/
-
-			/*
-			// Adagrad
-			uval[j] += pow(slope, 2);
-			d = *stepsize * slope / (sqrt(uval[j]) + e);
-			*/
-
-			/*
-			// RMSprop
-			uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2);
-			d = *stepsize * slope / (sqrt(uval[j]) + e);
-			*/
-
-			// Adam
-			vval[j] = b1 * vval[j] + (1-b1) * slope;
-			uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2);
-			// d = *stepsize * (vval[j] / (1-pow(b1, i+1))) / (sqrt(uval[j] / (1-pow(b2, i+1))) + e);
-			d = *stepsize * (vval[j] / (1-b1)) / sqrt((uval[j] / (1-b2)) + e);
-
-			/*
-			// AMSGrad
-			vval[j] = b1 * vval[j] + (1-b1) * slope;
-			uval[j] = MAX(uval[j], b2 * uval[j] + (1-b2) * pow(slope, 2));
-			d = *stepsize * vval[j] / sqrt(uval[j] + e);
-			*/
+			// gd_fixed();
+			// gd_momentum();
+			// gd_adagrad();
+			// gd_rmsprop();
+			gd_adam();
+			// gd_amsgrad();
 
 			c = abs(d);
 			if (c > delta)
@@ -1667,12 +1664,18 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		}
 		c /= m;
 		fprintf(stderr, c > error ? "[0;91merror: %f[0m\n" : "error: %f\n", c);
+
+		// update output coefficients
 		if (c < error) {
 			error = c;
 			for (j = 0; j < n; ++j) {
 				oval[j] = cval[j];
 			}
 			idlek = 0;
+		} else {
+			for (j = 0; j < n; ++j) {
+				cval[j] = oval[j];
+			}
 		}
 
 	}

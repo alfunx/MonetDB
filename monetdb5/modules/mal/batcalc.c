@@ -1465,8 +1465,8 @@ CMDifthen(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 #define gd_adam() \
 	vval[j] = b1 * vval[j] + (1-b1) * slope; \
 	uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2); \
-	d = *stepsize * (vval[j] / (1-b1)) / sqrt((uval[j] / (1-b2)) + e);
-	// d = *stepsize * (vval[j] / (1-pow(b1, i+1))) / (sqrt(uval[j] / (1-pow(b2, i+1))) + e);
+	d = *stepsize * vval[j] / sqrt(uval[j] + e);
+	// d = *stepsize * (vval[j] / (1-b1)) / sqrt((uval[j] / (1-b2)) + e);
 
 #define gd_amsgrad() \
 	vval[j] = b1 * vval[j] + (1-b1) * slope; \
@@ -1663,7 +1663,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			c += cost(sval[i], yval[i]);
 		}
 		c /= m;
-		fprintf(stderr, c > error ? "[0;91merror: %f[0m\n" : "error: %f\n", c);
+		fprintf(stderr, c > error ? "[0;91m  error: %f[0m\n" : "+ error: %f\n", c);
 
 		// update output coefficients
 		if (c < error) {
@@ -1672,10 +1672,6 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 				oval[j] = cval[j];
 			}
 			idlek = 0;
-		} else {
-			for (j = 0; j < n; ++j) {
-				cval[j] = oval[j];
-			}
 		}
 
 	}

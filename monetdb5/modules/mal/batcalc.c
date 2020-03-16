@@ -1617,7 +1617,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		error += cost(sval[i], yval[i]);
 	}
 	error /= m;
-	fprintf(stderr, "[0;92minitial error: %f[0m\n", error);
+	// fprintf(stderr, "[0;92minitial error: %f[0m\n", error);
 
 	// b1: velocity, b2: decay, e: epsilon, d: delta
 	const double b1 = 0.9, b2 = 0.95, e = 1e-10;
@@ -1665,7 +1665,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			c += cost(sval[i], yval[i]);
 		}
 		c /= m;
-		fprintf(stderr, c > error ? "[0;91m  error: %f[0m   slope: %f\n" : "+ error: %f   slope: %f\n", c, max_slope);
+		// fprintf(stderr, c > error ? "[0;91m  error: %f[0m   slope: %f\n" : "+ error: %f   slope: %f\n", c, max_slope);
 
 		// update output coefficients
 		if (c < error) {

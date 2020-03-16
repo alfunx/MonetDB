@@ -1438,12 +1438,40 @@ CMDifthen(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 
 #define abs(a) \
 	({ __auto_type _a = (a); \
-	   _a < 0.0 ? -_a : _a; })
+	   (_a) < 0.0 ? -(_a) : (_a); })
 
-#define cost(p, y) \
-	({ __auto_type _p = (p); \
+#define cost(s, y) \
+	({ __auto_type _s = (s); \
 	   __auto_type _y = (y); \
-	   -(_y) * log(_p) - (1-_y) * log(1-_p); })
+	   if      (_s <= 0.0) _s += DBL_EPSILON; \
+	   else if (_s >= 1.0) _s -= DBL_EPSILON; \
+	   -(_y) * log(_s) - (1-(_y)) * log(1-(_s)); })
+
+#define gd_fixed() \
+	d = *stepsize * slope;
+
+#define gd_momentum() \
+	vval[j] = *stepsize * slope + b1 * vval[j]; \
+	d = vval[j];
+
+#define gd_adagrad() \
+	uval[j] += pow(slope, 2); \
+	d = *stepsize * slope / (sqrt(uval[j]) + e);
+
+#define gd_rmsprop() \
+	uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2); \
+	d = *stepsize * slope / (sqrt(uval[j]) + e);
+
+#define gd_adam() \
+	vval[j] = b1 * vval[j] + (1-b1) * slope; \
+	uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2); \
+	d = *stepsize * vval[j] / sqrt(uval[j] + e);
+	// d = *stepsize * (vval[j] / (1-b1)) / sqrt((uval[j] / (1-b2)) + e);
+
+#define gd_amsgrad() \
+	vval[j] = b1 * vval[j] + (1-b1) * slope; \
+	uval[j] = MAX(uval[j], b2 * uval[j] + (1-b2) * pow(slope, 2)); \
+	d = *stepsize * vval[j] / sqrt(uval[j] + e);
 
 mal_export str CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
 
@@ -1472,9 +1500,9 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	int i, j, k;
 
 	// error
-	double delta = DBL_MAX;
 	double error = DBL_MAX;
-	double slope;
+	double slope = DBL_MAX;
+	double max_slope = DBL_MAX;
 
 	// parameters
 	tp = stk->stk[getArg(pci, 1)].vtype;
@@ -1573,32 +1601,33 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		return NULL;
 	}
 
-	// copy coefficients & calculate error
-	error = 0.0;
+	// copy coefficients & calculate prediction
 	for (j = 0; j < n; ++j) {
 		oval[j] = cval[j] = ival[j];
 		for (i = 0; i < m; ++i) {
 			pval[i] += xval[j][i] * cval[j];
 		}
 	}
+
+	// average error
+	error = 0.0;
 	for (i = 0; i < m; ++i) {
 		sval[i] = sigmoid(pval[i]);
 		pval[i] = sval[i] - yval[i];
 		error += cost(sval[i], yval[i]);
 	}
 	error /= m;
-	fprintf(stderr, "[0;92minitial error: %f[0m\n", error);
-	if (isnan(error)) error = DBL_MAX;
+	// fprintf(stderr, "[0;92minitial error: %f[0m\n", error);
 
 	// b1: velocity, b2: decay, e: epsilon, d: delta
 	const double b1 = 0.9, b2 = 0.95, e = 1e-10;
 	double c, d;
 
 	// gradient descend loop
-	for (k = 0; delta > *tolerance && k < *iterate; ++k) {
+	for (k = 0; max_slope > *tolerance && k < *iterate; ++k) {
 
 		// batch gradient, normalize, update coefficients
-		delta = DBL_MIN;
+		max_slope = 0.0;
 		for (j = 0; j < n; ++j) {
 			slope = 0.0;
 			for (i = 0; i < m; ++i) {
@@ -1606,45 +1635,16 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			}
 			slope /= m;
 
-			/*
-			// fixed stepsize
-			d = *stepsize * slope;
-			*/
+			// gd_fixed();
+			// gd_momentum();
+			// gd_adagrad();
+			// gd_rmsprop();
+			gd_adam();
+			// gd_amsgrad();
 
-			/*
-			// Momentum
-			vval[j] = *stepsize * slope + b1 * vval[j];
-			d = vval[j];
-			*/
-
-			/*
-			// Adagrad
-			uval[j] += pow(slope, 2);
-			d = *stepsize * slope / (sqrt(uval[j]) + e);
-			*/
-
-			/*
-			// RMSprop
-			uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2);
-			d = *stepsize * slope / (sqrt(uval[j]) + e);
-			*/
-
-			// Adam
-			vval[j] = b1 * vval[j] + (1-b1) * slope;
-			uval[j] = b2 * uval[j] + (1-b2) * pow(slope, 2);
-			// d = *stepsize * (vval[j] / (1-pow(b1, i+1))) / (sqrt(uval[j] / (1-pow(b2, i+1))) + e);
-			d = *stepsize * (vval[j] / (1-b1)) / sqrt((uval[j] / (1-b2)) + e);
-
-			/*
-			// AMSGrad
-			vval[j] = b1 * vval[j] + (1-b1) * slope;
-			uval[j] = MAX(uval[j], b2 * uval[j] + (1-b2) * pow(slope, 2));
-			d = *stepsize * vval[j] / sqrt(uval[j] + e);
-			*/
-
-			c = abs(d);
-			if (c > delta)
-				delta = c;
+			c = abs(slope);
+			if (c > max_slope)
+				max_slope = c;
 
 			cval[j] -= d;
 		}
@@ -1665,8 +1665,9 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			c += cost(sval[i], yval[i]);
 		}
 		c /= m;
-		fprintf(stderr, c > error ? "[0;91merror: %f[0m\n" : "error: %f\n", c);
-		if (isnan(c)) c = DBL_MAX;
+		// fprintf(stderr, c > error ? "[0;91m  error: %f[0m   slope: %f\n" : "+ error: %f   slope: %f\n", c, max_slope);
+
+		// update output coefficients
 		if (c < error) {
 			error = c;
 			for (j = 0; j < n; ++j) {
@@ -1677,10 +1678,11 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	}
 
 	fprintf(stderr, "\n[1;91mlogreg stats:[0m\n");
-	fprintf(stderr, "error:      %f\n", error);
-	fprintf(stderr, "delta:      %f\n", delta);
-	fprintf(stderr, "stepsize:   %f\n", *stepsize);
-	fprintf(stderr, "iterations: %d\n\n", k);
+	fprintf(stderr, "error:      %f\n",   error);
+	fprintf(stderr, "slope:      %f\n",   slope);
+	fprintf(stderr, "tolerance:  %f\n",   *tolerance);
+	fprintf(stderr, "stepsize:   %f\n",   *stepsize);
+	fprintf(stderr, "iterations: %d\n",   k);
 
 	free(pval);
 	free(sval);

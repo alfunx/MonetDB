@@ -2886,6 +2886,7 @@ joined_table:
 	  append_string(l, $6);
 	  append_int(l, $7);
 	  append_int(l, $8);
+	  append_int(l, $9);
 	  $$ = _symbol_create_list( SQL_MATRIXLOGREG, l); }
 
  |  matrix_ref ADD matrix_ref opt_no_optimize

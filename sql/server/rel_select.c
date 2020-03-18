@@ -5870,7 +5870,7 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	}
 
 	// set no-optimization flag, use old implementation if set
-	rel->noopt = n->next->next->next->next->next->data.i_val;
+	rel->noopt = n->next->next->next->next->next->next->data.i_val;
 
 	// select attributes for result relation
 	list *exps = new_exp_list(sql->sa);

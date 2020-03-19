@@ -5239,7 +5239,6 @@ append_exps_except(list *l, mvc *sql, sql_rel *rel, list *exps)
 		if (!exps_bind_column(exps, e->name, NULL)) {
 			exp_setrelname(sql->sa, e, sql->label);
 			append(l, e);
-			fprintf(stderr, ">>> [rel] add: %s.%s\n", e->rname, e->name);
 		}
 	}
 }
@@ -5254,7 +5253,6 @@ append_exps(list *l, mvc *sql, list *exps)
 
 		exp_setrelname(sql->sa, e, sql->label);
 		append(l, e);
-		fprintf(stderr, ">>> [rel] add: %s.%s\n", e->rname, e->name);
 	}
 }
 

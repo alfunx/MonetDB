@@ -3038,6 +3038,8 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 	t = stmt_alias(sql->sa, t, table_name(sql->sa, yoa->h->data), column_name(sql->sa, yoa->h->data));
 
 	if (!rel->noopt) {
+		fprintf(stderr, ">>> logreg: BAT approach\n");
+
 		// logreg list
 		lr = sa_list(sql->sa);
 		list_append(lr, stmt_atom_dbl(sql->sa, rel->tolerance));
@@ -3051,6 +3053,8 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 		p = stmt_alias(sql->sa, p, table_name(sql->sa, xoa->h->data), "coefficient");
 		list_append(l, p);
 	} else {
+		fprintf(stderr, ">>> logreg: TREE approach\n");
+
 		for (j = 0; j < rel->iterations; j++) {
 			// prepare prediction statement
 			p = NULL;
@@ -3094,6 +3098,8 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 		c = stmt_alias(sql->sa, c, table_name(sql->sa, xoa->h->data), "coefficient");
 		list_append(l, c);
 	}
+
+	fprintf(stderr, ">>> logreg: done\n");
 
 	return stmt_list(sql->sa, l);
 }

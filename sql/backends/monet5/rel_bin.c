@@ -1950,8 +1950,6 @@ partition_appl_desc(mvc *sql, stmt *p, list *exps, list *a, list *d)
 	stmt *s;
 	sql_exp *e;
 
-	fprintf(stderr, ">>> [partition_appl_desc]\n");
-
 	for (m = p->op4.lval->h; m; m = m->next) {
 		s = m->data;
 
@@ -1968,15 +1966,11 @@ partition_appl_desc(mvc *sql, stmt *p, list *exps, list *a, list *d)
 			if (nme && strcmp(nme, e->r) != 0)
 				continue;
 
-			fprintf(stderr, "    <A>  %s.%s\n", rnme ? rnme : "_", nme);
-
 			if (a) list_append(a, s);
 			break;
 		}
 
 		if (!n) {
-			fprintf(stderr, "    <D>  %s.%s\n", rnme ? rnme : "_", nme);
-
 			if (d) list_append(d, s);
 		}
 	}
@@ -1997,8 +1991,6 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord)
 	p->expected_cnt = list_length(s->op4.lval);
 	psub = stmt_list(sql->sa, p);
 	stmt_set_nrcols(psub);
-
-	fprintf(stderr, ">>> [gen_orderby_ids]\n");
 
 	// ordering of the order specification columns to know the final order of OIDs for
 	for (node *n = ord->h; n; n = n->next) {
@@ -2025,8 +2017,6 @@ gen_orderby_ids(mvc *sql, stmt *s, list *ord)
 		const char *tname = table_name(sql->sa, orderbycolstmt);
 		const char *cname = column_name(sql->sa, orderbycolstmt);
 
-		fprintf(stderr, "    %s.%s\n", tname, cname);
-
 		orderby_ids = stmt_result(sql->sa, orderby, 1);
 		orderby_grp = stmt_result(sql->sa, orderby, 2);
 	}
@@ -2042,8 +2032,6 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list *ol)
 		return;
 	}
 
-	fprintf(stderr, ">>> [align_by_ids]\n");
-
 	for (node *n = l->h; n; n = n->next) {
 		stmt *s = n->data;
 
@@ -2052,8 +2040,6 @@ align_by_ids(mvc *sql, stmt *orderby_ids, list *l, list *ol)
 
 		s = stmt_project(sql->sa, orderby_ids, s);
 		s = stmt_alias(sql->sa, s, tname, cname);
-
-		fprintf(stderr, "    %s.%s\n", tname, cname);
 
 		list_append(ol, s);
 	}
@@ -3052,6 +3038,8 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 	t = stmt_alias(sql->sa, t, table_name(sql->sa, yoa->h->data), column_name(sql->sa, yoa->h->data));
 
 	if (!rel->noopt) {
+		fprintf(stderr, ">>> logreg: BAT approach\n");
+
 		// logreg list
 		lr = sa_list(sql->sa);
 		list_append(lr, stmt_atom_dbl(sql->sa, rel->tolerance));
@@ -3065,6 +3053,8 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 		p = stmt_alias(sql->sa, p, table_name(sql->sa, xoa->h->data), "coefficient");
 		list_append(l, p);
 	} else {
+		fprintf(stderr, ">>> logreg: TREE approach\n");
+
 		for (j = 0; j < rel->iterations; j++) {
 			// prepare prediction statement
 			p = NULL;
@@ -3108,6 +3098,8 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 		c = stmt_alias(sql->sa, c, table_name(sql->sa, xoa->h->data), "coefficient");
 		list_append(l, c);
 	}
+
+	fprintf(stderr, ">>> logreg: done\n");
 
 	return stmt_list(sql->sa, l);
 }
@@ -5829,10 +5821,8 @@ rel2bin_ddl(mvc *sql, sql_rel *rel, list *refs)
 
 #define SUBREL_BIN_MATRIX_CASE(TYPE) \
 	case op_##TYPE: \
-		fprintf(stderr, "\n>>> DO: [subrel_bin]: " #TYPE "\n"); \
 		s = rel2bin_##TYPE(sql, rel, refs); \
 		sql->type = Q_TABLE; \
-		fprintf(stderr, ">>> END: [subrel_bin]: " #TYPE "\n"); \
 		break;
 
 static stmt *

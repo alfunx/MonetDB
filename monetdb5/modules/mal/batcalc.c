@@ -1491,7 +1491,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	double *oval;
 
 	// other arrays
-	double *cval, *pval, *sval, *uval, *vval;
+	double *pval, *sval, *uval, *vval;
 
 	// matrix dimensions
 	BUN n, m;
@@ -1499,8 +1499,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	// iterators
 	int i, j, k;
 
-	// error
-	double error = DBL_MAX;
+	// tolerance
 	double slope = DBL_MAX;
 	double max_slope = DBL_MAX;
 
@@ -1594,30 +1593,10 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		return NULL;
 	}
 
-	// temporary coefficients array
-	cval = calloc(n, sizeof (double));
-	if (cval == NULL) {
-		fprintf(stderr, "Memory for prediction array is not allocated.");
-		return NULL;
-	}
-
-	// copy coefficients & calculate prediction
+	// copy coefficients
 	for (j = 0; j < n; ++j) {
-		oval[j] = cval[j] = ival[j];
-		for (i = 0; i < m; ++i) {
-			pval[i] += xval[j][i] * cval[j];
-		}
+		oval[j] = ival[j];
 	}
-
-	// average error
-	error = 0.0;
-	for (i = 0; i < m; ++i) {
-		sval[i] = sigmoid(pval[i]);
-		pval[i] = sval[i] - yval[i];
-		error += cost(sval[i], yval[i]);
-	}
-	error /= m;
-	// fprintf(stderr, "[0;92minitial error: %f[0m\n", error);
 
 	// b1: velocity, b2: decay, e: epsilon, d: delta
 	const double b1 = 0.9, b2 = 0.95, e = 1e-10;
@@ -1625,6 +1604,20 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 
 	// gradient descend loop
 	for (k = 0; max_slope > *tolerance && k < *iterate; ++k) {
+
+		// prediction
+		for (i = 0; i < m; pval[i++] = 0.0);
+		for (j = 0; j < n; ++j) {
+			for (i = 0; i < m; ++i) {
+				pval[i] += xval[j][i] * oval[j];
+			}
+		}
+
+		// average error
+		for (i = 0; i < m; ++i) {
+			sval[i] = sigmoid(pval[i]);
+			pval[i] = sval[i] - yval[i];
+		}
 
 		// batch gradient, normalize, update coefficients
 		max_slope = 0.0;
@@ -1635,54 +1628,27 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 			}
 			slope /= m;
 
-			// gd_fixed();
+			gd_fixed();
 			// gd_momentum();
 			// gd_adagrad();
 			// gd_rmsprop();
-			gd_adam();
+			// gd_adam();
 			// gd_amsgrad();
 
 			c = abs(slope);
 			if (c > max_slope)
 				max_slope = c;
 
-			cval[j] -= d;
-		}
-
-		// prediction
-		for (i = 0; i < m; pval[i++] = 0.0);
-		for (j = 0; j < n; ++j) {
-			for (i = 0; i < m; ++i) {
-				pval[i] += xval[j][i] * cval[j];
-			}
-		}
-
-		// average error
-		c = 0.0;
-		for (i = 0; i < m; ++i) {
-			sval[i] = sigmoid(pval[i]);
-			pval[i] = sval[i] - yval[i];
-			c += cost(sval[i], yval[i]);
-		}
-		c /= m;
-		// fprintf(stderr, c > error ? "[0;91m  error: %f[0m   slope: %f\n" : "+ error: %f   slope: %f\n", c, max_slope);
-
-		// update output coefficients
-		if (c < error) {
-			error = c;
-			for (j = 0; j < n; ++j) {
-				oval[j] = cval[j];
-			}
+			oval[j] -= d;
 		}
 
 	}
 
 	fprintf(stderr, "\n[1;91mlogreg stats:[0m\n");
-	fprintf(stderr, "error:      %f\n",   error);
-	fprintf(stderr, "slope:      %f\n",   slope);
-	fprintf(stderr, "tolerance:  %f\n",   *tolerance);
-	fprintf(stderr, "stepsize:   %f\n",   *stepsize);
-	fprintf(stderr, "iterations: %d\n",   k);
+	fprintf(stderr, "slope:      %f\n", slope);
+	fprintf(stderr, "tolerance:  %f\n", *tolerance);
+	fprintf(stderr, "stepsize:   %f\n", *stepsize);
+	fprintf(stderr, "iterations: %d\n", k);
 
 	free(pval);
 	free(sval);

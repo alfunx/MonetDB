@@ -5802,56 +5802,15 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 		list_append(yintercept, exp_alias_or_copy(sql, NULL, "y_intercept", x_rel, ce));
 	}
 
-	// qqr relation
-	sql_rel *qqr_rel = rel_matrixqqr(sql->sa, x_rel);
-	qqr_rel->lord = gen_orderby(sql, x_rel, tab2);
-	qqr_rel->lexps = gen_exps_list(sql, x_rel, tab3);
-	list_merge(qqr_rel->lexps, yintercept, NULL);
-
-	// rqr relation
-	sql_rel *rqr_rel = rel_matrixrqr(sql->sa, x_rel, qqr_rel);
-	rqr_rel->lord = qqr_rel->lord;
-	rqr_rel->lexps = qqr_rel->lexps;
-	rqr_rel->rord = qqr_rel->lord;
-	rqr_rel->rexps = qqr_rel->lexps;
-
-	// inv relation
-	sql_rel *inv_rel = rel_matrixinv(sql->sa, rqr_rel);
-	// TODO: inv_rel->lord = rqr_rel->rord;
-	inv_rel->lexps = rqr_rel->rexps;
-
-	// qy relation
-	sql_rel *qy_rel = rel_matrixtransmul(sql->sa, qqr_rel, y_rel);
-	qy_rel->lord = qqr_rel->lord;
-	qy_rel->lexps = qqr_rel->lexps;
-	qy_rel->rord = gen_orderby(sql, y_rel, tab5);
-	qy_rel->rexps = gen_exps_list(sql, y_rel, tab6);
-
-	// linreg relation
-	sql_rel *lin_rel = rel_matrixtransmul(sql->sa, inv_rel, qy_rel);
-	// TODO: lin_rel->lord = inv_rel->lord;
-	lin_rel->lexps = inv_rel->lexps;
-	// TODO: lin_rel->rord = qy_rel->rord;
-	lin_rel->rexps = qy_rel->rexps;
-
-	// linreg projection
-	list *lin_exps = new_exp_list(sql->sa);
-	append(lin_exps, order_column());
-	append(lin_exps, schema_column());
-	append_exps(lin_exps, sql, lin_rel->rexps);
-
 	// logreg relation
-	rel = rel_matrixlogreg(sql->sa, lin_rel);
-	rel->lexps = lin_exps;
-	rel->r = sa_list(sql->sa);
-	list_append(rel->r, x_rel);
-	list_append(rel->r, y_rel);
-	rel->rord = sa_list(sql->sa);
-	list_append(rel->rord, qqr_rel->lord);
-	list_append(rel->rord, qy_rel->rord);
-	rel->rexps = sa_list(sql->sa);
-	list_append(rel->rexps, qqr_rel->lexps);
-	list_append(rel->rexps, qy_rel->rexps);
+	rel = rel_matrixlogreg(sql->sa, NULL);
+	rel->l = x_rel;
+	rel->r = y_rel;
+	rel->lord = gen_orderby(sql, x_rel, tab2);
+	rel->rord = gen_orderby(sql, y_rel, tab5);
+	rel->lexps = gen_exps_list(sql, x_rel, tab3);
+	rel->rexps = gen_exps_list(sql, y_rel, tab6);
+	list_merge(rel->lexps, yintercept, NULL);
 
 	// parameters for logistic regression
 	rel->tolerance = 0.001; // default tolerance
@@ -5874,7 +5833,7 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	list *exps = new_exp_list(sql->sa);
 	append(exps, order_column());
 	append(exps, schema_column());
-	append(exps, exp_alias_or_copy(sql, NULL, "coefficient", x_rel, qqr_rel->lexps->h->data));
+	append(exps, exp_alias_or_copy(sql, NULL, "coefficient", x_rel, rel->lexps->h->data));
 
 	// set number of attributes in the result relation
 	rel->nrcols = list_length(exps);

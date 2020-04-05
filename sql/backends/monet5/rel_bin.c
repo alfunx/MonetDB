@@ -2972,10 +2972,10 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 	list *l, *lr;
 
 	// application part and description part columns
-	list *la, *xa, *ya, *ld;
+	list *xa, *ya, *xd, *yd;
 
 	// ordered application part columns (desc part is directly appended to l)
-	list *loa, *xoa, *yoa;
+	list *xoa, *yoa;
 
 	// iterators
 	node *n, *m;
@@ -2986,50 +2986,46 @@ rel2bin_matrixlogreg(mvc *sql, sql_rel *rel, list *refs)
 	// temporary statements
 	stmt *s, *p, *c, *d, *t;
 
-	// extract sub-relations
-	sql_rel *x_rel = ((list*)rel->r)->h->data;
-	sql_rel *y_rel = ((list*)rel->r)->h->next->data;
-	list *x_ord = ((list*)rel->rord)->h->data;
-	list *y_ord = ((list*)rel->rord)->h->next->data;
-	list *x_exps = ((list*)rel->rexps)->h->data;
-	list *y_exps = ((list*)rel->rexps)->h->next->data;
-
 	// process sub-relations
-	stmt *left = subrel_bin(sql, rel->l, refs);
-	stmt *x = subrel_bin(sql, x_rel, refs);
-	stmt *y = subrel_bin(sql, y_rel, refs);
-	assert(left && x && y);
+	stmt *x = subrel_bin(sql, rel->l, refs);
+	stmt *y = subrel_bin(sql, rel->r, refs);
+	assert(x && y);
 
 	// generate the orderby ids
-	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
-	stmt *orderby_idsx = gen_orderby_ids(sql, x, x_ord);
-	stmt *orderby_idsy = gen_orderby_ids(sql, y, y_ord);
+	stmt *orderby_idsx = gen_orderby_ids(sql, x, rel->lord);
+	stmt *orderby_idsy = gen_orderby_ids(sql, y, rel->rord);
 
 	// construct list of statements
 	l = sa_list(sql->sa);
-	la = sa_list(sql->sa);
 	xa = sa_list(sql->sa);
 	ya = sa_list(sql->sa);
-	ld = sa_list(sql->sa);
-	loa = sa_list(sql->sa);
+	xd = sa_list(sql->sa);
+	yd = sa_list(sql->sa);
 	xoa = sa_list(sql->sa);
 	yoa = sa_list(sql->sa);
 
 	// split into application and descriptive part lists
-	assert(rel->lexps && x_exps && y_exps);
-	partition_appl_desc(sql, left, rel->lexps, la, ld);
-	partition_appl_desc(sql, x, x_exps, xa, NULL);
-	partition_appl_desc(sql, y, y_exps, ya, NULL);
+	assert(rel->lexps && rel->rexps);
+	partition_appl_desc(sql, x, rel->lexps, xa, xd);
+	partition_appl_desc(sql, y, rel->rexps, ya, yd);
 
 	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, ld, l);
-	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsx, xd, l);
+	align_by_ids(sql, orderby_idsy, yd, l);
 	align_by_ids(sql, orderby_idsx, xa, xoa);
 	align_by_ids(sql, orderby_idsy, ya, yoa);
 
+	// append schema and order stmt
+	list_append(l, stmt_schema_column(sql, xoa));
+	list_append(l, stmt_order_column(sql, xoa));
+
 	// coefficients
-	c = loa->h->data;
-	c = stmt_alias(sql->sa, c, table_name(sql->sa, loa->h->data), "coefficient");
+	c = stmt_temp(sql->sa, tail_type(xoa->h->data));
+	for (m = xoa->h; m; m = m->next) {
+		s = stmt_atom_dbl(sql->sa, 0.0);
+		c = stmt_append(sql->sa, c, s);
+	}
+	c = stmt_alias(sql->sa, c, table_name(sql->sa, xoa->h->data), "coefficient");
 
 	// calculate target
 	t = yoa->h->data;

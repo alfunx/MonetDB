@@ -1537,11 +1537,11 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	// result coefficients
 	obid = getArgReference_bat(stk, pci, 0);
 	obat = BATnew(TYPE_void, ibat->T->type, n, TRANSIENT);
-	oval = (double*) Tloc(obat, BUNfirst(ibat));
+	oval = (double*) Tloc(obat, BUNfirst(obat));
 
 	// prepare result BAT
 	BATsetcount(obat, n);
-	BATseqbase(obat, ibat->H->seq);
+	BATseqbase(obat, obat->H->seq);
 	obat->T->sorted = 0;
 	obat->T->revsorted = 0;
 	obat->T->key = 0;

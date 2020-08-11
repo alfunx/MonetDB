@@ -62,7 +62,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_matrixadd:
 	case op_matrixsub:
 	case op_matrixemul:
-	case op_matrixtransmul:
+	case op_matrixcpd:
 	case op_matrixrqr:
 	case op_matrixpredict:
 		exps = rel_table_projections( sql, rel->l, tname, level+1);
@@ -229,7 +229,7 @@ static sql_rel * rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *sq);
 static sql_rel * rel_matrixaddquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsubquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixemulquery(mvc *sql, sql_rel *rel, symbol *q);
-static sql_rel * rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixcpdquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
@@ -421,9 +421,9 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 			return NULL;
 		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
 	}
-	case SQL_MATRIXTRANSMUL:
+	case SQL_MATRIXCPD:
 	{
-		sql_rel *tq = rel_matrixtransmulquery(sql, r, q);
+		sql_rel *tq = rel_matrixcpdquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3756,7 +3756,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_matrixadd:
 	case op_matrixsub:
 	case op_matrixemul:
-	case op_matrixtransmul:
+	case op_matrixcpd:
 	case op_matrixrqr:
 	case op_matrixpredict:
 		exps = rel_projections_(sql, rel->l);
@@ -5431,7 +5431,7 @@ rel_matrixemulquery(mvc *sql, sql_rel *rel, symbol *q)
 }
 
 static sql_rel *
-rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
+rel_matrixcpdquery(mvc *sql, sql_rel *rel, symbol *q)
 {
 	dnode *n = q->data.lval->h;
 
@@ -5452,7 +5452,7 @@ rel_matrixtransmulquery(mvc *sql, sql_rel *rel, symbol *q)
 	// for relation name
 	int nr = ++sql->label;
 
-	rel = rel_matrixtransmul(sql->sa, l_rel, r_rel);
+	rel = rel_matrixcpd(sql->sa, l_rel, r_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
 	rel->rord = gen_orderby(sql, r_rel, tab5);
 	rel->lexps = gen_exps_list(sql, l_rel, tab3);
@@ -5745,14 +5745,14 @@ rel_matrixlinregquery(mvc *sql, sql_rel *rel, symbol *q)
 	inv_rel->lexps = rqr_rel->rexps;
 
 	// qy relation
-	sql_rel *qy_rel = rel_matrixtransmul(sql->sa, qqr_rel, y_rel);
+	sql_rel *qy_rel = rel_matrixcpd(sql->sa, qqr_rel, y_rel);
 	qy_rel->lord = qqr_rel->lord;
 	qy_rel->lexps = qqr_rel->lexps;
 	qy_rel->rord = gen_orderby(sql, y_rel, tab5);
 	qy_rel->rexps = gen_exps_list(sql, y_rel, tab6);
 
 	// result relation
-	rel = rel_matrixtransmul(sql->sa, inv_rel, qy_rel);
+	rel = rel_matrixcpd(sql->sa, inv_rel, qy_rel);
 	// TODO: rel->lord = inv_rel->lord;
 	rel->lexps = inv_rel->lexps;
 	// TODO: rel->rord = qy_rel->rord;
@@ -5821,14 +5821,14 @@ rel_matrixlogregquery(mvc *sql, sql_rel *rel, symbol *q)
 	inv_rel->lexps = rqr_rel->rexps;
 
 	// qy relation
-	sql_rel *qy_rel = rel_matrixtransmul(sql->sa, qqr_rel, y_rel);
+	sql_rel *qy_rel = rel_matrixcpd(sql->sa, qqr_rel, y_rel);
 	qy_rel->lord = qqr_rel->lord;
 	qy_rel->lexps = qqr_rel->lexps;
 	qy_rel->rord = gen_orderby(sql, y_rel, tab5);
 	qy_rel->rexps = gen_exps_list(sql, y_rel, tab6);
 
 	// linreg relation
-	sql_rel *lin_rel = rel_matrixtransmul(sql->sa, inv_rel, qy_rel);
+	sql_rel *lin_rel = rel_matrixcpd(sql->sa, inv_rel, qy_rel);
 	// TODO: lin_rel->lord = inv_rel->lord;
 	lin_rel->lexps = inv_rel->lexps;
 	// TODO: lin_rel->rord = qy_rel->rord;

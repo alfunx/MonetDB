@@ -290,8 +290,8 @@ op2string(operator_type op)
 		return "matrix sub";
 	case op_matrixemul:
 		return "matrix elem mul";
-	case op_matrixtransmul:
-		return "matrix trans mul";
+	case op_matrixcpd:
+		return "matrix cpd";
 	case op_matrixsqrt:
 		return "matrix sqrt";
 	case op_matrixinv:
@@ -468,7 +468,7 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 	case op_matrixadd:
 	case op_matrixsub:
 	case op_matrixemul:
-	case op_matrixtransmul:
+	case op_matrixcpd:
 	case op_matrixrqr:
 	case op_matrixpredict:
 		if (rel->op == op_matrixadd)
@@ -477,8 +477,8 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 			r = "matrix sub";
 		if (rel->op == op_matrixemul)
 			r = "matrix elem mul";
-		if (rel->op == op_matrixtransmul)
-			r = "matrix trans mul";
+		if (rel->op == op_matrixcpd)
+			r = "matrix cpd";
 		if (rel->op == op_matrixrqr)
 			r = "matrix rqr";
 		if (rel->op == op_matrixpredict)
@@ -654,7 +654,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 	case op_matrixadd: 
 	case op_matrixsub:
 	case op_matrixemul:
-	case op_matrixtransmul: 
+	case op_matrixcpd: 
 	case op_matrixrqr: 
 	case op_matrixpredict: 
 		rel_print_refs(sql, fout, rel->l, depth, refs, decorate);

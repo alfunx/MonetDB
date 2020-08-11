@@ -120,7 +120,7 @@ scanner_init_keywords(void)
 	keywords_insert("SUB", SUB);
 	keywords_insert("LINPREDICT", LINPREDICT);
 	keywords_insert("LOGPREDICT", LOGPREDICT);
-	keywords_insert("TMUL", TMUL);
+	keywords_insert("CPD", CPD);
 	keywords_insert("EMUL", EMUL);
 
 	keywords_insert("LAG", AGGR);

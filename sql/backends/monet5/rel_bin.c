@@ -1418,7 +1418,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_matrixadd:
 	case op_matrixsub:
 	case op_matrixemul:
-	case op_matrixtransmul:
+	case op_matrixcpd:
 	case op_matrixrqr:
 	case op_matrixpredict:
 
@@ -2438,7 +2438,7 @@ rel2bin_matrixemul(mvc *sql, sql_rel *rel, list *refs)
 }
 
 static stmt *
-rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
+rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 {
 	// list of all statements (result)
 	list *l;
@@ -5917,7 +5917,7 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	SUBREL_BIN_MATRIX_CASE(matrixadd);
 	SUBREL_BIN_MATRIX_CASE(matrixsub);
 	SUBREL_BIN_MATRIX_CASE(matrixemul);
-	SUBREL_BIN_MATRIX_CASE(matrixtransmul);
+	SUBREL_BIN_MATRIX_CASE(matrixcpd);
 	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
 	SUBREL_BIN_MATRIX_CASE(matrixinv);
 	SUBREL_BIN_MATRIX_CASE(matrixinvtriangular);

@@ -57,6 +57,7 @@ extern sql_rel *rel_matrixyintercept(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixadd(sql_allocator *sa, sql_rel *l, sql_rel *r);
 extern sql_rel *rel_matrixsub(sql_allocator *sa, sql_rel *l, sql_rel *r);
 extern sql_rel *rel_matrixemul(sql_allocator *sa, sql_rel *l, sql_rel *r);
+extern sql_rel *rel_matrixmmu(sql_allocator *sa, sql_rel *l, sql_rel *r);
 extern sql_rel *rel_matrixcpd(sql_allocator *sa, sql_rel *l, sql_rel *r);
 extern sql_rel *rel_matrixrqr(sql_allocator *sa, sql_rel *l, sql_rel *r);
 extern sql_rel *rel_matrixpredict(sql_allocator *sa, sql_rel *l, sql_rel *r);

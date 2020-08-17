@@ -126,6 +126,7 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 	case op_matrixemul:
 	case op_matrixmmu:
 	case op_matrixcpd:
+	case op_matrixopd:
 	case op_matrixpredict:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -253,6 +254,7 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_matrixemul:
 	case op_matrixmmu:
 	case op_matrixcpd:
+	case op_matrixopd:
 	case op_matrixpredict:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -478,6 +480,7 @@ REL_MATRIX_BIN(matrixsub);
 REL_MATRIX_BIN(matrixemul);
 REL_MATRIX_BIN(matrixmmu);
 REL_MATRIX_BIN(matrixcpd);
+REL_MATRIX_BIN(matrixopd);
 REL_MATRIX_BIN(matrixrqr);
 REL_MATRIX_BIN(matrixpredict);
 
@@ -916,6 +919,7 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_matrixemul:
 	case op_matrixmmu:
 	case op_matrixcpd:
+	case op_matrixopd:
 	case op_matrixrqr:
 	case op_matrixpredict:
 		// TODO: matrixadd
@@ -965,6 +969,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_matrixemul:
 	case op_matrixmmu:
 	case op_matrixcpd:
+	case op_matrixopd:
 	case op_matrixpredict:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:

@@ -45,6 +45,7 @@ has_remote_or_replica( sql_rel *rel )
 	case op_matrixemul: 
 	case op_matrixmmu: 
 	case op_matrixcpd: 
+	case op_matrixopd: 
 	case op_matrixrqr: 
 	case op_matrixpredict: 
 
@@ -172,6 +173,7 @@ replica(mvc *sql, sql_rel *rel, char *uri)
 	case op_matrixemul:
 	case op_matrixmmu: 
 	case op_matrixcpd: 
+	case op_matrixopd: 
 	case op_matrixrqr: 
 	case op_matrixpredict: 
 
@@ -253,6 +255,7 @@ distribute(mvc *sql, sql_rel *rel)
 	case op_matrixemul:
 	case op_matrixmmu: 
 	case op_matrixcpd: 
+	case op_matrixopd: 
 	case op_matrixrqr: 
 	case op_matrixpredict: 
 
@@ -336,6 +339,7 @@ rel_remote_func(mvc *sql, sql_rel *rel)
 	case op_matrixemul:
 	case op_matrixmmu: 
 	case op_matrixcpd: 
+	case op_matrixopd: 
 	case op_matrixrqr: 
 	case op_matrixpredict: 
 

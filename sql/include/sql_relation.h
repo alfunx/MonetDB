@@ -135,7 +135,7 @@ typedef struct expression {
 #define DDL_ALTER_TABLE_DEL_TABLE  64
 #define DDL_ALTER_TABLE_SET_ACCESS  65
 
-#define MAXOPS 35
+#define MAXOPS 36
 
 typedef enum operator_type {
 	op_basetable = 0,
@@ -165,6 +165,7 @@ typedef enum operator_type {
 	op_matrixemul,
 	op_matrixmmu,
 	op_matrixcpd,
+	op_matrixopd,
 	op_matrixsqrt,
 	op_matrixinv,
 	op_matrixinvtriangular,
@@ -245,6 +246,8 @@ typedef enum operator_type {
 	(op == op_matrixmmu)
 #define is_matrixcpd(op) \
 	(op == op_matrixcpd)
+#define is_matrixopd(op) \
+	(op == op_matrixopd)
 #define is_matrixsqrt(op) \
 	(op == op_matrixsqrt)
 #define is_matrixinv(op) \

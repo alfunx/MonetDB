@@ -578,6 +578,7 @@ int yydebug=1;
 %token RQR
 %token MMU
 %token CPD
+%token OPD
 %token EMUL
 %token SUB
 %token LINPREDICT
@@ -2922,6 +2923,12 @@ joined_table:
 	  append_symbol(l, $1);
 	  append_symbol(l, $3);
 	  $$ = _symbol_create_list( SQL_MATRIXCPD, l); }
+
+ |  matrix_ref OPD matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $1);
+	  append_symbol(l, $3);
+	  $$ = _symbol_create_list( SQL_MATRIXOPD, l); }
 
  |  SQRT matrix_ref
 	{ dlist *l = L();

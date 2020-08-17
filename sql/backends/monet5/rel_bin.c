@@ -1418,7 +1418,8 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_matrixadd:
 	case op_matrixsub:
 	case op_matrixemul:
-	case op_matrixtransmul:
+	case op_matrixmmu:
+	case op_matrixcpd:
 	case op_matrixrqr:
 	case op_matrixpredict:
 
@@ -2438,7 +2439,76 @@ rel2bin_matrixemul(mvc *sql, sql_rel *rel, list *refs)
 }
 
 static stmt *
-rel2bin_matrixtransmul(mvc *sql, sql_rel *rel, list *refs)
+rel2bin_matrixmmu(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ra, *ld;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa, *roa;
+
+	// iterators
+	node *n, *m;
+
+	// counters
+	int i;
+
+	// temporary statements
+	stmt *s, *t, *e;
+
+	// process sub-relations
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	stmt *right = subrel_bin(sql, rel->r, refs);
+	assert(left && right);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+	stmt *orderby_idsr = gen_orderby_ids(sql, right, rel->rord);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	ra = sa_list(sql->sa);
+	ld = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	roa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps && rel->rexps);
+	partition_appl_desc(sql, left, rel->lexps, la, ld);
+	partition_appl_desc(sql, right, rel->rexps, ra, NULL);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsr, ra, roa);
+
+	// create matrixmul stmts
+	for (m = roa->h; m; m = m->next) {
+		t = NULL;
+
+		for (n = loa->h, i = 0; n; n = n->next, i++) {
+			s = stmt_atom_oid(sql->sa, i);
+			s = stmt_fetch(sql->sa, m->data, s);
+			s = stmt_vectormul(sql->sa, n->data, s);
+			if (t)
+				t = stmt_vectoradd(sql->sa, t, s);
+			else
+				t = s;
+		}
+
+		s = stmt_alias(sql->sa, t, table_name(sql->sa, m->data), column_name(sql->sa, m->data));
+		list_append(l, s);
+	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 {
 	// list of all statements (result)
 	list *l;
@@ -5917,7 +5987,8 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	SUBREL_BIN_MATRIX_CASE(matrixadd);
 	SUBREL_BIN_MATRIX_CASE(matrixsub);
 	SUBREL_BIN_MATRIX_CASE(matrixemul);
-	SUBREL_BIN_MATRIX_CASE(matrixtransmul);
+	SUBREL_BIN_MATRIX_CASE(matrixmmu);
+	SUBREL_BIN_MATRIX_CASE(matrixcpd);
 	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
 	SUBREL_BIN_MATRIX_CASE(matrixinv);
 	SUBREL_BIN_MATRIX_CASE(matrixinvtriangular);

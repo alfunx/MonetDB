@@ -2550,9 +2550,6 @@ rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, la, loa);
 	align_by_ids(sql, orderby_idsr, ra, roa);
 
-	// zero stmt
-	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
-
 	// append schema and order stmt
 	list_append(l, stmt_schema_column(sql, loa));
 	list_append(l, stmt_order_column(sql, loa));
@@ -2560,7 +2557,7 @@ rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 	// create matrixmul stmts
 	for (m = roa->h; m; m = m->next) {
 		t = m->data;
-		s = stmt_temp(sql->sa, tail_type(zero));
+		s = stmt_temp(sql->sa, tail_type(t));
 
 		for (n = loa->h; n; n = n->next) {
 			e = stmt_dotproduct(sql->sa, n->data, m->data);

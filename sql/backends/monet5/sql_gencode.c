@@ -1950,6 +1950,19 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_scalaradd:{
+			int  l, r;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			r = _dumpstmt(sql, mb, s->op2);
+			assert(l >= 0 && r >= 0);
+
+			q = newStmt(mb, calcRef, "+");
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, r);
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_vectoradd:{
 			int  l, r;
 
@@ -2026,6 +2039,17 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			assert(l >= 0);
 
 			q = newStmt(mb, aggrRef, "count");
+			q = pushArgument(mb, q, l);
+			s->nr = getDestVar(q);
+		}
+			break;
+		case st_sum:{
+			int l;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, aggrRef, "sum");
 			q = pushArgument(mb, q, l);
 			s->nr = getDestVar(q);
 		}

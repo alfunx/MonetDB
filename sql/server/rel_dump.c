@@ -294,6 +294,10 @@ op2string(operator_type op)
 		return "matrix mmu";
 	case op_matrixcpd:
 		return "matrix cpd";
+	case op_matrixcolsum:
+		return "matrix column sum";
+	case op_matrixrowsum:
+		return "matrix row sum";
 	case op_matrixsqrt:
 		return "matrix sqrt";
 	case op_matrixinv:
@@ -515,6 +519,8 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 		exps_print(sql, fout, rel->exps, depth, 1, 0);
 		break;
 
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -522,6 +528,10 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
 	case op_matrixyintercept:
+		if (rel->op == op_matrixcolsum)
+			r = "matrix column sum";
+		if (rel->op == op_matrixrowsum)
+			r = "matrix row sum";
 		if (rel->op == op_matrixsqrt)
 			r = "matrix sqrt";
 		if (rel->op == op_matrixinv)
@@ -674,6 +684,8 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 			list_append(refs, rel->r);
 		}
 		break;
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:

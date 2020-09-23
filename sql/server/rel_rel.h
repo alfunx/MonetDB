@@ -46,6 +46,8 @@ extern sql_rel *rel_inplace_groupby(sql_rel *rel, sql_rel *l, list *groupbyexps,
 extern sql_rel *rel_setop(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type setop);
 extern sql_rel *rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join);
 
+extern sql_rel *rel_matrixcolsum(sql_allocator *sa, sql_rel *l);
+extern sql_rel *rel_matrixrowsum(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixsqrt(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixinv(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixinvtriangular(sql_allocator *sa, sql_rel *l);

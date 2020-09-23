@@ -116,6 +116,8 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 		if (i->r)
 			rel->r = (i->r)?list_dup(i->r, (fdup)NULL):NULL;
 		break;
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -243,6 +245,8 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 		if (rel->l)
 			return rel_bind_column_(sql, p, rel->l, cname);
 
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -465,6 +469,8 @@ rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join)
 		return rel; \
 	}
 
+REL_MATRIX_UN(matrixcolsum);
+REL_MATRIX_UN(matrixrowsum);
 REL_MATRIX_UN(matrixsqrt);
 REL_MATRIX_UN(matrixinv);
 REL_MATRIX_UN(matrixinvtriangular);
@@ -899,6 +905,8 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_semi:
 	case op_anti:
 
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -955,6 +963,8 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_select:
 	case op_topn:
 	case op_sample:
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:

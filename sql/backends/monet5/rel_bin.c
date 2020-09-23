@@ -1436,6 +1436,8 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_groupby: 
 		if (rel->r) 
 			args = exps2bin_args(sql, rel->r, args);
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -2693,6 +2695,158 @@ rel2bin_matrixrqr(mvc *sql, sql_rel *rel, list *refs)
 		s = stmt_alias(sql->sa, s, table_name(sql->sa, t), column_name(sql->sa, t));
 		list_append(l, s);
 	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixcolsum(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa;
+
+	// iterators
+	node *n;
+
+	// counters
+	int i;
+
+	// temporary statements
+	stmt *s, *t, *f, *c;
+
+	// process sub-relation
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	assert(left);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps);
+	partition_appl_desc(sql, left, rel->lexps, la, NULL);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, la, loa);
+
+	// zero stmt
+	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
+
+	// create matrixcolsum stmts
+	if (rel->noopt) {
+		fprintf(stderr, "using naive algo, %d rows", rel->noopt);
+		for (n = loa->h; n; n = n->next) {
+			s = stmt_temp(sql->sa, tail_type(n->data));
+			t = NULL;
+			for (i = 0; i < rel->noopt; i++) {
+				c = stmt_atom_oid(sql->sa, i);
+				f = stmt_fetch(sql->sa, n->data, c);
+				if (t)
+					t = stmt_scalaradd(sql->sa, t, f);
+				else
+					t = f;
+			}
+			s = stmt_append(sql->sa, s, t);
+			s = stmt_alias(sql->sa, s, table_name(sql->sa, n->data), column_name(sql->sa, n->data));
+			list_append(l, s);
+		}
+	} else {
+		fprintf(stderr, "using vectorized algo");
+		for (n = loa->h; n; n = n->next) {
+			s = stmt_temp(sql->sa, tail_type(zero));
+			t = stmt_sum(sql->sa, n->data);
+			s = stmt_append(sql->sa, s, t);
+			s = stmt_alias(sql->sa, s, table_name(sql->sa, n->data), column_name(sql->sa, n->data));
+			list_append(l, s);
+		}
+	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixrowsum(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part and description part columns
+	list *la, *ld;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa;
+
+	// iterators
+	node *n;
+
+	// counters
+	int i;
+
+	// temporary statements
+	stmt *s, *t, *f, *c;
+
+	// process sub-relation
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	assert(left);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	//ld = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps);
+	partition_appl_desc(sql, left, rel->lexps, la, /*ld*/ NULL);
+
+	// align lists according to the orderby ids
+	//align_by_ids(sql, orderby_idsl, ld, l);
+	align_by_ids(sql, orderby_idsl, la, loa);
+
+	// prepare result statement
+	s = NULL;
+
+	// create matrixrowsum stmts
+	if (rel->noopt) {
+		fprintf(stderr, "using naive algo, %d rows", rel->noopt);
+		s = stmt_temp(sql->sa, tail_type(loa->h->data));
+		for (i = 0; i < rel->noopt; i++) {
+			t = NULL;
+			for (n = loa->h; n; n = n->next) {
+				c = stmt_atom_oid(sql->sa, i);
+				f = stmt_fetch(sql->sa, n->data, c);
+				if (t)
+					t = stmt_scalaradd(sql->sa, t, f);
+				else
+					t = f;
+			}
+			s = stmt_append(sql->sa, s, t);
+		}
+	} else {
+		fprintf(stderr, "using vectorized algo");
+		for (n = loa->h; n; n = n->next) {
+			if (s)
+				s = stmt_vectoradd(sql->sa, s, n->data);
+			else
+				s = n->data;
+		}
+	}
+
+	s = stmt_alias(sql->sa, s, NULL, "sum");
+	list_append(l, s);
 
 	return stmt_list(sql->sa, l);
 }
@@ -5986,6 +6140,8 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	SUBREL_BIN_MATRIX_CASE(matrixemul);
 	SUBREL_BIN_MATRIX_CASE(matrixmmu);
 	SUBREL_BIN_MATRIX_CASE(matrixcpd);
+	SUBREL_BIN_MATRIX_CASE(matrixcolsum);
+	SUBREL_BIN_MATRIX_CASE(matrixrowsum);
 	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
 	SUBREL_BIN_MATRIX_CASE(matrixinv);
 	SUBREL_BIN_MATRIX_CASE(matrixinvtriangular);

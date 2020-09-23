@@ -70,6 +70,8 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 		if (exps)
 			return exps;
 		return rel_table_projections( sql, rel->r, tname, level+1);
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -232,6 +234,8 @@ static sql_rel * rel_matrixsubquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixemulquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixmmuquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixcpdquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixcolsumquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixrowsumquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
@@ -434,6 +438,22 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_MATRIXCPD:
 	{
 		sql_rel *tq = rel_matrixcpdquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXCOLSUM:
+	{
+		sql_rel *tq = rel_matrixcolsumquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXROWSUM:
+	{
+		sql_rel *tq = rel_matrixrowsumquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3821,6 +3841,8 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_semi:
 	case op_anti:
 
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -5514,6 +5536,79 @@ rel_matrixcpdquery(mvc *sql, sql_rel *rel, symbol *q)
 	append(exps, order_column());
 	append(exps, schema_column());
 	append_exps(exps, sql, rel->rexps);
+
+	// set number of attributes in the result relation
+	rel->nrcols = list_length(exps);
+
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixcolsumquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *l_rel = table_ref(sql, rel, tab1);
+	if (!l_rel)
+		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
+
+	rel = rel_matrixcolsum(sql->sa, l_rel);
+	rel->lord = gen_orderby(sql, l_rel, tab2);
+	rel->lexps = gen_exps_list(sql, l_rel, tab3);
+
+	// set no-optimization flag
+	rel->noopt = n->next->data.i_val;
+
+	// select attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append_exps(exps, sql, rel->lexps);
+
+	// set number of attributes in the result relation
+	rel->nrcols = list_length(exps);
+
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixrowsumquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+
+	// resolve table refs
+	sql_rel *l_rel = table_ref(sql, rel, tab1);
+	if (!l_rel)
+		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
+
+	rel = rel_matrixrowsum(sql->sa, l_rel);
+	rel->lord = gen_orderby(sql, l_rel, tab2);
+	rel->lexps = gen_exps_list(sql, l_rel, tab3);
+
+	// select attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	append(exps, exp_column(sql->sa, NULL, "sum", NULL, 0, 0, 0));
+	//append_exps_except(exps, sql, l_rel, rel->lexps);
+
+	// set no-optimization flag
+	rel->noopt = n->next->data.i_val;
 
 	// set number of attributes in the result relation
 	rel->nrcols = list_length(exps);

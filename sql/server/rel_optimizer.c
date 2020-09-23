@@ -247,6 +247,8 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 		rel_properties(sql, gp, rel->l);
 		rel_properties(sql, gp, rel->r);
 		break;
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -298,6 +300,8 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_except: 
 		break;
 
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -7846,6 +7850,8 @@ rewrite(mvc *sql, sql_rel *rel, rewrite_fptr rewriter, int *has_changes)
 		rel->l = rewrite(sql, rel->l, rewriter, has_changes);
 		rel->r = rewrite(sql, rel->r, rewriter, has_changes);
 		break;
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:

@@ -97,12 +97,14 @@ typedef enum stmt_type {
 	st_assign,
 
 	st_logreg,
+	st_scalaradd,
 	st_vectoradd,
 	st_vectorsub,
 	st_vectormul,
 	st_vectordiv,
 	st_stepfunction,
 	st_count,
+	st_sum,
 	st_sigmoid,
 	st_fetch,
 	st_gathersqrt,
@@ -203,11 +205,13 @@ extern stmt *stmt_tdiff(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_tinter(sql_allocator *sa, stmt *op1, stmt *op2);
 
 extern stmt *stmt_logreg(sql_allocator *sa, list *l);
+extern stmt *stmt_scalaradd(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_vectoradd(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_vectorsub(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_vectormul(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_vectordiv(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_stepfunction(sql_allocator *sa, stmt *op1, stmt *op2);
+extern stmt *stmt_sum(sql_allocator *sa, stmt *op1);
 extern stmt *stmt_count(sql_allocator *sa, stmt *op1);
 extern stmt *stmt_sigmoid(sql_allocator *sa, stmt *op1);
 extern stmt *stmt_fetch(sql_allocator *sa, stmt *op1, stmt *op2);

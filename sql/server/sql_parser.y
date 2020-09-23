@@ -478,6 +478,7 @@ int yydebug=1;
 	window_frame_exclusion
 	subgeometry_type
 	opt_iterate_clause
+	opt_row_count
 
 %type <w_val>
 	wrdval
@@ -582,6 +583,7 @@ int yydebug=1;
 %token SUB
 %token LINPREDICT
 %token LOGPREDICT
+%token COLSUM ROWSUM
 
 /* operators */
 %left UNION EXCEPT INTERSECT CORRESPONDING UNIONJOIN
@@ -2847,6 +2849,11 @@ opt_gather_clause:
  |  GATHER selection		{ $$ = _symbol_create_list(SQL_GATHER, $2); }
  ;
 
+opt_row_count:
+    /* empty */ 		{ $$ = NULL; }
+ |  intval ROWS  		{ $$ = $1; }
+ ;
+
 matrix_ref:
    '(' table_ref ON selection opt_order_by_clause opt_gather_clause ')'
 	{ dlist *l = L();
@@ -2922,6 +2929,18 @@ joined_table:
 	  append_symbol(l, $1);
 	  append_symbol(l, $3);
 	  $$ = _symbol_create_list( SQL_MATRIXCPD, l); }
+
+ |  COLSUM matrix_ref opt_row_count
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_int(l, $3);
+	  $$ = _symbol_create_list( SQL_MATRIXCOLSUM, l); }
+
+ |  ROWSUM matrix_ref opt_row_count
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_int(l, $3);
+	  $$ = _symbol_create_list( SQL_MATRIXROWSUM, l); }
 
  |  SQRT matrix_ref
 	{ dlist *l = L();

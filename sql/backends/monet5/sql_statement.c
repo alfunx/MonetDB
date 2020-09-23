@@ -921,6 +921,16 @@ stmt_logreg(sql_allocator *sa, list *l)
 }
 
 stmt *
+stmt_scalaradd(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_scalaradd);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
 stmt_vectoradd(sql_allocator *sa, stmt *op1, stmt *op2)
 {
 	stmt *s = stmt_create(sa, st_vectoradd);
@@ -974,6 +984,15 @@ stmt *
 stmt_count(sql_allocator *sa, stmt *op1)
 {
 	stmt *s = stmt_create(sa, st_count);
+	s->op1 = op1;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *
+stmt_sum(sql_allocator *sa, stmt *op1)
+{
+	stmt *s = stmt_create(sa, st_sum);
 	s->op1 = op1;
 	s->nrcols = 1;
 	return s;

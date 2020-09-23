@@ -123,6 +123,8 @@ scanner_init_keywords(void)
 	keywords_insert("MMU", MMU);
 	keywords_insert("CPD", CPD);
 	keywords_insert("EMUL", EMUL);
+	keywords_insert("COLSUM", COLSUM);
+	keywords_insert("ROWSUM", ROWSUM);
 
 	keywords_insert("LAG", AGGR);
 	keywords_insert("LEAD", AGGR);

@@ -55,6 +55,8 @@ has_remote_or_replica( sql_rel *rel )
 		    has_remote_or_replica( rel->r ))
 			return 1;
 		break;
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -278,6 +280,8 @@ distribute(mvc *sql, sql_rel *rel)
 			rel->p = pl;
 		}
 		break;
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
@@ -345,6 +349,8 @@ rel_remote_func(mvc *sql, sql_rel *rel)
 		rel->l = rel_remote_func(sql, rel->l);
 		rel->r = rel_remote_func(sql, rel->r);
 		break;
+	case op_matrixcolsum:
+	case op_matrixrowsum:
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:

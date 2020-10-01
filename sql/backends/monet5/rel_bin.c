@@ -2739,12 +2739,9 @@ rel2bin_matrixcolsum(mvc *sql, sql_rel *rel, list *refs)
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, la, loa);
 
-	// zero stmt
-	stmt *zero = stmt_atom_dbl(sql->sa, 0.0);
-
 	// create matrixcolsum stmts
-	if (rel->noopt) {
-		fprintf(stderr, "using naive algo, %d rows", rel->noopt);
+	if (rel->noopt && rel->noopt > 1) {
+		fprintf(stderr, "using naive colsum algo, %d rows\n", rel->noopt);
 		for (n = loa->h; n; n = n->next) {
 			s = stmt_temp(sql->sa, tail_type(n->data));
 			t = NULL;
@@ -2761,9 +2758,9 @@ rel2bin_matrixcolsum(mvc *sql, sql_rel *rel, list *refs)
 			list_append(l, s);
 		}
 	} else {
-		fprintf(stderr, "using vectorized algo");
+		fprintf(stderr, "using vectorized colsum algo\n");
 		for (n = loa->h; n; n = n->next) {
-			s = stmt_temp(sql->sa, tail_type(zero));
+			s = stmt_temp(sql->sa, sql_bind_localtype("dbl"));
 			t = stmt_sum(sql->sa, n->data);
 			s = stmt_append(sql->sa, s, t);
 			s = stmt_alias(sql->sa, s, table_name(sql->sa, n->data), column_name(sql->sa, n->data));
@@ -2784,7 +2781,7 @@ rel2bin_matrixrowsum(mvc *sql, sql_rel *rel, list *refs)
 	list *la, *ld;
 
 	// ordered application part columns (desc part is directly appended to l)
-	list *loa;
+	list *loa, *_a, *_b;
 
 	// iterators
 	node *n;
@@ -2820,8 +2817,8 @@ rel2bin_matrixrowsum(mvc *sql, sql_rel *rel, list *refs)
 	s = NULL;
 
 	// create matrixrowsum stmts
-	if (rel->noopt) {
-		fprintf(stderr, "using naive algo, %d rows", rel->noopt);
+	if (rel->noopt && rel->noopt > 1) {
+		fprintf(stderr, "using naive rowsum algo, %d rows\n", rel->noopt);
 		s = stmt_temp(sql->sa, tail_type(loa->h->data));
 		for (i = 0; i < rel->noopt; i++) {
 			t = NULL;
@@ -2835,8 +2832,24 @@ rel2bin_matrixrowsum(mvc *sql, sql_rel *rel, list *refs)
 			}
 			s = stmt_append(sql->sa, s, t);
 		}
+	} else if (rel->noopt && rel->noopt <= 1) {
+		fprintf(stderr, "using vectorized balanced rowsum algo\n");
+		_a = list_dup(loa, NULL);
+		_b = sa_list(sql->sa);
+		while (list_length(_a) > 1) {
+			for (n = _a->h; n && n->next; n = n->next->next) {
+				s = stmt_vectoradd(sql->sa, n->data, n->next->data);
+				list_append(_b, s);
+			}
+			if (n)
+				list_prepend(_b, n->data);
+			list_destroy(_a);
+			_a = _b;
+			_b = sa_list(sql->sa);
+		}
+		s = _a->h->data;
 	} else {
-		fprintf(stderr, "using vectorized algo");
+		fprintf(stderr, "using vectorized rowsum algo\n");
 		for (n = loa->h; n; n = n->next) {
 			if (s)
 				s = stmt_vectoradd(sql->sa, s, n->data);

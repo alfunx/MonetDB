@@ -2160,6 +2160,43 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_iter: {
+			int l, res;
+			int hvar, tvar;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, iteratorRef, newRef);
+			hvar = newTmpVariable(mb, TYPE_any);
+			getArg(q, 0) = hvar;
+			tvar = newTmpVariable(mb, TYPE_any);
+			q = pushReturn(mb, q, tvar);
+			q = pushArgument(mb, q, l);
+
+			s->flag = hvar;
+			s->nr = tvar;
+		}
+			break;
+		case st_next: {
+			int l, r, res;
+			int hvar, tvar;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			r = _dumpstmt(sql, mb, s->op2);
+			assert(l >= 0 && r >= 0);
+
+			q = newStmt(mb, iteratorRef, nextRef);
+			hvar = s->op2->flag;
+			getArg(q, 0) = hvar;
+			tvar = newTmpVariable(mb, TYPE_any);
+			q = pushReturn(mb, q, tvar);
+			q = pushArgument(mb, q, l);
+
+			s->flag = hvar;
+			s->nr = tvar;
+		}
+			break;
 		case st_one: {
 			int l, res;
 			l = _dumpstmt(sql, mb, s->op1);

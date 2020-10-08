@@ -368,6 +368,8 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_normalize:
 			case st_orthogonalize:
 			case st_one:
+			case st_iter:
+			case st_next:
 				if (s->op1)
 					push(s->op1);
 				if (s->op2)
@@ -1036,10 +1038,25 @@ stmt_orthogonalize(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *stmt_one(sql_allocator *sa, stmt *op1) {
-  stmt *s = stmt_create(sa, st_one);
-  s->op1 = op1;
-  s->nrcols = 1;
-  return s;
+	stmt *s = stmt_create(sa, st_one);
+	s->op1 = op1;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *stmt_iter(sql_allocator *sa, stmt *op1) {
+	stmt *s = stmt_create(sa, st_iter);
+	s->op1 = op1;
+	s->nrcols = 1;
+	return s;
+}
+
+stmt *stmt_next(sql_allocator *sa, stmt *op1, stmt *op2) {
+	stmt *s = stmt_create(sa, st_next);
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	return s;
 }
 
 stmt *
@@ -1403,6 +1420,8 @@ tail_type(stmt *st)
 	case st_normalize:
 	case st_orthogonalize:
 	case st_one:
+	case st_iter:
+	case st_next:
 		return tail_type(st->op1);
 
 	case st_list:
@@ -1570,6 +1589,8 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_normalize:
 	case st_orthogonalize:
 	case st_one:
+	case st_iter:
+	case st_next:
 		return column_name(sa, st->op1);
 	case st_Nop:
 	{
@@ -1655,6 +1676,8 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_normalize:
 	case st_orthogonalize:
 	case st_one:
+	case st_iter:
+	case st_next:
 		return table_name(sa, st->op1);
 
 	case st_table_clear:
@@ -1726,6 +1749,8 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_normalize:
 	case st_orthogonalize:
 	case st_one:
+	case st_iter:
+	case st_next:
 		return schema_name(sa, st->op1);
 	case st_alias:
 		/* there are no schema aliases, ie look into the base column */

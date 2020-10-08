@@ -2819,14 +2819,12 @@ rel2bin_matrixrowsum(mvc *sql, sql_rel *rel, list *refs)
 		fprintf(stderr, "using naive rowsum algo, %d rows\n", rel->noopt);
 		s = stmt_temp(sql->sa, tail_type(loa->h->data));
 		for (i = 0; i < rel->noopt; i++) {
-			t = NULL;
-			for (n = loa->h; n; n = n->next) {
+			c = stmt_atom_oid(sql->sa, i);
+			t = stmt_fetch(sql->sa, loa->h->data, c);
+			for (n = loa->h->next; n; n = n->next) {
 				c = stmt_atom_oid(sql->sa, i);
 				f = stmt_fetch(sql->sa, n->data, c);
-				if (t)
-					t = stmt_scalaradd(sql->sa, t, f);
-				else
-					t = f;
+				t = stmt_scalaradd(sql->sa, t, f);
 			}
 			s = stmt_append(sql->sa, s, t);
 		}
@@ -2848,11 +2846,9 @@ rel2bin_matrixrowsum(mvc *sql, sql_rel *rel, list *refs)
 		s = _a->h->data;
 	} else {
 		fprintf(stderr, "using vectorized rowsum algo\n");
-		for (n = loa->h; n; n = n->next) {
-			if (s)
-				s = stmt_vectoradd(sql->sa, s, n->data);
-			else
-				s = n->data;
+		s = n->data;
+		for (n = loa->h->next; n; n = n->next) {
+			s = stmt_vectoradd(sql->sa, s, n->data);
 		}
 	}
 

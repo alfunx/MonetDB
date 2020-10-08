@@ -2743,16 +2743,14 @@ rel2bin_matrixcolsum(mvc *sql, sql_rel *rel, list *refs)
 	if (rel->noopt && rel->noopt > 1) {
 		fprintf(stderr, "using naive colsum algo, %d rows\n", rel->noopt);
 		for (n = loa->h; n; n = n->next) {
-			s = stmt_temp(sql->sa, tail_type(n->data));
-			t = NULL;
-			for (i = 0; i < rel->noopt; i++) {
+			c = stmt_atom_oid(sql->sa, 0);
+			t = stmt_fetch(sql->sa, n->data, c);
+			for (i = 1; i < rel->noopt; i++) {
 				c = stmt_atom_oid(sql->sa, i);
 				f = stmt_fetch(sql->sa, n->data, c);
-				if (t)
-					t = stmt_scalaradd(sql->sa, t, f);
-				else
-					t = f;
+				t = stmt_scalaradd(sql->sa, t, f);
 			}
+			s = stmt_temp(sql->sa, tail_type(n->data));
 			s = stmt_append(sql->sa, s, t);
 			s = stmt_alias(sql->sa, s, table_name(sql->sa, n->data), column_name(sql->sa, n->data));
 			list_append(l, s);

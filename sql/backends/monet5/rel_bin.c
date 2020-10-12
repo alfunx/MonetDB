@@ -2741,13 +2741,11 @@ rel2bin_matrixcolsum(mvc *sql, sql_rel *rel, list *refs)
 
 	// create matrixcolsum stmts
 	if (rel->noopt && rel->noopt > 1) {
-		fprintf(stderr, "using naive colsum algo, %d rows\n", rel->noopt);
+		fprintf(stderr, "using iter colsum algo, %d rows\n", rel->noopt);
 		for (n = loa->h; n; n = n->next) {
-			c = stmt_atom_oid(sql->sa, 0);
-			t = stmt_fetch(sql->sa, n->data, c);
+			t = f = stmt_iter(sql->sa, n->data);
 			for (i = 1; i < rel->noopt; i++) {
-				c = stmt_atom_oid(sql->sa, i);
-				f = stmt_fetch(sql->sa, n->data, c);
+				f = stmt_next(sql->sa, n->data, f);
 				t = stmt_scalaradd(sql->sa, t, f);
 			}
 			s = stmt_temp(sql->sa, tail_type(n->data));

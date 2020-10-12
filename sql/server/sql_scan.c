@@ -122,7 +122,7 @@ scanner_init_keywords(void)
 	keywords_insert("LOGPREDICT", LOGPREDICT);
 	keywords_insert("MMU", MMU);
 	keywords_insert("CPD", CPD);
-	keywords_insert("EMUL", EMUL);
+	keywords_insert("MUL", MUL);
 
 	keywords_insert("LAG", AGGR);
 	keywords_insert("LEAD", AGGR);

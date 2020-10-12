@@ -3073,6 +3073,9 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 static int
 backend_dumpstmt(backend *be, MalBlkPtr mb, stmt *s, int top, int add_end)
 {
+struct timeval tval_before, tval_after, tval_result;
+gettimeofday(&tval_before, NULL);
+
 	mvc *c = be->mvc;
 	stmt **stmts = stmt_array(c->sa, s);
 	InstrPtr q;
@@ -3110,6 +3113,10 @@ backend_dumpstmt(backend *be, MalBlkPtr mb, stmt *s, int top, int add_end)
 	}
 	if (add_end)
 		pushEndInstruction(mb);
+gettimeofday(&tval_after, NULL);
+timersub(&tval_after, &tval_before, &tval_result);
+printf("sql_gencode.c: Time elapsed: %ld.%06lds\n", (long int)tval_result.tv_sec, (long int)tval_result.tv_usec);
+
 	return 0;
 }
 

@@ -2739,6 +2739,9 @@ rel2bin_matrixcolsum(mvc *sql, sql_rel *rel, list *refs)
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, la, loa);
 
+struct timeval tval_before, tval_after, tval_result;
+gettimeofday(&tval_before, NULL);
+
 	// create matrixcolsum stmts
 	if (rel->noopt && rel->noopt > 1) {
 		fprintf(stderr, "using iter colsum algo, %d rows\n", rel->noopt);
@@ -2763,6 +2766,10 @@ rel2bin_matrixcolsum(mvc *sql, sql_rel *rel, list *refs)
 			list_append(l, s);
 		}
 	}
+
+gettimeofday(&tval_after, NULL);
+timersub(&tval_after, &tval_before, &tval_result);
+printf("rel_bin.c: Time elapsed: %ld.%06lds\n", (long int)tval_result.tv_sec, (long int)tval_result.tv_usec);
 
 	return stmt_list(sql->sa, l);
 }
@@ -2812,6 +2819,9 @@ rel2bin_matrixrowsum(mvc *sql, sql_rel *rel, list *refs)
 	// prepare result statement
 	s = NULL;
 
+struct timeval tval_before, tval_after, tval_result;
+gettimeofday(&tval_before, NULL);
+
 	// create matrixrowsum stmts
 	if (rel->noopt && rel->noopt > 1) {
 		fprintf(stderr, "using naive rowsum algo, %d rows\n", rel->noopt);
@@ -2849,6 +2859,10 @@ rel2bin_matrixrowsum(mvc *sql, sql_rel *rel, list *refs)
 			s = stmt_vectoradd(sql->sa, s, n->data);
 		}
 	}
+
+gettimeofday(&tval_after, NULL);
+timersub(&tval_after, &tval_before, &tval_result);
+printf("rel_bin.c: Time elapsed: %ld.%06lds\n", (long int)tval_result.tv_sec, (long int)tval_result.tv_usec);
 
 	s = stmt_alias(sql->sa, s, NULL, "sum");
 	list_append(l, s);

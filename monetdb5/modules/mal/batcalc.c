@@ -1692,3 +1692,92 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 
 	return MAL_SUCCEED;
 }
+
+str
+CMDbatMMUsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int argc = pci->argc;
+	int tp;
+
+	// BATs
+	BAT *obat, *bbat, *abat;
+	bat *obid, *bbid, *abid;
+
+	// BAT tails
+	double *oval;
+	const double *bval;
+	const double **aval;
+
+	// matrix dimensions
+	BUN a, b;
+
+	// iterators
+	int i, j, k;
+
+	// check BATs
+	for (i = 1; i < argc; ++i) {
+		tp = stk->stk[getArg(pci, i)].vtype;
+		assert(tp == TYPE_bat || isaBatType(tp));
+
+		abid = getArgReference_bat(stk, pci, i);
+		abat = BATdescriptor(*abid);
+
+		assert(abat != NULL && abat->T->type == TYPE_dbl);
+		assert(BAThdense(abat));
+	}
+
+	// BAT B (one column from right matrix)
+	bbid = getArgReference_bat(stk, pci, 1);
+	bbat = BATdescriptor(*bbid);
+	bval = (const double*) Tloc(bbat, BUNfirst(bbat));
+
+	// counts
+	a = BATcount(abat);
+	b = BATcount(bbat);
+	assert(b == argc - 2);
+
+	// result coefficients
+	obid = getArgReference_bat(stk, pci, 0);
+	obat = BATnew(TYPE_void, abat->T->type, a, TRANSIENT);
+	oval = (double*) Tloc(obat, BUNfirst(obat));
+
+	// prepare result BAT
+	BATsetcount(obat, a);
+	BATseqbase(obat, obat->H->seq);
+	obat->T->sorted = 0;
+	obat->T->revsorted = 0;
+	obat->T->key = 0;
+	BBPkeepref(*obid = obat->batCacheid);
+
+	// A BATs (full left matrix)
+	aval = malloc(b * sizeof (double*));
+	if (aval == NULL) {
+		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (i = 0; i < b; ++i) {
+		abid = getArgReference_bat(stk, pci, i + 2);
+		abat = BATdescriptor(*abid);
+		aval[i] = (const double*) Tloc(abat, BUNfirst(abat));
+		assert(a == BATcount(abat));
+	}
+
+	// for (j = 0; j < a; ++j) {
+	// 	oval[j] = 0;
+	// 	for (i = 0; i < b; ++i) {
+	// 		oval[j] += aval[i][j] * bval[i];
+	// 	}
+	// }
+
+	for (j = 0; j < a; oval[j++] = 0.0);
+	for (i = 0; i < b; ++i) {
+		int x = bval[i];
+		for (j = 0; j < a; ++j) {
+			oval[j] += aval[i][j] * x;
+		}
+	}
+
+	free(aval);
+
+	return MAL_SUCCEED;
+}

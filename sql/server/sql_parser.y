@@ -578,7 +578,7 @@ int yydebug=1;
 %token RQR
 %token MMU
 %token CPD
-%token EMUL
+%token MUL
 %token SUB
 %token LINPREDICT
 %token LOGPREDICT
@@ -2904,7 +2904,7 @@ joined_table:
 	  append_int(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXSUB, l); }
 
- |  matrix_ref EMUL matrix_ref opt_no_optimize
+ |  matrix_ref MUL matrix_ref opt_no_optimize
 	{ dlist *l = L();
 	  append_symbol(l, $1);
 	  append_symbol(l, $3);

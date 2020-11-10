@@ -1950,6 +1950,25 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_mmu:{
+			int l;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, batcalcRef, "mmu");
+			q = pushArgument(mb, q, l);
+
+			// push input parameters and BATs
+			for (n = s->op4.lval->h; n; n = n->next) {
+				l = _dumpstmt(sql, mb, n->data);
+				assert (l >= 0);
+				q  = pushArgument(mb, q, l);
+			}
+
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_vectoradd:{
 			int  l, r;
 
@@ -2161,8 +2180,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 		}
 			break;
 		case st_iter: {
-			int l, res;
-			int hvar, tvar;
+			int l, hvar, tvar;
 
 			l = _dumpstmt(sql, mb, s->op1);
 			assert(l >= 0);
@@ -2179,12 +2197,10 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 		}
 			break;
 		case st_next: {
-			int l, r, res;
-			int hvar, tvar;
+			int l, hvar, tvar;
 
 			l = _dumpstmt(sql, mb, s->op1);
-			r = _dumpstmt(sql, mb, s->op2);
-			assert(l >= 0 && r >= 0);
+			assert(l >= 0);
 
 			q = newStmt(mb, iteratorRef, nextRef);
 			hvar = s->op2->flag;

@@ -2457,7 +2457,7 @@ rel2bin_matrixmmu(mvc *sql, sql_rel *rel, list *refs)
 	int i;
 
 	// temporary statements
-	stmt *s, *t, *e;
+	stmt *s, *t, *f;
 
 	// process sub-relations
 	stmt *left = subrel_bin(sql, rel->l, refs);
@@ -2486,21 +2486,41 @@ rel2bin_matrixmmu(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, la, loa);
 	align_by_ids(sql, orderby_idsr, ra, roa);
 
-	// create matrixmul stmts
+	// // create matrixmmu stmts (fetch)
+	// for (m = roa->h; m; m = m->next) {
+	// 	s = stmt_atom_oid(sql->sa, 0);
+	// 	s = stmt_fetch(sql->sa, m->data, s);
+	// 	t = stmt_vectormul(sql->sa, loa->h->data, s);
+	//
+	// 	for (n = loa->h->next, i = 1; n; n = n->next, ++i) {
+	// 		s = stmt_atom_oid(sql->sa, i);
+	// 		s = stmt_fetch(sql->sa, m->data, s);
+	// 		s = stmt_vectormul(sql->sa, n->data, s);
+	// 		t = stmt_vectoradd(sql->sa, t, s);
+	// 	}
+	//
+	// 	s = stmt_alias(sql->sa, t, table_name(sql->sa, m->data), column_name(sql->sa, m->data));
+	// 	list_append(l, s);
+	// }
+
+	// // create matrixmmu stmts (iterator)
+	// for (m = roa->h; m; m = m->next) {
+	// 	f = stmt_iter(sql->sa, m->data);
+	// 	t = stmt_vectormul(sql->sa, loa->h->data, f);
+	//
+	// 	for (n = loa->h->next; n; n = n->next) {
+	// 		f = stmt_next(sql->sa, m->data, f);
+	// 		s = stmt_vectormul(sql->sa, n->data, f);
+	// 		t = stmt_vectoradd(sql->sa, t, s);
+	// 	}
+	//
+	// 	s = stmt_alias(sql->sa, t, table_name(sql->sa, m->data), column_name(sql->sa, m->data));
+	// 	list_append(l, s);
+	// }
+
+	// create matrixmmu stmts (mmu BAT operation)
 	for (m = roa->h; m; m = m->next) {
-		t = NULL;
-
-		for (n = loa->h, i = 0; n; n = n->next, i++) {
-			s = stmt_atom_oid(sql->sa, i);
-			s = stmt_fetch(sql->sa, m->data, s);
-			s = stmt_vectormul(sql->sa, n->data, s);
-			if (t)
-				t = stmt_vectoradd(sql->sa, t, s);
-			else
-				t = s;
-		}
-
-		s = stmt_alias(sql->sa, t, table_name(sql->sa, m->data), column_name(sql->sa, m->data));
+		s = stmt_mmu(sql->sa, m->data, loa);
 		list_append(l, s);
 	}
 

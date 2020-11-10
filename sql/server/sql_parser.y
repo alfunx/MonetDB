@@ -574,6 +574,7 @@ int yydebug=1;
 %token STEPSIZE
 %token TOLERANCE
 %token INV
+%token TRA
 %token QQR
 %token RQR
 %token MMU
@@ -2932,6 +2933,11 @@ joined_table:
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  $$ = _symbol_create_list( SQL_MATRIXINV, l); }
+
+ |  TRA matrix_ref
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  $$ = _symbol_create_list( SQL_MATRIXTRA, l); }
 
  |  QQR matrix_ref
 	{ dlist *l = L();

@@ -250,6 +250,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -301,6 +302,7 @@ rel_properties(mvc *sql, global_props *gp, sql_rel *rel)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -7849,6 +7851,7 @@ rewrite(mvc *sql, sql_rel *rel, rewrite_fptr rewriter, int *has_changes)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:

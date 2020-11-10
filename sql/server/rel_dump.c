@@ -300,6 +300,8 @@ op2string(operator_type op)
 		return "matrix inv";
 	case op_matrixinvtriangular:
 		return "matrix inv triangular";
+	case op_matrixtra:
+		return "matrix tra";
 	case op_matrixqqr:
 		return "matrix qqr";
 	case op_matrixrqr:
@@ -518,6 +520,7 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -528,6 +531,8 @@ rel_print_(mvc *sql, stream  *fout, sql_rel *rel, int depth, list *refs, int dec
 			r = "matrix inv";
 		if (rel->op == op_matrixinvtriangular)
 			r = "matrix inv triangular";
+		if (rel->op == op_matrixtra)
+			r = "matrix tra";
 		if (rel->op == op_matrixqqr)
 			r = "matrix qqr";
 		if (rel->op == op_matrixsigmoid)
@@ -677,6 +682,7 @@ rel_print_refs(mvc *sql, stream* fout, sql_rel *rel, int depth, list *refs, int 
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:

@@ -58,6 +58,7 @@ has_remote_or_replica( sql_rel *rel )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -281,6 +282,7 @@ distribute(mvc *sql, sql_rel *rel)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -348,6 +350,7 @@ rel_remote_func(mvc *sql, sql_rel *rel)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:

@@ -215,6 +215,7 @@ int yydebug=1;
 	like_table
 	domain_constraint_type 
 	opt_order_by_clause
+	opt_application_clause
 	opt_gather_clause
 	default
 	default_value
@@ -2843,18 +2844,23 @@ opt_tolerance_clause:
  |  TOLERANCE INTNUM		{ $$ = $2; }
  ;
 
+opt_application_clause:
+    /* empty */ 		{ $$ = NULL; }
+ |  ON selection		{ $$ = $2; }
+ ;
+
 opt_gather_clause:
     /* empty */ 		{ $$ = NULL; }
  |  GATHER selection		{ $$ = _symbol_create_list(SQL_GATHER, $2); }
  ;
 
 matrix_ref:
-   '(' table_ref ON selection opt_order_by_clause opt_gather_clause ')'
+   '(' table_ref opt_application_clause opt_order_by_clause opt_gather_clause ')'
 	{ dlist *l = L();
 	  append_symbol(l, $2);
+	  append_symbol(l, $4);
+	  append_list(l, $3);
 	  append_symbol(l, $5);
-	  append_list(l, $4);
-	  append_symbol(l, $6);
 	  $$ = _symbol_create_list( SQL_MATRIX, l); }
  ;
 

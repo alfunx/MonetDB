@@ -1736,7 +1736,7 @@ CMDbatMMUsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	b = BATcount(bbat);
 	assert(b == argc - 2);
 
-	// result coefficients
+	// result BAT
 	obid = getArgReference_bat(stk, pci, 0);
 	obat = BATnew(TYPE_void, abat->T->type, a, TRANSIENT);
 	oval = (double*) Tloc(obat, BUNfirst(obat));

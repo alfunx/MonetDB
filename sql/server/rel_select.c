@@ -5605,6 +5605,8 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 	return rel;
 }
 
+#define TRA_TUPLE_COUNT 5
+
 static sql_rel *
 rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 {
@@ -5625,17 +5627,23 @@ rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	rel = rel_matrixtra(sql->sa, l_rel);
 	rel->lord = gen_orderby(sql, l_rel, tab2);
-	rel->lexps = rel_projections(sql, l_rel, NULL, 1, 0);
+	if (tab3)
+		rel->lexps = gen_exps_list(sql, l_rel, tab3);
+	else
+		rel->lexps = rel_projections(sql, l_rel, NULL, 1, 0);
 
-	// // select attributes for result relation
-	// list *exps = new_exp_list(sql->sa);
-	// append_exps_except(exps, sql, l_rel, rel->lexps);
-	// append_exps(exps, sql, rel->lexps);
+	// select attributes for result relation
+	list *exps = new_exp_list(sql->sa);
+	for (int i = 0; i < TRA_TUPLE_COUNT; ++i) {
+		char *nme = GDKmalloc(IDLENGTH);
+		snprintf(nme, IDLENGTH, "t%d", i);
+		append(exps, exp_column(sql->sa, NULL, nme, NULL, 0, 0, 0));
+	}
 
-	// // set number of attributes in the result relation
-	// rel->nrcols = list_length(exps);
+	// set number of attributes in the result relation
+	rel->nrcols = list_length(exps);
 
-	// rel = rel_project(sql->sa, rel, exps);
+	rel = rel_project(sql->sa, rel, exps);
 	return rel;
 }
 

@@ -985,6 +985,26 @@ renameVariable(MalBlkPtr mb, int id, str pattern, int newid)
 		GDKerror("renameVariable" MAL_MALLOC_FAIL);
 }
 
+/* generate a new variable name based on a pattern with 2 %d arguments*/
+void
+renameVariableExt(MalBlkPtr mb, int id, str pattern, int newid1, int newid2)
+{
+	VarPtr v;
+	str nme;
+	assert(id >=0 && id <mb->vtop);
+	v = getVar(mb, id);
+
+	if (v->name)
+		GDKfree(v->name);
+	nme= GDKmalloc(IDLENGTH);
+	if( nme) {
+		snprintf(nme,IDLENGTH,pattern,newid1,newid2);
+		v->name = nme;
+		v->tmpindex = 0;
+	} else
+		GDKerror("renameVariable" MAL_MALLOC_FAIL);
+}
+
 int
 newTmpVariable(MalBlkPtr mb, malType type)
 {

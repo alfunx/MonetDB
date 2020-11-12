@@ -2592,6 +2592,8 @@ rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 	return stmt_list(sql->sa, l);
 }
 
+#define TRA_TUPLE_COUNT 5
+
 static stmt *
 rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 {
@@ -2629,14 +2631,18 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, la, loa);
 
-	// create tra stmts
-	for (n = loa->h; n; n = n->next) {
-		s = stmt_normalize(sql->sa, n->data);
-		list_append(l, s);
-		for (m = n->next; m; m = m->next) {
-			t = stmt_orthogonalize(sql->sa, m->data, s);
-			m->data = t;
-		}
+	// create tra stmt, represents first output BAT
+	s = stmt_tra(sql->sa, loa);
+	s = stmt_alias(sql->sa, s, NULL, "t0");
+	list_append(l, s);
+
+	// get the remaining output BATs
+	for (int i = 1; i < TRA_TUPLE_COUNT; ++i) {
+		char *nme = GDKmalloc(IDLENGTH);
+		snprintf(nme, IDLENGTH, "t%d", i);
+		t = stmt_result(sql->sa, s, i);
+		t = stmt_alias(sql->sa, t, NULL, nme);
+		list_append(l, t);
 	}
 
 	return stmt_list(sql->sa, l);

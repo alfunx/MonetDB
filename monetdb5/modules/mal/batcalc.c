@@ -1694,6 +1694,93 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 }
 
 str
+CMDbatTRAsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int argc = pci->argc;
+	int tp;
+
+	// BATs
+	BAT *obat, *abat;
+	bat *obid, *abid;
+
+	// BAT tails
+	double **oval;
+	const double **aval;
+
+	// matrix dimensions
+	BUN a_len;
+	int a_wdt, a_wdt_index;
+
+	// iterators
+	int i, j, k;
+
+	// find width parameter index
+	for (i = 0; i < argc; ++i) {
+		tp = stk->stk[getArg(pci, i)].vtype;
+		if (tp == TYPE_int) {
+			a_wdt_index = i;
+			break;
+		}
+	}
+
+	// input matrix width
+	tp = stk->stk[getArg(pci, a_wdt_index)].vtype;
+	a_wdt = *getArgReference_int(stk, pci, a_wdt_index);
+
+	// input matrix length
+	abid = getArgReference_bat(stk, pci, a_wdt_index + 1);
+	abat = BATdescriptor(*abid);
+	a_len = BATcount(abat);
+	assert(a_len == a_wdt_index);
+
+	// result BATs
+	oval = malloc(a_len * sizeof (double*));
+	if (oval == NULL) {
+		fprintf(stderr, "Memory for output BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (i = 0; i < a_wdt_index; ++i) {
+		obid = getArgReference_bat(stk, pci, i);
+		obat = BATnew(TYPE_void, abat->T->type, a_wdt, TRANSIENT);
+		oval[i] = (double*) Tloc(obat, BUNfirst(obat));
+		BATsetcount(obat, a_wdt);
+		BATseqbase(obat, abat->H->seq);
+		obat->T->sorted = 0;
+		obat->T->revsorted = 0;
+		obat->T->key = 0;
+		BBPkeepref(*obid = obat->batCacheid);
+	}
+
+	// A BATs (full left matrix)
+	aval = malloc(a_wdt * sizeof (double*));
+	if (aval == NULL) {
+		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (i = 0; i < a_wdt; ++i) {
+		tp = stk->stk[getArg(pci, i + a_wdt_index + 1)].vtype;
+		assert(tp == TYPE_bat || isaBatType(tp));
+		abid = getArgReference_bat(stk, pci, i + a_wdt_index + 1);
+		abat = BATdescriptor(*abid);
+		aval[i] = (const double*) Tloc(abat, BUNfirst(abat));
+		assert(a_len == BATcount(abat));
+		assert(abat != NULL && abat->T->type == TYPE_dbl);
+		assert(BAThdense(abat));
+	}
+
+	for (i = 0; i < a_len; ++i) {
+		for (j = 0; j < a_wdt; ++j) {
+			oval[i][j] = aval[j][i];
+		}
+	}
+
+	free(aval);
+	free(oval);
+
+	return MAL_SUCCEED;
+}
+
+str
 CMDbatMMUsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 {
 	int argc = pci->argc;

@@ -2575,17 +2575,23 @@ rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 	list_append(l, stmt_schema_column(sql, loa));
 	list_append(l, stmt_order_column(sql, loa));
 
-	// create matrixmul stmts
+	// // create matrixcpd stmts
+	// for (m = roa->h; m; m = m->next) {
+	// 	t = m->data;
+	// 	s = stmt_temp(sql->sa, tail_type(t));
+	//
+	// 	for (n = loa->h; n; n = n->next) {
+	// 		e = stmt_dotproduct(sql->sa, n->data, m->data);
+	// 		s = stmt_append(sql->sa, s, e);
+	// 	}
+	//
+	// 	s = stmt_alias(sql->sa, s, table_name(sql->sa, t), column_name(sql->sa, t));
+	// 	list_append(l, s);
+	// }
+
+	// create matrixcpd stmts (cpd BAT operation)
 	for (m = roa->h; m; m = m->next) {
-		t = m->data;
-		s = stmt_temp(sql->sa, tail_type(t));
-
-		for (n = loa->h; n; n = n->next) {
-			e = stmt_dotproduct(sql->sa, n->data, m->data);
-			s = stmt_append(sql->sa, s, e);
-		}
-
-		s = stmt_alias(sql->sa, s, table_name(sql->sa, t), column_name(sql->sa, t));
+		s = stmt_cpd(sql->sa, m->data, loa);
 		list_append(l, s);
 	}
 

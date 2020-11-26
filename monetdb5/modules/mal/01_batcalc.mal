@@ -21125,6 +21125,10 @@ pattern mmu(b:bat[:dbl], a:bat[:dbl]...) :bat[:dbl]
 address CMDbatMMUsignal
 comment "Return BAT after MMU, overflow causes NIL value";
 
+pattern tra(a:bat[:any]...) (:bat[:any]...)
+address CMDbatTRAsignal
+comment "Return BAT after TRA, overflow causes NIL value";
+
 pattern !(b1:bat[:flt],b2:bat[:flt]) :bat[:flt]
 address CMDbatGSQRTsignal
 comment "Return sqrt(B2), grouped by B1, signal error on overflow";

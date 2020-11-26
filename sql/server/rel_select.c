@@ -73,6 +73,7 @@ rel_table_projections( mvc *sql, sql_rel *rel, char *tname, int level )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -234,6 +235,7 @@ static sql_rel * rel_matrixmmuquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixcpdquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixsqrtquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q);
+static sql_rel * rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixqqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery(mvc *sql, sql_rel *rel, symbol *q);
 static sql_rel * rel_matrixrqrquery_simple(mvc *sql, sql_rel *rel, symbol *q);
@@ -450,6 +452,14 @@ query_exp_optname(mvc *sql, sql_rel *r, symbol *q)
 	case SQL_MATRIXINV:
 	{
 		sql_rel *tq = rel_matrixinvquery(sql, r, q);
+
+		if (!tq)
+			return NULL;
+		return rel_table_optname(sql, tq, q->data.lval->t->data.sym);
+	}
+	case SQL_MATRIXTRA:
+	{
+		sql_rel *tq = rel_matrixtraquery(sql, r, q);
 
 		if (!tq)
 			return NULL;
@@ -3824,6 +3834,7 @@ rel_projections_(mvc *sql, sql_rel *rel)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -5586,6 +5597,55 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 	append(exps, schema_column());
 	append_exps_except(exps, sql, l_rel, rel->lexps);
 	append_exps(exps, sql, rel->lexps);
+
+	// set number of attributes in the result relation
+	rel->nrcols = list_length(exps);
+
+	rel = rel_project(sql->sa, rel, exps);
+	return rel;
+}
+
+static sql_rel *
+rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
+{
+	dnode *n = q->data.lval->h;
+
+	// read data from symbol tree
+	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
+	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
+	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	dlist  *tab4 = n->next->data.lval;
+
+	// resolve table refs
+	sql_rel *l_rel = table_ref(sql, rel, tab1);
+	if (!l_rel)
+		return NULL;
+
+	// for relation name
+	int nr = ++sql->label;
+
+	rel = rel_matrixtra(sql->sa, l_rel);
+	rel->lord = gen_orderby(sql, l_rel, tab2);
+	if (tab3)
+		rel->lexps = gen_exps_list(sql, l_rel, tab3);
+	else
+		rel->lexps = rel_projections(sql, l_rel, NULL, 1, 0);
+
+	// store attributes for result relation
+	sql_exp *e = rel->lexps->h->data;
+	list *exps = new_exp_list(sql->sa);
+	rel->exps  = new_exp_list(sql->sa);
+	rel->rexps = new_exp_list(sql->sa);
+	char *nme = tab2->data.lval->h->data.sym->data.lval->h->data.sym->data.lval->h->data.sval;
+	append(rel->rexps, nme);
+	append(exps,       exp_column(sql->sa, NULL, nme, exp_subtype(e), 3, 0, 0));
+	// append(exps,       exp_alias_or_copy(sql, NULL, nme, l_rel, e));
+	for (n = tab4->h; n; n = n->next) {
+		nme = n->data.sval;
+		append(rel->exps, nme);
+		append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(e), 3, 0, 0));
+		// append(exps, exp_alias_or_copy(sql, NULL, nme, l_rel, e));
+	}
 
 	// set number of attributes in the result relation
 	rel->nrcols = list_length(exps);

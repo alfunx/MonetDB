@@ -119,6 +119,7 @@ rel_copy( sql_allocator *sa, sql_rel *i )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixrqr:
 	case op_matrixadd:
@@ -246,6 +247,7 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixrqr:
 	case op_matrixadd:
@@ -468,6 +470,7 @@ rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, operator_type join)
 REL_MATRIX_UN(matrixsqrt);
 REL_MATRIX_UN(matrixinv);
 REL_MATRIX_UN(matrixinvtriangular);
+REL_MATRIX_UN(matrixtra);
 REL_MATRIX_UN(matrixqqr);
 REL_MATRIX_UN(matrixsigmoid);
 REL_MATRIX_UN(matrixlogreg);
@@ -902,6 +905,7 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -958,6 +962,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixrqr:
 	case op_matrixadd:

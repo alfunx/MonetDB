@@ -1439,6 +1439,7 @@ rel2bin_args( mvc *sql, sql_rel *rel, list *args)
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
+	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -2586,6 +2587,80 @@ rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 
 		s = stmt_alias(sql->sa, s, table_name(sql->sa, t), column_name(sql->sa, t));
 		list_append(l, s);
+	}
+
+	return stmt_list(sql->sa, l);
+}
+
+static stmt *
+rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
+{
+	// list of all statements (result)
+	list *l;
+
+	// application part columns
+	list *la;
+
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa;
+
+	// iterators
+	node *n, *m;
+	int i;
+
+	// temporary statements
+	stmt *s, *t;
+
+	// process sub-relation
+	stmt *left = subrel_bin(sql, rel->l, refs);
+	assert(left);
+
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+
+	// construct list of statements
+	l = sa_list(sql->sa);
+	la = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+
+	// split into application and descriptive part lists
+	assert(rel->lexps);
+	partition_appl_desc(sql, left, rel->lexps, la, NULL);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, la, loa);
+
+	// create schema stmt
+	s = stmt_atom_string(sql->sa, "");
+	s = stmt_temp(sql->sa, tail_type(s));
+	for (n = la->h; n; n = n->next) {
+		fprintf(stderr, ">>> %s\n", column_name(sql->sa, n->data));
+		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
+		s = stmt_append(sql->sa, s, t);
+	}
+	s = stmt_alias(sql->sa, s, NULL, rel->rexps->h->data);
+	list_append(l, s);
+
+	// create attribute stmt
+	s = stmt_atom_string(sql->sa, "");
+	s = stmt_temp(sql->sa, tail_type(s));
+	for (n = rel->exps->h; n; n = n->next) {
+		t = stmt_atom_string(sql->sa, n->data);
+		s = stmt_append(sql->sa, s, t);
+	}
+
+	// create tra stmt, represents first output BAT
+	n = rel->exps->h;
+	s = stmt_tra(sql->sa, s, loa);
+	s->nrcols = list_length(rel->exps);
+	s = stmt_alias(sql->sa, s, NULL, n->data);
+	list_append(l, s);
+
+	// get the remaining output BATs
+	for (n = n->next, i = 1; n; n = n->next, ++i) {
+		t = stmt_result(sql->sa, s, i);
+		t = stmt_alias(sql->sa, t, NULL, n->data);
+		list_append(l, t);
 	}
 
 	return stmt_list(sql->sa, l);
@@ -6009,6 +6084,7 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
 	SUBREL_BIN_MATRIX_CASE(matrixinv);
 	SUBREL_BIN_MATRIX_CASE(matrixinvtriangular);
+	SUBREL_BIN_MATRIX_CASE(matrixtra);
 	SUBREL_BIN_MATRIX_CASE(matrixqqr);
 	SUBREL_BIN_MATRIX_CASE(matrixrqr);
 	SUBREL_BIN_MATRIX_CASE(matrixpredict);

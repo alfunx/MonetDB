@@ -215,7 +215,9 @@ int yydebug=1;
 	like_table
 	domain_constraint_type 
 	opt_order_by_clause
+	opt_application_clause
 	opt_gather_clause
+	opt_tuple_list
 	default
 	default_value
 	cast_value
@@ -574,6 +576,7 @@ int yydebug=1;
 %token STEPSIZE
 %token TOLERANCE
 %token INV
+%token TRA
 %token QQR
 %token RQR
 %token MMU
@@ -2842,18 +2845,28 @@ opt_tolerance_clause:
  |  TOLERANCE INTNUM		{ $$ = $2; }
  ;
 
+opt_application_clause:
+    /* empty */ 		{ $$ = NULL; }
+ |  ON selection		{ $$ = $2; }
+ ;
+
 opt_gather_clause:
     /* empty */ 		{ $$ = NULL; }
  |  GATHER selection		{ $$ = _symbol_create_list(SQL_GATHER, $2); }
  ;
 
+opt_tuple_list:
+    /* empty */ 		{ $$ = NULL; }
+ |  USING column_commalist_parens		{ $$ = $2; }
+ ;
+
 matrix_ref:
-   '(' table_ref ON selection opt_order_by_clause opt_gather_clause ')'
+   '(' table_ref opt_application_clause opt_order_by_clause opt_gather_clause ')'
 	{ dlist *l = L();
 	  append_symbol(l, $2);
+	  append_symbol(l, $4);
+	  append_list(l, $3);
 	  append_symbol(l, $5);
-	  append_list(l, $4);
-	  append_symbol(l, $6);
 	  $$ = _symbol_create_list( SQL_MATRIX, l); }
  ;
 
@@ -2932,6 +2945,12 @@ joined_table:
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  $$ = _symbol_create_list( SQL_MATRIXINV, l); }
+
+ |  TRA matrix_ref opt_tuple_list
+	{ dlist *l = L();
+	  append_symbol(l, $2);
+	  append_list(l, $3);
+	  $$ = _symbol_create_list( SQL_MATRIXTRA, l); }
 
  |  QQR matrix_ref
 	{ dlist *l = L();

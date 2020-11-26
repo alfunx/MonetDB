@@ -1694,6 +1694,75 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 }
 
 str
+CMDbatTRAsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int argc = pci->argc;
+	int tp;
+
+	// BATs
+	BAT *obat, *ibat, *abat;
+	bat *obid, *ibid, *abid;
+
+	// BAT tails
+	double **oval;
+	const double **ival;
+
+	// iterators
+	int i, j, k;
+
+	// attribute BAT
+	abid = getArgReference_bat(stk, pci, argc-1);
+	abat = BATdescriptor(*abid);
+	const int o_wdt = BATcount(abat);
+	const int o_len = argc - o_wdt - 1;
+
+	// A BATs (full left matrix)
+	ival = malloc(o_len * sizeof (double*));
+	if (ival == NULL) {
+		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (i = 0; i < o_len; ++i) {
+		tp = stk->stk[getArg(pci, i + o_wdt)].vtype;
+		assert(tp == TYPE_bat || isaBatType(tp));
+		ibid = getArgReference_bat(stk, pci, i + o_wdt);
+		ibat = BATdescriptor(*ibid);
+		ival[i] = (const double*) Tloc(ibat, BUNfirst(ibat));
+		assert(o_wdt == BATcount(ibat));
+		assert(BAThdense(ibat));
+	}
+
+	// result BATs
+	oval = malloc(o_wdt * sizeof (double*));
+	if (oval == NULL) {
+		fprintf(stderr, "Memory for output BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (i = 0; i < o_wdt; ++i) {
+		obid = getArgReference_bat(stk, pci, i);
+		obat = BATnew(TYPE_void, TYPE_dbl, o_len, TRANSIENT);
+		oval[i] = (double*) Tloc(obat, BUNfirst(obat));
+		BATsetcount(obat, o_len);
+		BATseqbase(obat, ibat->H->seq);
+		obat->T->sorted = 0;
+		obat->T->revsorted = 0;
+		obat->T->key = 0;
+		BBPkeepref(*obid = obat->batCacheid);
+	}
+
+	for (i = 0; i < o_wdt; ++i) {
+		for (j = 0; j < o_len; ++j) {
+			oval[i][j] = ival[j][i];
+		}
+	}
+
+	free(ival);
+	free(oval);
+
+	return MAL_SUCCEED;
+}
+
+str
 CMDbatMMUsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 {
 	int argc = pci->argc;

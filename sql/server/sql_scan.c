@@ -115,6 +115,7 @@ scanner_init_keywords(void)
 	keywords_insert("STEPSIZE", STEPSIZE);
 	keywords_insert("TOLERANCE", TOLERANCE);
 	keywords_insert("INV", INV);
+	keywords_insert("TRA", TRA);
 	keywords_insert("QQR", QQR);
 	keywords_insert("RQR", RQR);
 	keywords_insert("SUB", SUB);

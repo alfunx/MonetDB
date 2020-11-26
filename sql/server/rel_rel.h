@@ -49,6 +49,7 @@ extern sql_rel *rel_crossproduct(sql_allocator *sa, sql_rel *l, sql_rel *r, oper
 extern sql_rel *rel_matrixsqrt(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixinv(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixinvtriangular(sql_allocator *sa, sql_rel *l);
+extern sql_rel *rel_matrixtra(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixqqr(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixsigmoid(sql_allocator *sa, sql_rel *l);
 extern sql_rel *rel_matrixlogreg(sql_allocator *sa, sql_rel *l);

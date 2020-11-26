@@ -5605,8 +5605,6 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 	return rel;
 }
 
-#define TRA_TUPLE_COUNT 5
-
 static sql_rel *
 rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 {
@@ -5616,6 +5614,7 @@ rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 	symbol *tab1 = n->data.sym->data.lval->h->data.sym;
 	symbol *tab2 = n->data.sym->data.lval->h->next->data.sym;
 	dlist  *tab3 = n->data.sym->data.lval->h->next->next->data.lval;
+	dlist  *tab4 = n->next->data.lval;
 
 	// resolve table refs
 	sql_rel *l_rel = table_ref(sql, rel, tab1);
@@ -5632,12 +5631,20 @@ rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 	else
 		rel->lexps = rel_projections(sql, l_rel, NULL, 1, 0);
 
-	// select attributes for result relation
+	// store attributes for result relation
+	sql_exp *e = rel->lexps->h->data;
 	list *exps = new_exp_list(sql->sa);
-	for (int i = 0; i < TRA_TUPLE_COUNT; ++i) {
-		char *nme = GDKmalloc(IDLENGTH);
-		snprintf(nme, IDLENGTH, "t%d", i);
-		append(exps, exp_column(sql->sa, NULL, nme, NULL, 0, 0, 0));
+	rel->exps  = new_exp_list(sql->sa);
+	rel->rexps = new_exp_list(sql->sa);
+	char *nme = tab2->data.lval->h->data.sym->data.lval->h->data.sym->data.lval->h->data.sval;
+	append(rel->rexps, nme);
+	append(exps,       exp_column(sql->sa, NULL, nme, exp_subtype(e), 3, 0, 0));
+	// append(exps,       exp_alias_or_copy(sql, NULL, nme, l_rel, e));
+	for (n = tab4->h; n; n = n->next) {
+		nme = n->data.sval;
+		append(rel->exps, nme);
+		append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(e), 3, 0, 0));
+		// append(exps, exp_alias_or_copy(sql, NULL, nme, l_rel, e));
 	}
 
 	// set number of attributes in the result relation

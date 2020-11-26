@@ -2592,8 +2592,6 @@ rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 	return stmt_list(sql->sa, l);
 }
 
-#define TRA_TUPLE_COUNT 5
-
 static stmt *
 rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 {
@@ -2608,6 +2606,7 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 
 	// iterators
 	node *n, *m;
+	int i;
 
 	// temporary statements
 	stmt *s, *t;
@@ -2631,17 +2630,36 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	// align lists according to the orderby ids
 	align_by_ids(sql, orderby_idsl, la, loa);
 
+	// create schema stmt
+	s = stmt_atom_string(sql->sa, "");
+	s = stmt_temp(sql->sa, tail_type(s));
+	for (n = la->h; n; n = n->next) {
+		fprintf(stderr, ">>> %s\n", column_name(sql->sa, n->data));
+		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
+		s = stmt_append(sql->sa, s, t);
+	}
+	s = stmt_alias(sql->sa, s, NULL, rel->rexps->h->data);
+	list_append(l, s);
+
+	// create attribute stmt
+	s = stmt_atom_string(sql->sa, "");
+	s = stmt_temp(sql->sa, tail_type(s));
+	for (n = rel->exps->h; n; n = n->next) {
+		t = stmt_atom_string(sql->sa, n->data);
+		s = stmt_append(sql->sa, s, t);
+	}
+
 	// create tra stmt, represents first output BAT
-	s = stmt_tra(sql->sa, loa);
-	s = stmt_alias(sql->sa, s, NULL, "t0");
+	n = rel->exps->h;
+	s = stmt_tra(sql->sa, s, loa);
+	s->nrcols = list_length(rel->exps);
+	s = stmt_alias(sql->sa, s, NULL, n->data);
 	list_append(l, s);
 
 	// get the remaining output BATs
-	for (int i = 1; i < TRA_TUPLE_COUNT; ++i) {
-		char *nme = GDKmalloc(IDLENGTH);
-		snprintf(nme, IDLENGTH, "t%d", i);
+	for (n = n->next, i = 1; n; n = n->next, ++i) {
 		t = stmt_result(sql->sa, s, i);
-		t = stmt_alias(sql->sa, t, NULL, nme);
+		t = stmt_alias(sql->sa, t, NULL, n->data);
 		list_append(l, t);
 	}
 

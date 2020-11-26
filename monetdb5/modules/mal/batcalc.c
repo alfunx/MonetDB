@@ -1700,81 +1700,63 @@ CMDbatTRAsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	int tp;
 
 	// BATs
-	BAT *obat, *abat;
-	bat *obid, *abid;
+	BAT *obat, *ibat, *abat;
+	bat *obid, *ibid, *abid;
 
 	// BAT tails
 	double **oval;
-	const double **aval;
-
-	// matrix dimensions
-	BUN a_len;
-	int a_wdt, a_wdt_index;
+	const double **ival;
 
 	// iterators
 	int i, j, k;
 
-	// find width parameter index
-	for (i = 0; i < argc; ++i) {
-		tp = stk->stk[getArg(pci, i)].vtype;
-		if (tp == TYPE_int) {
-			a_wdt_index = i;
-			break;
-		}
+	// attribute BAT
+	abid = getArgReference_bat(stk, pci, argc-1);
+	abat = BATdescriptor(*abid);
+	const int o_wdt = BATcount(abat);
+	const int o_len = argc - o_wdt - 1;
+
+	// A BATs (full left matrix)
+	ival = malloc(o_len * sizeof (double*));
+	if (ival == NULL) {
+		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (i = 0; i < o_len; ++i) {
+		tp = stk->stk[getArg(pci, i + o_wdt)].vtype;
+		assert(tp == TYPE_bat || isaBatType(tp));
+		ibid = getArgReference_bat(stk, pci, i + o_wdt);
+		ibat = BATdescriptor(*ibid);
+		ival[i] = (const double*) Tloc(ibat, BUNfirst(ibat));
+		assert(o_wdt == BATcount(ibat));
+		assert(BAThdense(ibat));
 	}
 
-	// input matrix width
-	tp = stk->stk[getArg(pci, a_wdt_index)].vtype;
-	a_wdt = *getArgReference_int(stk, pci, a_wdt_index);
-
-	// input matrix length
-	abid = getArgReference_bat(stk, pci, a_wdt_index + 1);
-	abat = BATdescriptor(*abid);
-	a_len = BATcount(abat);
-	assert(a_len == a_wdt_index);
-
 	// result BATs
-	oval = malloc(a_len * sizeof (double*));
+	oval = malloc(o_wdt * sizeof (double*));
 	if (oval == NULL) {
 		fprintf(stderr, "Memory for output BAT-pointer array is not allocated.");
 		return NULL;
 	}
-	for (i = 0; i < a_wdt_index; ++i) {
+	for (i = 0; i < o_wdt; ++i) {
 		obid = getArgReference_bat(stk, pci, i);
-		obat = BATnew(TYPE_void, abat->T->type, a_wdt, TRANSIENT);
+		obat = BATnew(TYPE_void, TYPE_dbl, o_len, TRANSIENT);
 		oval[i] = (double*) Tloc(obat, BUNfirst(obat));
-		BATsetcount(obat, a_wdt);
-		BATseqbase(obat, abat->H->seq);
+		BATsetcount(obat, o_len);
+		BATseqbase(obat, ibat->H->seq);
 		obat->T->sorted = 0;
 		obat->T->revsorted = 0;
 		obat->T->key = 0;
 		BBPkeepref(*obid = obat->batCacheid);
 	}
 
-	// A BATs (full left matrix)
-	aval = malloc(a_wdt * sizeof (double*));
-	if (aval == NULL) {
-		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
-		return NULL;
-	}
-	for (i = 0; i < a_wdt; ++i) {
-		tp = stk->stk[getArg(pci, i + a_wdt_index + 1)].vtype;
-		assert(tp == TYPE_bat || isaBatType(tp));
-		abid = getArgReference_bat(stk, pci, i + a_wdt_index + 1);
-		abat = BATdescriptor(*abid);
-		aval[i] = (const double*) Tloc(abat, BUNfirst(abat));
-		assert(a_len == BATcount(abat));
-		assert(abat != NULL && abat->T->type == TYPE_dbl);
-		assert(BAThdense(abat));
-	}
-
-	for (i = 0; i < a_len; ++i) {
-		for (j = 0; j < a_wdt; ++j) {
-			oval[i][j] = aval[j][i];
+	for (i = 0; i < o_wdt; ++i) {
+		for (j = 0; j < o_len; ++j) {
+			oval[i][j] = ival[j][i];
 		}
 	}
 
-	free(aval);
+	free(ival);
 	free(oval);
 
 	return MAL_SUCCEED;

@@ -217,6 +217,7 @@ int yydebug=1;
 	opt_order_by_clause
 	opt_application_clause
 	opt_gather_clause
+	opt_tuple_list
 	default
 	default_value
 	cast_value
@@ -2854,6 +2855,11 @@ opt_gather_clause:
  |  GATHER selection		{ $$ = _symbol_create_list(SQL_GATHER, $2); }
  ;
 
+opt_tuple_list:
+    /* empty */ 		{ $$ = NULL; }
+ |  USING column_commalist_parens		{ $$ = $2; }
+ ;
+
 matrix_ref:
    '(' table_ref opt_application_clause opt_order_by_clause opt_gather_clause ')'
 	{ dlist *l = L();
@@ -2940,9 +2946,10 @@ joined_table:
 	  append_symbol(l, $2);
 	  $$ = _symbol_create_list( SQL_MATRIXINV, l); }
 
- |  TRA matrix_ref
+ |  TRA matrix_ref opt_tuple_list
 	{ dlist *l = L();
 	  append_symbol(l, $2);
+	  append_list(l, $3);
 	  $$ = _symbol_create_list( SQL_MATRIXTRA, l); }
 
  |  QQR matrix_ref

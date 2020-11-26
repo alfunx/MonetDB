@@ -923,10 +923,11 @@ stmt_logreg(sql_allocator *sa, list *l)
 }
 
 stmt *
-stmt_tra(sql_allocator *sa, list *l)
+stmt_tra(sql_allocator *sa, stmt *op1, list *l)
 {
 	stmt *s = stmt_create(sa, st_tra);
-	s->op1 = stmt_list(sa, l);
+	s->op1 = op1;
+	s->op2 = stmt_list(sa, l);
 	s->op4.lval = l;
 	s->nrcols = 0;
 	return s;

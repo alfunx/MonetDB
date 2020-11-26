@@ -1950,30 +1950,33 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
-#define TRA_TUPLE_COUNT 5
 		case st_tra:{
 			int l, i, res;
 
 			q = newStmt(mb, batcalcRef, "tra");
 
 			// push return BATs
-			for (i = 1; i < TRA_TUPLE_COUNT; ++i) {
+			for (i = 1; i < s->nrcols; ++i) {
 				l = newTmpVariable(mb, TYPE_any);
 				q = pushReturn(mb, q, l);
 			}
 
 			// push input parameters and BATs
-			q = pushInt(mb, q, list_length(s->op4.lval));
 			for (n = s->op4.lval->h; n; n = n->next) {
 				l = _dumpstmt(sql, mb, n->data);
 				assert (l >= 0);
 				q  = pushArgument(mb, q, l);
 			}
 
+			// push stmt with output attribute names
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+			q  = pushArgument(mb, q, l);
+
 			s->nr = getDestVar(q);
 
 			// rename output results
-			for (i = 1; i < TRA_TUPLE_COUNT; ++i) {
+			for (i = 1; i < s->nrcols; ++i) {
 				res = getArg(q, i);
 				renameVariableExt(mb, res, "r%d_%d", i, s->nr);
 			}

@@ -99,6 +99,7 @@ typedef enum stmt_type {
 	st_logreg,
 	st_tra,
 	st_mmu,
+	st_cpd,
 	st_vectoradd,
 	st_vectorsub,
 	st_vectormul,
@@ -207,6 +208,7 @@ extern stmt *stmt_tinter(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_logreg(sql_allocator *sa, list *l);
 extern stmt *stmt_tra(sql_allocator *sa, stmt *op1, list *l);
 extern stmt *stmt_mmu(sql_allocator *sa, stmt *op1, list *l);
+extern stmt *stmt_cpd(sql_allocator *sa, stmt *op1, list *l);
 extern stmt *stmt_vectoradd(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_vectorsub(sql_allocator *sa, stmt *op1, stmt *op2);
 extern stmt *stmt_vectormul(sql_allocator *sa, stmt *op1, stmt *op2);

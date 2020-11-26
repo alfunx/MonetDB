@@ -2001,6 +2001,25 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_cpd:{
+			int l;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, batcalcRef, "cpd");
+			q = pushArgument(mb, q, l);
+
+			// push input parameters and BATs
+			for (n = s->op4.lval->h; n; n = n->next) {
+				l = _dumpstmt(sql, mb, n->data);
+				assert (l >= 0);
+				q  = pushArgument(mb, q, l);
+			}
+
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_vectoradd:{
 			int  l, r;
 

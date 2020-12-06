@@ -1,0 +1,3 @@
+[submodule "monetdb-tra-preprocessor"]
+	path = monetdb-tra-preprocessor
+	url = https://github.com/alfunx/monetdb-tra-preprocessor

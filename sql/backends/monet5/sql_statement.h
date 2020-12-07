@@ -144,6 +144,8 @@ typedef struct stmt {
 
 	int optimized;		/* used in dependency handling */
 	struct stmt *rewritten; /* used in multi-column result handling (gencode) */
+
+	unsigned int rescols;
 } stmt;
 
 extern int stmt_key(stmt *s);

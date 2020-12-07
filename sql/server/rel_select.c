@@ -5241,6 +5241,27 @@ rel_unionjoinquery(mvc *sql, sql_rel *rel, symbol *q)
 }
 
 static void
+get_orderby_exps(list *l, mvc *sql, sql_rel *rel, list *exp_names)
+{
+	list *all = rel_projections(sql, rel, NULL, 1, 0);
+	if (!all)
+		return;
+
+	node *n, *m;
+	sql_exp *e;
+
+	for (n = exp_names->h; n; n = n->next) {
+		for (m = all->h; m; m = m->next) {
+			e = m->data;
+			if (n->data && e->name && strcmp(n->data, e->name) == 0) {
+				append(l, e);
+				break;
+			}
+		}
+	}
+}
+
+static void
 append_exps_except(list *l, mvc *sql, sql_rel *rel, list *exps)
 {
 	list *all = rel_projections(sql, rel, NULL, 1, 0);
@@ -5605,6 +5626,11 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 	return rel;
 }
 
+/* query preprocessing for matrix transpose (TRA) */
+extern char *SQL_QUERY_FOR_PREPROCESSING;
+
+#define PREPROCESS_BUFSIZE 512
+
 static sql_rel *
 rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 {
@@ -5620,6 +5646,8 @@ rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_rel *l_rel = table_ref(sql, rel, tab1);
 	if (!l_rel)
 		return NULL;
+	if (!tab2)
+		return NULL;
 
 	// for relation name
 	int nr = ++sql->label;
@@ -5632,19 +5660,51 @@ rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 		rel->lexps = rel_projections(sql, l_rel, NULL, 1, 0);
 
 	// store attributes for result relation
-	sql_exp *e = rel->lexps->h->data;
 	list *exps = new_exp_list(sql->sa);
+	list *ord_exp_names = new_exp_list(sql->sa);
 	rel->exps  = new_exp_list(sql->sa);
 	rel->rexps = new_exp_list(sql->sa);
+
+	// get exps of order specification
 	char *nme = tab2->data.lval->h->data.sym->data.lval->h->data.sym->data.lval->h->data.sval;
-	append(rel->rexps, nme);
-	append(exps,       exp_column(sql->sa, NULL, nme, exp_subtype(e), 3, 0, 0));
-	// append(exps,       exp_alias_or_copy(sql, NULL, nme, l_rel, e));
-	for (n = tab4->h; n; n = n->next) {
-		nme = n->data.sval;
-		append(rel->exps, nme);
-		append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(e), 3, 0, 0));
-		// append(exps, exp_alias_or_copy(sql, NULL, nme, l_rel, e));
+	append(ord_exp_names, nme);
+	get_orderby_exps(rel->rexps, sql, l_rel, ord_exp_names);
+
+	sql_exp *el = rel->lexps->h->data;
+	sql_exp *er = rel->rexps->h->data;
+
+	append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(er), 3, 0, 0));
+
+	if (tab4) {
+		// USING clause was provided
+		for (n = tab4->h; n; n = n->next) {
+			nme = n->data.sval;
+			append(rel->exps, nme);
+			append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(el), 3, 0, 0));
+		}
+	} else {
+		// use preprocessor
+		char cmd[PREPROCESS_BUFSIZE];
+		snprintf(cmd, PREPROCESS_BUFSIZE, "monetdb-tra-preprocessor '%s'", SQL_QUERY_FOR_PREPROCESSING);
+
+		char buf[PREPROCESS_BUFSIZE];
+		FILE *fp;
+
+		if ((fp = popen(cmd, "r")) == NULL) {
+			printf("Error: Opening pipe failed\n");
+			return NULL;
+		}
+
+		while (fgets(buf, PREPROCESS_BUFSIZE, fp) != NULL) {
+			nme = strtok(strdup(buf), "\n");
+			append(rel->exps, nme);
+			append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(el), 3, 0, 0));
+		}
+
+		if (pclose(fp)) {
+			printf("Error: Command exited with error status\n");
+			return NULL;
+		}
 	}
 
 	// set number of attributes in the result relation

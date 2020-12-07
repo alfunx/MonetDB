@@ -2615,7 +2615,7 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	int i;
 
 	// temporary statements
-	stmt *s, *t;
+	stmt *o, *s, *t;
 
 	// process sub-relation
 	stmt *left = subrel_bin(sql, rel->l, refs);
@@ -2644,10 +2644,10 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
 		s = stmt_append(sql->sa, s, t);
 	}
-	s = stmt_alias(sql->sa, s, NULL, rel->rexps->h->data);
+	s = stmt_alias(sql->sa, s, NULL, ((sql_exp*)rel->rexps->h->data)->name);
 	list_append(l, s);
 
-	// create attribute stmt
+	// create attribute stmt (based on input)
 	s = stmt_atom_string(sql->sa, "");
 	s = stmt_temp(sql->sa, tail_type(s));
 	for (n = rel->exps->h; n; n = n->next) {
@@ -2655,17 +2655,34 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 		s = stmt_append(sql->sa, s, t);
 	}
 
+	// join order specification with attribute stmt
+	for (n = left->op4.lval->h; n; n = n->next) {
+		const char *nme = column_name(sql->sa, n->data);
+		if (nme && strcmp(nme, ((sql_exp*)rel->rexps->h->data)->name) == 0) {
+			o = stmt_join(sql->sa, n->data, s, cmp_equal);
+			break;
+		}
+	}
+
+	// align application part attributes
+	for (n = loa->h; n; n = n->next) {
+		t = n->data;
+		const char *rnme = table_name(sql->sa, t);
+		const char *nme = column_name(sql->sa, t);
+		n->data = stmt_project(sql->sa, o, column(sql->sa, t));
+		n->data = stmt_alias(sql->sa, n->data, rnme, nme);
+	}
+
 	// create tra stmt, represents first output BAT
-	n = rel->exps->h;
 	s = stmt_tra(sql->sa, s, loa);
+	s->rescols = list_length(rel->exps);
 	s->nrcols = list_length(rel->exps);
-	s = stmt_alias(sql->sa, s, NULL, n->data);
-	list_append(l, s);
 
 	// get the remaining output BATs
-	for (n = n->next, i = 1; n; n = n->next, ++i) {
+	for (n = rel->exps->h, i = 0; n; n = n->next, ++i) {
 		t = stmt_result(sql->sa, s, i);
 		t = stmt_alias(sql->sa, t, NULL, n->data);
+		t = stmt_convert(sql->sa, t, tail_type(t), tail_type(loa->h->data));
 		list_append(l, t);
 	}
 

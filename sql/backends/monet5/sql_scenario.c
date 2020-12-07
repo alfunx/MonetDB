@@ -1040,6 +1040,9 @@ cachable(mvc *m, stmt *s)
  * prepare the intermediate code.
  */
 
+/* query preprocessing for matrix transpose (TRA) */
+char *SQL_QUERY_FOR_PREPROCESSING;
+
 str
 SQLparser(Client c)
 {
@@ -1225,6 +1228,7 @@ SQLparser(Client c)
 		sql_rel *r;
 		stmt *s;
 recompilequery:
+		SQL_QUERY_FOR_PREPROCESSING = in->buf + in->pos;
 		r = sql_symbol2relation(m, m->sym);
 		s = sql_relation2stmt(m, r);
 

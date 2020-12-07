@@ -5097,6 +5097,34 @@ use_triangular_inv(int *changes, mvc *sql, sql_rel *rel)
 	return rel;
 }
 
+static sql_rel *
+push_project_to_matrix_tra(int *changes, mvc *sql, sql_rel *rel)
+{
+	if (!is_project(rel->op))
+		return rel;
+
+	sql_rel *t = rel->l;
+
+	if (!t || !is_matrixtra(t->op))
+		return rel;
+
+	node *n, *m;
+	sql_exp *e;
+
+	for (n = t->exps->h; n; n = n->next) {
+		for (m = rel->exps->h; m; m = m->next) {
+			e = m->data;
+			if (n->data && e->name && strcmp(n->data, e->name) == 0)
+				break;
+		}
+		if (!m) {
+			list_remove_node(t->exps, n);
+		}
+	}
+
+	return rel;
+}
+
 /* Pushing projects up the tree. Done very early in the optimizer.
  * Makes later steps easier. 
  */
@@ -5126,6 +5154,7 @@ rel_push_project_up(int *changes, mvc *sql, sql_rel *rel)
 		if (is_project(l->op) && l->l &&
 				(is_matrixadd(((sql_rel*)l->l)->op) ||
 				 is_matrixsub(((sql_rel*)l->l)->op) ||
+				 is_matrixtra(((sql_rel*)l->l)->op) ||
 				 is_matrixemul(((sql_rel*)l->l)->op))) {
 			fprintf(stderr, ">>> [rel_push_project_up] no action\n");
 			return rel;
@@ -8080,6 +8109,9 @@ _rel_optimizer(mvc *sql, sql_rel *rel, int level)
 
 	if (gp.cnt[op_matrixinv])
 		rel = rewrite(sql, rel, &use_triangular_inv, &changes);
+
+	if (gp.cnt[op_project])
+		rel = rewrite(sql, rel, &push_project_to_matrix_tra, &changes);
 
 	/* Remove unused expressions */
 	if (level <= 0)

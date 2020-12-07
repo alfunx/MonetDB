@@ -1956,7 +1956,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			q = newStmt(mb, batcalcRef, "tra");
 
 			// push return BATs
-			for (i = 1; i < s->nrcols; ++i) {
+			for (i = 1; i < s->rescols; ++i) {
 				l = newTmpVariable(mb, TYPE_any);
 				q = pushReturn(mb, q, l);
 			}
@@ -1976,7 +1976,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 
 			// rename output results
-			for (i = 1; i < s->nrcols; ++i) {
+			for (i = 1; i < s->rescols; ++i) {
 				res = getArg(q, i);
 				renameVariableExt(mb, res, "r%d_%d", i, s->nr);
 			}

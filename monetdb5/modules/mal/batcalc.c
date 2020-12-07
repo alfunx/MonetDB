@@ -1540,6 +1540,7 @@ CMDbatLOGREGsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	oval = (double*) Tloc(obat, BUNfirst(obat));
 
 	// prepare result BAT
+	BATsetcapacity(obat, n);
 	BATsetcount(obat, n);
 	BATseqbase(obat, obat->H->seq);
 	obat->T->sorted = 0;
@@ -1742,6 +1743,7 @@ CMDbatTRAsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		obid = getArgReference_bat(stk, pci, i);
 		obat = BATnew(TYPE_void, TYPE_dbl, o_len, TRANSIENT);
 		oval[i] = (double*) Tloc(obat, BUNfirst(obat));
+		BATsetcapacity(obat, o_len);
 		BATsetcount(obat, o_len);
 		BATseqbase(obat, ibat->H->seq);
 		obat->T->sorted = 0;
@@ -1811,6 +1813,7 @@ CMDbatMMUsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	oval = (double*) Tloc(obat, BUNfirst(obat));
 
 	// prepare result BAT
+	BATsetcapacity(obat, a);
 	BATsetcount(obat, a);
 	BATseqbase(obat, obat->H->seq);
 	obat->T->sorted = 0;
@@ -1900,6 +1903,7 @@ CMDbatCPDsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	oval = (double*) Tloc(obat, BUNfirst(obat));
 
 	// prepare result BAT
+	BATsetcapacity(obat, a);
 	BATsetcount(obat, a);
 	BATseqbase(obat, obat->H->seq);
 	obat->T->sorted = 0;

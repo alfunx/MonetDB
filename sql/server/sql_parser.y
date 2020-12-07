@@ -2946,10 +2946,11 @@ joined_table:
 	  append_symbol(l, $2);
 	  $$ = _symbol_create_list( SQL_MATRIXINV, l); }
 
- |  TRA matrix_ref opt_tuple_list
+ |  TRA matrix_ref opt_tuple_list opt_no_optimize
 	{ dlist *l = L();
 	  append_symbol(l, $2);
 	  append_list(l, $3);
+	  append_int(l, $4);
 	  $$ = _symbol_create_list( SQL_MATRIXTRA, l); }
 
  |  QQR matrix_ref

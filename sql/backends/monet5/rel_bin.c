@@ -2621,9 +2621,6 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	stmt *left = subrel_bin(sql, rel->l, refs);
 	assert(left);
 
-	// generate the orderby ids
-	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
-
 	// construct list of statements
 	l = sa_list(sql->sa);
 	la = sa_list(sql->sa);
@@ -2632,9 +2629,6 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	// split into application and descriptive part lists
 	assert(rel->lexps);
 	partition_appl_desc(sql, left, rel->lexps, la, NULL);
-
-	// align lists according to the orderby ids
-	align_by_ids(sql, orderby_idsl, la, loa);
 
 	// create schema stmt
 	s = stmt_atom_string(sql->sa, "");
@@ -2659,19 +2653,14 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	for (n = left->op4.lval->h; n; n = n->next) {
 		const char *nme = column_name(sql->sa, n->data);
 		if (nme && strcmp(nme, ((sql_exp*)rel->rexps->h->data)->name) == 0) {
-			o = stmt_join(sql->sa, n->data, s, cmp_equal);
+			o = stmt_join(sql->sa, s, n->data, cmp_equal);
+			o = stmt_result(sql->sa, o, 1);
 			break;
 		}
 	}
 
 	// align application part attributes
-	for (n = loa->h; n; n = n->next) {
-		t = n->data;
-		const char *rnme = table_name(sql->sa, t);
-		const char *nme = column_name(sql->sa, t);
-		n->data = stmt_project(sql->sa, o, column(sql->sa, t));
-		n->data = stmt_alias(sql->sa, n->data, rnme, nme);
-	}
+	align_by_ids(sql, o, la, loa);
 
 	// create tra stmt, represents first output BAT
 	s = stmt_tra(sql->sa, s, loa);

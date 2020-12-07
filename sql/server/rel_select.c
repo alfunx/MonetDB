@@ -5659,6 +5659,9 @@ rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 	else
 		rel->lexps = rel_projections(sql, l_rel, NULL, 1, 0);
 
+	// set no-optimization flag
+	rel->noopt = n->next->next->data.i_val;
+
 	// store attributes for result relation
 	list *exps = new_exp_list(sql->sa);
 	list *ord_exp_names = new_exp_list(sql->sa);

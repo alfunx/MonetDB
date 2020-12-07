@@ -5108,18 +5108,23 @@ push_project_to_matrix_tra(int *changes, mvc *sql, sql_rel *rel)
 	if (!t || !is_matrixtra(t->op))
 		return rel;
 
-	node *n, *m;
-	sql_exp *e;
+	if (t->noopt) {
+		fprintf(stderr, ">>> [push_project_to_matrix_tra] no-optimization flag is set\n");
+		return rel;
+	}
 
-	for (n = t->exps->h; n; n = n->next) {
-		for (m = rel->exps->h; m; m = m->next) {
-			e = m->data;
-			if (n->data && e->name && strcmp(n->data, e->name) == 0)
-				break;
-		}
-		if (!m) {
-			list_remove_node(t->exps, n);
-		}
+	node *n;
+	sql_exp *e;
+	sql_exp *o = t->rexps->h->data;
+
+	list_destroy(t->exps);
+	t->exps = new_exp_list(sql->sa);
+
+	for (n = rel->exps->h; n; n = n->next) {
+		e = n->data;
+		if (e && strcmp(e->name, o->name) == 0)
+			continue;
+		list_append(t->exps, strdup(e->name));
 	}
 
 	return rel;

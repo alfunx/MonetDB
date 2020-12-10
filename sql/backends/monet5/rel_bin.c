@@ -2571,8 +2571,19 @@ rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, la, loa);
 	align_by_ids(sql, orderby_idsr, ra, roa);
 
+	// create schema stmt
+	s = stmt_atom_string(sql->sa, "");
+	s = stmt_temp(sql->sa, tail_type(s));
+	for (n = la->h; n; n = n->next) {
+		fprintf(stderr, ">>> %s\n", column_name(sql->sa, n->data));
+		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
+		s = stmt_append(sql->sa, s, t);
+	}
+	s = stmt_alias(sql->sa, s, NULL, ((sql_exp*)rel->exps->h->data)->name);
+	list_append(l, s);
+
 	// append schema and order stmt
-	list_append(l, stmt_schema_column(sql, loa));
+	//list_append(l, stmt_schema_column(sql, loa));
 	list_append(l, stmt_order_column(sql, loa));
 
 	// // create matrixcpd stmts

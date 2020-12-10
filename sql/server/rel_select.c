@@ -5543,8 +5543,17 @@ rel_matrixcpdquery(mvc *sql, sql_rel *rel, symbol *q)
 
 	// select attributes for result relation
 	list *exps = new_exp_list(sql->sa);
+	list *ord_exp_names = new_exp_list(sql->sa);
+	rel->exps = new_exp_list(sql->sa);
+
+	// get exps of order specification
+	char *nme = tab2->data.lval->h->data.sym->data.lval->h->data.sym->data.lval->h->data.sval;
+	append(ord_exp_names, nme);
+	get_orderby_exps(rel->exps, sql, l_rel, ord_exp_names);
+	append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(rel->exps->h->data), 3, 0, 0));
+
 	append(exps, order_column());
-	append(exps, schema_column());
+	//append(exps, schema_column());
 	append_exps(exps, sql, rel->rexps);
 
 	// set number of attributes in the result relation
@@ -5629,7 +5638,7 @@ rel_matrixinvquery(mvc *sql, sql_rel *rel, symbol *q)
 /* query preprocessing for matrix transpose (TRA) */
 extern char *SQL_QUERY_FOR_PREPROCESSING;
 
-#define PREPROCESS_BUFSIZE 512
+#define PREPROCESS_BUFSIZE 524288
 
 static sql_rel *
 rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)

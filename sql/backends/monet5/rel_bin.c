@@ -6004,12 +6004,6 @@ rel2bin_ddl(mvc *sql, sql_rel *rel, list *refs)
 	return s;
 }
 
-#define SUBREL_BIN_MATRIX_CASE(TYPE) \
-	case op_##TYPE: \
-		s = rel2bin_##TYPE(sql, rel, refs); \
-		sql->type = Q_TABLE; \
-		break;
-
 static stmt *
 subrel_bin(mvc *sql, sql_rel *rel, list *refs) 
 {
@@ -6099,21 +6093,66 @@ subrel_bin(mvc *sql, sql_rel *rel, list *refs)
 	case op_ddl:
 		s = rel2bin_ddl(sql, rel, refs);
 		break;
-	SUBREL_BIN_MATRIX_CASE(matrixadd);
-	SUBREL_BIN_MATRIX_CASE(matrixsub);
-	SUBREL_BIN_MATRIX_CASE(matrixemul);
-	SUBREL_BIN_MATRIX_CASE(matrixmmu);
-	SUBREL_BIN_MATRIX_CASE(matrixcpd);
-	SUBREL_BIN_MATRIX_CASE(matrixsqrt);
-	SUBREL_BIN_MATRIX_CASE(matrixinv);
-	SUBREL_BIN_MATRIX_CASE(matrixinvtriangular);
-	SUBREL_BIN_MATRIX_CASE(matrixtra);
-	SUBREL_BIN_MATRIX_CASE(matrixqqr);
-	SUBREL_BIN_MATRIX_CASE(matrixrqr);
-	SUBREL_BIN_MATRIX_CASE(matrixpredict);
-	SUBREL_BIN_MATRIX_CASE(matrixsigmoid);
-	SUBREL_BIN_MATRIX_CASE(matrixlogreg);
-	SUBREL_BIN_MATRIX_CASE(matrixyintercept);
+	case op_matrixadd:
+		s = rel2bin_matrixadd(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixsub:
+		s = rel2bin_matrixsub(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixemul:
+		s = rel2bin_matrixemul(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixmmu:
+		s = rel2bin_matrixmmu(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixcpd:
+		s = rel2bin_matrixcpd(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixsqrt:
+		s = rel2bin_matrixsqrt(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixinv:
+		s = rel2bin_matrixinv(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixinvtriangular:
+		s = rel2bin_matrixinvtriangular(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixtra:
+		s = rel2bin_matrixtra(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixqqr:
+		s = rel2bin_matrixqqr(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixrqr:
+		s = rel2bin_matrixrqr(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixpredict:
+		s = rel2bin_matrixpredict(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixsigmoid:
+		s = rel2bin_matrixsigmoid(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixlogreg:
+		s = rel2bin_matrixlogreg(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
+	case op_matrixyintercept:
+		s = rel2bin_matrixyintercept(sql, rel, refs);
+		sql->type = Q_TABLE;
+		break;
         }
 	if (s && rel_is_ref(rel)) {
 		list_append(refs, rel);

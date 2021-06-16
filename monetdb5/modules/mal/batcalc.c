@@ -1765,6 +1765,106 @@ CMDbatTRAsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 }
 
 str
+CMDbatTRAbatlistsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int argc = pci->argc;
+	int tp;
+
+	// BATs
+	BAT *obl_bat, *ibat, *obat, *abat;
+	bat *obl_bid, *ibid, *obid, *abid;
+
+	// BAT tails
+	bat *obl_val;
+	int **oval;
+	const int **ival;
+
+	// BAT name
+	char name[IDLENGTH];
+
+	// iterators
+	int i, j, k;
+
+	// attribute BAT
+	tp = stk->stk[getArg(pci, 1)].vtype;
+	assert(tp == TYPE_bat || isaBatType(tp));
+	abid = getArgReference_bat(stk, pci, 1);
+	abat = BATdescriptor(*abid);
+	const int o_wdt = BATcount(abat);
+	const int o_len = argc - 2;
+
+	// A BATs (full left matrix)
+	ival = malloc(o_len * sizeof (int*));
+	if (ival == NULL) {
+		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (i = 2; i < argc; ++i) {
+		tp = stk->stk[getArg(pci, i)].vtype;
+		assert(tp == TYPE_bat || isaBatType(tp));
+		ibid = getArgReference_bat(stk, pci, i);
+		ibat = BATdescriptor(*ibid);
+		ival[i - 2] = (const int*) Tloc(ibat, BUNfirst(ibat));
+		assert(o_wdt == BATcount(ibat));
+		assert(BAThdense(ibat));
+	}
+
+	// result BATlist
+	obl_bid = getArgReference_bat(stk, pci, 0);
+	obl_bat = BATnew(TYPE_void, TYPE_int, o_wdt + BL_HEADER, TRANSIENT);
+	obl_val = (bat*) Tloc(obl_bat, BUNfirst(obl_bat));
+
+	// prepare result BATlist
+	BATsetcapacity(obl_bat, o_wdt + BL_HEADER);
+	BATsetcount(obl_bat, o_wdt + BL_HEADER);
+	BATseqbase(obl_bat, obl_bat->H->seq);
+	obl_bat->T->sorted = 0;
+	obl_bat->T->revsorted = 0;
+	obl_bat->T->key = 0;
+	BBPkeepref(*obl_bid = obl_bat->batCacheid);
+
+	// store attribute names
+	BBPfix(abat->batCacheid);
+	snprintf(name, IDLENGTH, BL_FORMAT, abat->batCacheid);
+	BBPrename(abat->batCacheid, name);
+	obl_val[0] = abat->batCacheid;
+	BBPkeepref(abat->batCacheid);
+
+	// result BATs
+	oval = malloc(o_wdt * sizeof (int*));
+	if (oval == NULL) {
+		fprintf(stderr, "Memory for output BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (i = 0; i < o_wdt; ++i) {
+		obat = BATnew(TYPE_void, TYPE_int, o_len, TRANSIENT);
+		oval[i] = (int*) Tloc(obat, BUNfirst(obat));
+		BATsetcapacity(obat, o_len);
+		BATsetcount(obat, o_len);
+		BATseqbase(obat, 0);
+		obat->T->sorted = 0;
+		obat->T->revsorted = 0;
+		obat->T->key = 0;
+		BBPfix(obat->batCacheid);
+		snprintf(name, 20, BL_FORMAT, obat->batCacheid);
+		BBPrename(obat->batCacheid, name);
+		obl_val[i + BL_HEADER] = obat->batCacheid;
+		BBPkeepref(obat->batCacheid);
+	}
+
+	for (i = 0; i < o_wdt; ++i) {
+		for (j = 0; j < o_len; ++j) {
+			oval[i][j] = ival[j][i];
+		}
+	}
+
+	free(ival);
+	free(oval);
+
+	return MAL_SUCCEED;
+}
+
+str
 CMDbatMMUsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 {
 	int argc = pci->argc;

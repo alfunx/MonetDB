@@ -2618,8 +2618,8 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	// application part columns
 	list *la;
 
-	// ordered application part columns (desc part is directly appended to l)
-	list *loa;
+	// order specification columns
+	list *oa;
 
 	// iterators
 	node *n, *m;
@@ -2635,56 +2635,17 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	// construct list of statements
 	l = sa_list(sql->sa);
 	la = sa_list(sql->sa);
-	loa = sa_list(sql->sa);
+	oa = sa_list(sql->sa);
 
 	// split into application and descriptive part lists
 	assert(rel->lexps);
 	partition_appl_desc(sql, left, rel->lexps, la, NULL);
-
-	// create schema stmt
-	s = stmt_atom_string(sql->sa, "");
-	s = stmt_temp(sql->sa, tail_type(s));
-	for (n = la->h; n; n = n->next) {
-		fprintf(stderr, ">>> %s\n", column_name(sql->sa, n->data));
-		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
-		s = stmt_append(sql->sa, s, t);
-	}
-	s = stmt_alias(sql->sa, s, NULL, ((sql_exp*)rel->rexps->h->data)->name);
-	list_append(l, s);
-
-	// create attribute stmt (based on input)
-	s = stmt_atom_string(sql->sa, "");
-	s = stmt_temp(sql->sa, tail_type(s));
-	for (n = rel->exps->h; n; n = n->next) {
-		t = stmt_atom_string(sql->sa, n->data);
-		s = stmt_append(sql->sa, s, t);
-	}
-
-	// join order specification with attribute stmt
-	for (n = left->op4.lval->h; n; n = n->next) {
-		const char *nme = column_name(sql->sa, n->data);
-		if (nme && strcmp(nme, ((sql_exp*)rel->rexps->h->data)->name) == 0) {
-			o = stmt_join(sql->sa, s, n->data, cmp_equal);
-			o = stmt_result(sql->sa, o, 1);
-			break;
-		}
-	}
-
-	// align application part attributes
-	align_by_ids(sql, o, la, loa);
+	partition_appl_desc(sql, left, rel->rexps, oa, NULL);
 
 	// create tra stmt, represents first output BAT
-	s = stmt_tra(sql->sa, s, loa);
-	s->rescols = list_length(rel->exps);
-	s->nrcols = list_length(rel->exps);
-
-	// get the remaining output BATs
-	for (n = rel->exps->h, i = 0; n; n = n->next, ++i) {
-		t = stmt_result(sql->sa, s, i);
-		t = stmt_alias(sql->sa, t, NULL, n->data);
-		t = stmt_convert(sql->sa, t, tail_type(t), tail_type(loa->h->data));
-		list_append(l, t);
-	}
+	s = stmt_tra(sql->sa, oa->h->data, la);
+	s->nrcols = 1;
+	list_append(l, s);
 
 	return stmt_list(sql->sa, l);
 }

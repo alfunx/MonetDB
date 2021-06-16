@@ -178,6 +178,7 @@ mal_export  str remoteRef;
 mal_export  str replaceRef;
 mal_export  str replicatorRef;
 mal_export  str resultSetRef;
+mal_export  str resultSetBatlistRef;
 mal_export  str reuseRef;
 mal_export  str row_numberRef;
 mal_export  str rpcRef;

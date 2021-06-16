@@ -3082,4 +3082,25 @@ gdk_export BAT *BATsample(BAT *b, BUN n);
  */
 #define MAXPARAMS	32
 
+
+// BAT-List functions
+
+#include <string.h>
+
+#define BL_FORMAT "batlist_%d"
+#define BL_HEADER 1
+
+static inline bat*
+BLget(const bat *ibl_bid, int index)
+{
+	char name[IDLENGTH];
+	BAT *ibl_bat = BATdescriptor(*ibl_bid);
+	BATiter ibl_iter = bat_iterator(ibl_bat);
+	snprintf(name, IDLENGTH, BL_FORMAT, *(bat*)BUNtail(ibl_iter, index + BL_HEADER));
+	BAT *result = BATdescriptor(BBPindex(name));
+	return result != NULL ? &result->batCacheid : NULL;
+}
+
+#define BLnames(ibl_bid) BLget(ibl_bid, 0 - BL_HEADER);
+
 #endif /* _GDK_H_ */

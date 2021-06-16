@@ -157,7 +157,10 @@ dump_header(mvc *sql, MalBlkPtr mb, stmt *s, list *l)
 	list = newInstruction(mb,ASSIGNsymbol);
 	getArg(list,0) = newTmpVariable(mb,TYPE_int);
 	setModuleId(list, sqlRef);
-	setFunctionId(list, resultSetRef);
+	if (((stmt*)s->op1->op4.lval->h->data)->op1->type == st_tra)
+		setFunctionId(list, resultSetBatlistRef);
+	else
+		setFunctionId(list, resultSetRef);
 	k = list->argc;
 	meta(tblId,TYPE_str);
 	meta(nmeId,TYPE_str);
@@ -1951,15 +1954,14 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 		}
 			break;
 		case st_tra:{
-			int l, i, res;
+			int l;
 
-			q = newStmt(mb, batcalcRef, "tra");
+			q = newStmt(mb, batcalcRef, "traBatlist");
 
-			// push return BATs
-			for (i = 1; i < s->rescols; ++i) {
-				l = newTmpVariable(mb, TYPE_any);
-				q = pushReturn(mb, q, l);
-			}
+			// push stmt with output attribute names
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+			q  = pushArgument(mb, q, l);
 
 			// push input parameters and BATs
 			for (n = s->op4.lval->h; n; n = n->next) {
@@ -1968,18 +1970,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 				q  = pushArgument(mb, q, l);
 			}
 
-			// push stmt with output attribute names
-			l = _dumpstmt(sql, mb, s->op1);
-			assert(l >= 0);
-			q  = pushArgument(mb, q, l);
-
 			s->nr = getDestVar(q);
-
-			// rename output results
-			for (i = 1; i < s->rescols; ++i) {
-				res = getArg(q, i);
-				renameVariableExt(mb, res, "r%d_%d", i, s->nr);
-			}
 		}
 			break;
 		case st_mmu:{

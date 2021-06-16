@@ -185,6 +185,7 @@ str remoteRef;
 str replaceRef;
 str replicatorRef;
 str resultSetRef;
+str resultSetBatlistRef;
 str reuseRef;
 str row_numberRef;
 str rpcRef;
@@ -401,6 +402,7 @@ void optimizerInit(void)
 	replaceRef = putName("replace");
 	replicatorRef = putName("replicator");
 	resultSetRef = putName("resultSet");
+	resultSetBatlistRef = putName("resultSetBatlist");
 	reuseRef = putName("reuse");
 	row_numberRef = putName("row_number");
 	rpcRef = putName("rpc");

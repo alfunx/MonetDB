@@ -3092,6 +3092,88 @@ mvc_table_result_wrap(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	return res;
 }
 
+str
+mvc_table_result_wrap_batlist(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int *res_id = getArgReference_int(stk, pci, 0);
+	bat tblId = *getArgReference_bat(stk, pci, 1);
+	bat atrId = *getArgReference_bat(stk, pci, 2);
+	bat tpeId = *getArgReference_bat(stk, pci, 3);
+	bat lenId = *getArgReference_bat(stk, pci, 4);
+	bat scaleId = *getArgReference_bat(stk, pci, 5);
+	bat iblId;
+
+	BAT *tbl, *atr, *tpe, *len, *scale, *ibl, *a, *b;
+
+	char name[IDLENGTH];
+	int i, res;
+	oid o = 0;
+	str tblname, colname, tpename, msg = MAL_SUCCEED;
+	int *digits, *scaledigits;
+	BATiter itertbl, iteratr, itertpe;
+	mvc *m = NULL;
+
+	if ((msg = getSQLContext(cntxt, mb, &m, NULL)) != NULL)
+		return msg;
+	if ((msg = checkSQLContext(cntxt)) != NULL)
+		return msg;
+	iblId = *getArgReference_bat(stk,pci,6);
+	ibl = BATdescriptor(iblId);
+	const int ibl_len = BATcount(ibl);
+	const bat *ibl_val = (const bat*) Tloc(ibl, BUNfirst(ibl));
+
+	snprintf(name, IDLENGTH, BL_FORMAT, ibl_val[0]);
+	a = BATdescriptor(BBPindex(name));
+	atrId = a->batCacheid;
+
+	if (a == NULL)
+		throw(MAL,"sql.resultset","Failed to access order column");
+	res = *res_id = mvc_result_table(m, ibl_len - 1, 1, a);
+	if (res < 0)
+		msg = createException(SQL, "sql.resultSet", "failed");
+	BBPunfix(atrId);
+
+	tbl = BATdescriptor(tblId);
+	atr = BATdescriptor(atrId);
+	tpe = BATdescriptor(tpeId);
+	len = BATdescriptor(lenId);
+	scale = BATdescriptor(scaleId);
+	if (msg || tbl == NULL || atr == NULL || tpe == NULL || len == NULL || scale == NULL)
+		goto wrapup_result_set;
+	/* mimick the old rsColumn approach; */
+	itertbl = bat_iterator(tbl);
+	iteratr = bat_iterator(atr);
+	itertpe = bat_iterator(tpe);
+	digits = (int*) Tloc(len,BUNfirst(len));
+	scaledigits = (int*) Tloc(scale,BUNfirst(scale));
+
+	tblname = BUNtail(itertbl, o);
+	tpename = BUNtail(itertpe, o);
+
+	for (i = 1; msg == MAL_SUCCEED && i < ibl_len; i++, o++) {
+		colname = BUNtail(iteratr, o);
+		snprintf(name, IDLENGTH, BL_FORMAT, ibl_val[i]);
+		b = BATdescriptor(BBPindex(name));
+		if (b == NULL)
+			msg = createException(MAL, "sql.resultset", "Failed to access result column");
+		else if (mvc_result_column(m, tblname, colname, tpename, *digits, *scaledigits, b))
+			msg = createException(SQL, "sql.resultset", "mvc_result_column failed");
+		if (b)
+			BBPunfix(ibl_val[i]);
+	}
+
+	/* now sent it to the channel cntxt->fdout */
+	if (mvc_export_result(cntxt->sqlcontext, cntxt->fdout, res))
+		msg = createException(SQL, "sql.resultset", "failed");
+  wrapup_result_set:
+	if( tbl) BBPunfix(tblId);
+	// if( atr) BBPunfix(atrId);
+	if( tpe) BBPunfix(tpeId);
+	if( len) BBPunfix(lenId);
+	if( scale) BBPunfix(scaleId);
+	return msg;
+}
+
 /* str mvc_declared_table_wrap(int *res_id, str *name); */
 str
 mvc_declared_table_wrap(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)

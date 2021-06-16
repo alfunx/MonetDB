@@ -316,6 +316,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			else
 				s->optimized = -1;
 			switch (s->type) {
+			case st_tra:
 			case st_list:
 				list_deps(dep_list, s->op4.lval, depend_type, dir);
 				break;
@@ -355,7 +356,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_uselect:
 			case st_uselect2:
 			case st_logreg:
-			case st_tra:
+			// case st_tra:
 			case st_mmu:
 			case st_cpd:
 			case st_vectoradd:
@@ -930,7 +931,9 @@ stmt_tra(sql_allocator *sa, stmt *op1, list *l)
 	s->op1 = op1;
 	s->op2 = stmt_list(sa, l);
 	s->op4.lval = l;
-	s->nrcols = 0;
+	s->nrcols = 1;
+	s->tname = "batlist";
+	s->cname = "batlist";
 	return s;
 }
 
@@ -1443,7 +1446,7 @@ tail_type(stmt *st)
 	case st_gen_group:
 	case st_order:
 	case st_logreg:
-	case st_tra:
+	// case st_tra:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1463,6 +1466,7 @@ tail_type(stmt *st)
 	case st_next:
 		return tail_type(st->op1);
 
+	case st_tra:
 	case st_list:
 		return tail_type(st->op4.lval->h->data);
 
@@ -1615,7 +1619,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_convert:
 	case st_logreg:
-	case st_tra:
+	// case st_tra:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1659,6 +1663,7 @@ _column_name(sql_allocator *sa, stmt *st)
 			return sa_strdup(sa, "single_value");
 		return "single_value";
 
+	case st_tra:
 	case st_list:
 		if (list_length(st->op4.lval))
 			return column_name(sa, st->op4.lval->h->data);
@@ -1705,7 +1710,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_aggr:
 	case st_logreg:
-	case st_tra:
+	// case st_tra:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1742,6 +1747,7 @@ _table_name(sql_allocator *sa, stmt *st)
 			return st->op4.aval->data.val.sval;
 		return NULL;
 
+	case st_tra:
 	case st_list:
 		if (list_length(st->op4.lval) && st->op4.lval->h)
 			return table_name(sa, st->op4.lval->h->data);
@@ -1781,7 +1787,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_Nop:
 	case st_aggr:
 	case st_logreg:
-	case st_tra:
+	// case st_tra:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1811,6 +1817,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_temp:
 	case st_single:
 		return NULL;
+	case st_tra:
 	case st_list:
 		if (list_length(st->op4.lval))
 			return schema_name(sa, st->op4.lval->h->data);

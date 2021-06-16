@@ -303,6 +303,10 @@ unsafe pattern resultSet(tbl:bat[:str], attr:bat[:str], tpe:bat[:str], len:bat[:
 address mvc_table_result_wrap
 comment "Prepare a table result set for the client in default CSV format";
 
+unsafe pattern resultSetBatlist(tbl:bat[:str], attr:bat[:str], tpe:bat[:str], len:bat[:int], scale:bat[:int], batlist:bat[:bat]) :int
+address mvc_table_result_wrap_batlist
+comment "Prepare a table result set for the client in default CSV format";
+
 unsafe pattern export_table(fname:str, fmt:str, colsep:str, recsep:str, qout:str, nullrep:str, tbl:bat[:str], attr:bat[:str], tpe:bat[:str], len:bat[:int],scale:bat[:int], cols:any...) :int 
 address mvc_export_row_wrap
 comment "Prepare a table result set for the COPY INTO stream";

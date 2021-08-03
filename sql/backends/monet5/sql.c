@@ -2415,25 +2415,21 @@ DELTAsub(bat *result, const bat *col, const bat *cid, const bat *uid, const bat 
 }
 
 str
-fetch_from_batlist(bat *result, const bat *ibl_bid, const str *name)
+fetch_from_batlist(bat *result, const bat *ibl_bid, const str *cname)
 {
 	BAT *ibl_bat = BATdescriptor(*ibl_bid);
-	const int ibl_len = BATcount(ibl_bat);
 	BATiter ibl_iter = bat_iterator(ibl_bat);
+	const int ibl_len = BATcount(ibl_bat) - BL_HEADER;
 
-	bat *iba_bid = BLatr(ibl_bid);
-	BAT *iba_bat = BATdescriptor(*iba_bid);
-	const int iba_len = BATcount(iba_bat);
+	BAT *iba_bat = BLatr(ibl_bat);
 	BATiter iba_iter = bat_iterator(iba_bat);
 
-	char m[IDLENGTH];
-
-	for (int i = 0; i < iba_len; ++i) {
-		const str n = BUNtail(iba_iter, i);
-		if (strcmp(n, *name) == 0) {
-			bat *rbid = (bat*)BUNtail(ibl_iter, i + BL_HEADER);
-			BAT *rbat = BATdescriptor(*rbid);
-			BBPkeepref(*result = rbat->batCacheid);
+	for (int i = 0; i < ibl_len; ++i) {
+		const str name = BUNtail(iba_iter, i);
+		if (strcmp(name, *cname) == 0) {
+			bat *r_bid = (bat*)BUNtail(ibl_iter, i + BL_HEADER);
+			BAT *r_bat = BATdescriptor(*r_bid);
+			BBPkeepref(*result = r_bat->batCacheid);
 			return MAL_SUCCEED;
 		}
 	}
@@ -2449,17 +2445,14 @@ DELTAproject_batlist(bat *result, const bat *sub, const bat *ibl_bid)
 
 	BAT *ibl_bat = BATdescriptor(*ibl_bid);
 	BATiter ibl_iter = bat_iterator(ibl_bat);
+	const int ibl_len = BATcount(ibl_bat) - BL_HEADER;
 	bat *ibl_val = (bat*) Tloc(ibl_bat, BUNfirst(ibl_bat));
 
 	if ((s = BATdescriptor(*sub)) == NULL)
 		throw(MAL, "sql.delta_batlist", RUNTIME_OBJECT_MISSING);
 
-	bat *abid = BLatr(ibl_bid);
-	BAT *abat = BATdescriptor(*abid);
-	const int ibl_len = BATcount(abat);
-
 	for (int i = 0; i < ibl_len; ++i) {
-		c = BATdescriptor(*BLget(ibl_bid, i));
+		c = BLget(ibl_bat, i);
 		res = BATproject(s, c);
 		assert(res);
 		BBPunfix(c->batCacheid);
@@ -2783,8 +2776,7 @@ mvc_result_set_wrap( Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		bid = *getArgReference_bat(stk,pci,i);
 		b = BATdescriptor(bid);
 		if (BATttype(b) == TYPE_bat) {
-			bid = *BLatr(&bid);
-			b = BATdescriptor(bid);
+			b = BLatr(b);
 			count += BATcount(b);
 		} else {
 			++count;
@@ -2821,24 +2813,19 @@ mvc_result_set_wrap( Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		tpename = BUNtail(itertpe,o);
 		b = BATdescriptor(bid);
 		if (BATttype(b) == TYPE_bat && strcmp(tpename, "table") == 0 && strcmp(colname, "batlist") == 0) {
-			bat *iba_bid = BLatr(&bid);
-			BAT *iba_bat = BATdescriptor(*iba_bid);
-			BATiter iteriba = bat_iterator(iba_bat);
+			BATiter iba_iter = bat_iterator(BLatr(b));
 			for (int j = 0; j < BATcount(b) - BL_HEADER; ++j) {
-				str iba = BUNtail(iteriba, j);
-				bat *ibl_bid = BLget(&bid, j);
-				BAT *ibl_bat = BATdescriptor(*ibl_bid);
-				if (mvc_result_column(m, tblname, iba, "int", 32, 0, ibl_bat))
+				if (mvc_result_column(m, tblname, BUNtail(iba_iter, j), "int", 32, 0, BLget(b, j)))
 					msg = createException(SQL, "sql.resultset", "mvc_result_column failed (batlist)");
 			}
 		} else {
-			if ( b == NULL)
+			if (b == NULL)
 				msg= createException(MAL,"sql.resultset","Failed to access result column");
 			else if (mvc_result_column(m, tblname, colname, tpename, *digits++, *scaledigits++, b))
 				msg = createException(SQL, "sql.resultset", "mvc_result_column failed");
-			if( b)
-				BBPunfix(bid);
 		}
+		if (b)
+			BBPunfix(bid);
 	}
 
 	/* now sent it to the channel cntxt->fdout */

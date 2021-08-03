@@ -538,6 +538,8 @@ exp_bin(mvc *sql, sql_exp *e, stmt *left, stmt *right, stmt *grp, stmt *ext, stm
 			s = bin_find_column(sql->sa, right, e->l, e->r);
 		if (!s && left) 
 			s = bin_find_column(sql->sa, left, e->l, e->r);
+		if (!s && left && left->op4.lval && left->op4.lval->h->data && strcmp(((stmt*)left->op4.lval->h->data)->tname, "batlist") == 0)
+			s = stmt_fetch_from_batlist(sql->sa, left->op4.lval->h->data, e->name);
 		if (s && grp)
 			s = stmt_project(sql->sa, ext, s);
 		if (!s && right) {
@@ -3985,14 +3987,19 @@ rel2bin_select( mvc *sql, sql_rel *rel, list *refs)
 	/* construct relation */
 	l = sa_list(sql->sa);
 	if (sub && sel) {
-		for( n = sub->op4.lval->h; n; n = n->next ) {
-			stmt *col = n->data;
-	
-			if (col->nrcols == 0) /* constant */
-				col = stmt_const(sql->sa, sel, col);
-			else
-				col = stmt_project(sql->sa, sel, col);
-			list_append(l, col);
+		if (strcmp(((stmt*)sub->op4.lval->h->data)->tname, "batlist") == 0) {
+			stmt *proj = stmt_projectdelta_batlist(sql->sa, sel, sub->op4.lval->h->data);
+			list_append(l, proj);
+		} else {
+			for( n = sub->op4.lval->h; n; n = n->next ) {
+				stmt *col = n->data;
+
+				if (col->nrcols == 0) /* constant */
+					col = stmt_const(sql->sa, sel, col);
+				else
+					col = stmt_project(sql->sa, sel, col);
+				list_append(l, col);
+			}
 		}
 	}
 	return stmt_list(sql->sa, l);

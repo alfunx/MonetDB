@@ -2415,6 +2415,68 @@ DELTAsub(bat *result, const bat *col, const bat *cid, const bat *uid, const bat 
 }
 
 str
+fetch_from_batlist(bat *result, const bat *ibl_bid, const str *name)
+{
+	BAT *ibl_bat = BATdescriptor(*ibl_bid);
+	const int ibl_len = BATcount(ibl_bat);
+	BATiter ibl_iter = bat_iterator(ibl_bat);
+
+	bat *iba_bid = BLnames(ibl_bid);
+	BAT *iba_bat = BATdescriptor(*iba_bid);
+	const int iba_len = BATcount(iba_bat);
+	BATiter iba_iter = bat_iterator(iba_bat);
+
+	char m[IDLENGTH];
+
+	for (int i = 0; i < iba_len; ++i) {
+		const str n = BUNtail(iba_iter, i);
+		if (strcmp(n, *name) == 0) {
+			bat *rbid = (bat*)BUNtail(ibl_iter, i + 1);
+			BAT *rbat = BATdescriptor(*rbid);
+			BBPkeepref(*result = rbat->batCacheid);
+			return MAL_SUCCEED;
+		}
+	}
+
+	throw(SQL, "mvc", "BAT not found in BAT-List");
+}
+
+str
+DELTAproject_batlist(bat *result, const bat *sub, const bat *ibl_bid)
+{
+	char name[IDLENGTH];
+	BAT *s, *c, *u_id, *u_val, *i = NULL, *res, *tres;
+
+	BAT *ibl_bat = BATdescriptor(*ibl_bid);
+	BATiter ibl_iter = bat_iterator(ibl_bat);
+	bat *ibl_val = (bat*) Tloc(ibl_bat, BUNfirst(ibl_bat));
+
+	if ((s = BATdescriptor(*sub)) == NULL)
+		throw(MAL, "sql.delta_batlist", RUNTIME_OBJECT_MISSING);
+
+	bat *abid = BLnames(ibl_bid);
+	BAT *abat = BATdescriptor(*abid);
+	const int ibl_len = BATcount(abat);
+
+	for (int i = 0; i < ibl_len; ++i) {
+		c = BATdescriptor(*BLget(ibl_bid, i));
+		res = BATproject(s, c);
+		assert(res);
+		BBPunfix(c->batCacheid);
+
+		BBPfix(res->batCacheid);
+		snprintf(name, 20, BL_FORMAT, res->batCacheid);
+		BBPrename(res->batCacheid, name);
+
+		ibl_val[i + BL_HEADER] = res->batCacheid;
+	}
+
+	BBPunfix(s->batCacheid);
+	BBPkeepref(*result = ibl_bat->batCacheid);
+	return MAL_SUCCEED;
+}
+
+str
 DELTAproject(bat *result, const bat *sub, const bat *col, const bat *uid, const bat *uval, const bat *ins)
 {
 	BAT *s, *c, *u_id, *u_val, *i = NULL, *res, *tres;

@@ -247,7 +247,6 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
-	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixrqr:
 	case op_matrixadd:
@@ -279,6 +278,10 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 			return rel_bind_column_(sql, p, rel->r, cname);
 		break;
 
+	case op_matrixtra:
+		return rel;
+		break;
+
 	default:
 		return NULL;
 	}
@@ -300,6 +303,9 @@ rel_bind_column( mvc *sql, sql_rel *rel, const char *cname, int f )
 		sql_exp *e = exps_bind_column(rel->exps, cname, NULL);
 		if (e)
 			return exp_alias_or_copy(sql, e->rname, cname, rel, e);
+	}
+	if (is_matrixtra(rel->op)) {
+		return exp_column(sql->sa, NULL, cname, exp_subtype(rel->lexps->h->data), 3, 0, 0);
 	}
 	return NULL;
 }
@@ -962,7 +968,6 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
-	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixrqr:
 	case op_matrixadd:
@@ -975,6 +980,10 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_matrixlogreg:
 	case op_matrixyintercept:
 		found = rel_bind_path_(rel->l, e, path);
+		break;
+
+	case op_matrixtra:
+		found = 1;
 		break;
 
 	case op_union:
@@ -994,6 +1003,8 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 		if (!found && e->l && exps_bind_column2(rel->exps, e->l, e->r))
 			found = 1;
 		if (!found && !e->l && exps_bind_column(rel->exps, e->r, NULL))
+			found = 1;
+		if (is_matrixtra(((sql_rel*)rel->l)->op))
 			found = 1;
 		break;
 	case op_insert:

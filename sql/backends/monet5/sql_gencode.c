@@ -159,6 +159,8 @@ dump_header(mvc *sql, MalBlkPtr mb, stmt *s, list *l)
 	setModuleId(list, sqlRef);
 	if (((stmt*)s->op1->op4.lval->h->data)->op1->type == st_tra)
 		setFunctionId(list, resultSetBatlistRef);
+	else if (((stmt*)s->op1->op4.lval->h->data)->op1->type == st_projectdelta_batlist)
+		setFunctionId(list, resultSetBatlistRef);
 	else
 		setFunctionId(list, resultSetRef);
 	k = list->argc;
@@ -1970,6 +1972,32 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 				q  = pushArgument(mb, q, l);
 			}
 
+			s->nr = getDestVar(q);
+		}
+			break;
+		case st_fetch_from_batlist:{
+			int l;
+			char *n = atom2string(sql->mvc->sa, s->op2->op4.aval);
+
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+
+			q = newStmt(mb, sqlRef, "fetchFromBatlist");
+			q = pushArgument(mb, q, l);
+			q = pushStr(mb, q, n);
+			s->nr = getDestVar(q);
+		}
+			break;
+		case st_projectdelta_batlist:{
+			int l, r;
+
+			l = _dumpstmt(sql, mb, s->op1);
+			r = _dumpstmt(sql, mb, s->op2);
+			assert(l >= 0 && r >= 0);
+
+			q = newStmt(mb, sqlRef, "projectdeltaBatlist");
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, r);
 			s->nr = getDestVar(q);
 		}
 			break;

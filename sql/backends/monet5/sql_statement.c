@@ -317,6 +317,8 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 				s->optimized = -1;
 			switch (s->type) {
 			case st_tra:
+			case st_fetch_from_batlist:
+			case st_projectdelta_batlist:
 			case st_list:
 				list_deps(dep_list, s->op4.lval, depend_type, dir);
 				break;
@@ -938,6 +940,32 @@ stmt_tra(sql_allocator *sa, stmt *op1, list *l)
 }
 
 stmt *
+stmt_fetch_from_batlist(sql_allocator *sa, stmt *batlist, const char *name)
+{
+	stmt *s = stmt_create(sa, st_fetch_from_batlist);
+
+	s->op1 = batlist;
+	s->op2 = stmt_atom_string(sa, strdup(name));
+	s->nrcols = 1;
+	s->tname = "batlist";
+	s->cname = strdup(name);
+	return s;
+}
+
+stmt *
+stmt_projectdelta_batlist(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_projectdelta_batlist);
+
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	s->tname = "batlist";
+	s->cname = "batlist";
+	return s;
+}
+
+stmt *
 stmt_mmu(sql_allocator *sa, stmt *op1, list *l)
 {
 	stmt *s = stmt_create(sa, st_mmu);
@@ -1447,6 +1475,8 @@ tail_type(stmt *st)
 	case st_order:
 	case st_logreg:
 	// case st_tra:
+	case st_fetch_from_batlist:
+	case st_projectdelta_batlist:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1620,6 +1650,8 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_convert:
 	case st_logreg:
 	// case st_tra:
+	case st_fetch_from_batlist:
+	case st_projectdelta_batlist:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1711,6 +1743,8 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_aggr:
 	case st_logreg:
 	// case st_tra:
+	case st_fetch_from_batlist:
+	case st_projectdelta_batlist:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1818,6 +1852,8 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_single:
 		return NULL;
 	case st_tra:
+	case st_fetch_from_batlist:
+	case st_projectdelta_batlist:
 	case st_list:
 		if (list_length(st->op4.lval))
 			return schema_name(sa, st->op4.lval->h->data);

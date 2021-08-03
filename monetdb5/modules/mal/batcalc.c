@@ -1771,13 +1771,13 @@ CMDbatTRAbatlistsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	int tp;
 
 	// BATs
-	BAT *obl_bat, *ibat, *obat, *abat;
-	bat *obl_bid, *ibid, *obid, *abid;
+	bat *obl_bid, *i_bid, *o_bid, *a_bid;
+	BAT *obl_bat, *i_bat, *o_bat, *a_bat;
 
 	// BAT tails
 	bat *obl_val;
-	int **oval;
-	const int **ival;
+	int **o_val;
+	const int **i_val;
 
 	// BAT name
 	char name[IDLENGTH];
@@ -1788,78 +1788,78 @@ CMDbatTRAbatlistsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 	// attribute BAT
 	tp = stk->stk[getArg(pci, 1)].vtype;
 	assert(tp == TYPE_bat || isaBatType(tp));
-	abid = getArgReference_bat(stk, pci, 1);
-	abat = BATdescriptor(*abid);
-	const int o_wdt = BATcount(abat);
+	a_bid = getArgReference_bat(stk, pci, 1);
+	a_bat = BATdescriptor(*a_bid);
+	const int a_len = BATcount(a_bat);
 	const int o_len = argc - 2;
 
 	// A BATs (full left matrix)
-	ival = malloc(o_len * sizeof (int*));
-	if (ival == NULL) {
+	i_val = malloc(o_len * sizeof (int*));
+	if (i_val == NULL) {
 		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
 		return NULL;
 	}
 	for (i = 2; i < argc; ++i) {
 		tp = stk->stk[getArg(pci, i)].vtype;
 		assert(tp == TYPE_bat || isaBatType(tp));
-		ibid = getArgReference_bat(stk, pci, i);
-		ibat = BATdescriptor(*ibid);
-		ival[i - 2] = (const int*) Tloc(ibat, BUNfirst(ibat));
-		assert(o_wdt == BATcount(ibat));
-		assert(BAThdense(ibat));
+		i_bid = getArgReference_bat(stk, pci, i);
+		i_bat = BATdescriptor(*i_bid);
+		i_val[i - 2] = (const int*) Tloc(i_bat, BUNfirst(i_bat));
+		assert(a_len == BATcount(i_bat));
+		assert(BAThdense(i_bat));
 	}
 
 	// result BATlist
 	obl_bid = getArgReference_bat(stk, pci, 0);
-	obl_bat = BATnew(TYPE_void, TYPE_int, o_wdt + BL_HEADER, TRANSIENT);
+	obl_bat = BATnew(TYPE_void, TYPE_bat, a_len + BL_HEADER, TRANSIENT);
 	obl_val = (bat*) Tloc(obl_bat, BUNfirst(obl_bat));
 
 	// prepare result BATlist
-	BATsetcapacity(obl_bat, o_wdt + BL_HEADER);
-	BATsetcount(obl_bat, o_wdt + BL_HEADER);
+	BATsetcapacity(obl_bat, a_len + BL_HEADER);
+	BATsetcount(obl_bat, a_len + BL_HEADER);
 	BATseqbase(obl_bat, obl_bat->H->seq);
 	obl_bat->T->sorted = 0;
 	obl_bat->T->revsorted = 0;
 	obl_bat->T->key = 0;
 	BBPkeepref(*obl_bid = obl_bat->batCacheid);
 
-	// store attribute names
-	BBPfix(abat->batCacheid);
-	snprintf(name, IDLENGTH, BL_FORMAT, abat->batCacheid);
-	BBPrename(abat->batCacheid, name);
-	obl_val[0] = abat->batCacheid;
-	BBPkeepref(abat->batCacheid);
+	// store attribute BAT
+	BBPfix(a_bat->batCacheid);
+	snprintf(name, IDLENGTH, BL_FORMAT, a_bat->batCacheid);
+	BBPrename(a_bat->batCacheid, name);
+	obl_val[0] = a_bat->batCacheid;
+	BBPkeepref(a_bat->batCacheid);
 
 	// result BATs
-	oval = malloc(o_wdt * sizeof (int*));
-	if (oval == NULL) {
+	o_val = malloc(a_len * sizeof (int*));
+	if (o_val == NULL) {
 		fprintf(stderr, "Memory for output BAT-pointer array is not allocated.");
 		return NULL;
 	}
-	for (i = 0; i < o_wdt; ++i) {
-		obat = BATnew(TYPE_void, TYPE_int, o_len, TRANSIENT);
-		oval[i] = (int*) Tloc(obat, BUNfirst(obat));
-		BATsetcapacity(obat, o_len);
-		BATsetcount(obat, o_len);
-		BATseqbase(obat, 0);
-		obat->T->sorted = 0;
-		obat->T->revsorted = 0;
-		obat->T->key = 0;
-		BBPfix(obat->batCacheid);
-		snprintf(name, 20, BL_FORMAT, obat->batCacheid);
-		BBPrename(obat->batCacheid, name);
-		obl_val[i + BL_HEADER] = obat->batCacheid;
-		BBPkeepref(obat->batCacheid);
+	for (i = 0; i < a_len; ++i) {
+		o_bat = BATnew(TYPE_void, TYPE_int, o_len, TRANSIENT);
+		o_val[i] = (int*) Tloc(o_bat, BUNfirst(o_bat));
+		BATsetcapacity(o_bat, o_len);
+		BATsetcount(o_bat, o_len);
+		BATseqbase(o_bat, 0);
+		o_bat->T->sorted = 0;
+		o_bat->T->revsorted = 0;
+		o_bat->T->key = 0;
+		BBPfix(o_bat->batCacheid);
+		snprintf(name, 20, BL_FORMAT, o_bat->batCacheid);
+		BBPrename(o_bat->batCacheid, name);
+		obl_val[i + BL_HEADER] = o_bat->batCacheid;
+		BBPkeepref(o_bat->batCacheid);
 	}
 
-	for (i = 0; i < o_wdt; ++i) {
+	for (i = 0; i < a_len; ++i) {
 		for (j = 0; j < o_len; ++j) {
-			oval[i][j] = ival[j][i];
+			o_val[i][j] = i_val[j][i];
 		}
 	}
 
-	free(ival);
-	free(oval);
+	free(i_val);
+	free(o_val);
 
 	return MAL_SUCCEED;
 }

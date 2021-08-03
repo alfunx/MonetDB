@@ -358,7 +358,6 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_uselect:
 			case st_uselect2:
 			case st_logreg:
-			// case st_tra:
 			case st_mmu:
 			case st_cpd:
 			case st_vectoradd:
@@ -1474,9 +1473,6 @@ tail_type(stmt *st)
 	case st_gen_group:
 	case st_order:
 	case st_logreg:
-	// case st_tra:
-	case st_fetch_from_batlist:
-	case st_projectdelta_batlist:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1496,7 +1492,6 @@ tail_type(stmt *st)
 	case st_next:
 		return tail_type(st->op1);
 
-	case st_tra:
 	case st_list:
 		return tail_type(st->op4.lval->h->data);
 
@@ -1552,7 +1547,11 @@ tail_type(stmt *st)
 	case st_exception:
 		return NULL;
 	case st_table:
+	case st_tra:
+	case st_projectdelta_batlist:
 		return sql_bind_localtype("bat");
+	case st_fetch_from_batlist:
+		return sql_bind_localtype("int");
 	default:
 		fprintf(stderr, "missing tail type %u: %s\n", st->type, st_type2string(st->type));
 		assert(0);
@@ -1649,7 +1648,6 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_convert:
 	case st_logreg:
-	// case st_tra:
 	case st_fetch_from_batlist:
 	case st_projectdelta_batlist:
 	case st_mmu:
@@ -1742,7 +1740,6 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_aggr:
 	case st_logreg:
-	// case st_tra:
 	case st_fetch_from_batlist:
 	case st_projectdelta_batlist:
 	case st_mmu:
@@ -1821,7 +1818,6 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_Nop:
 	case st_aggr:
 	case st_logreg:
-	// case st_tra:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:

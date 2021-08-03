@@ -2421,7 +2421,7 @@ fetch_from_batlist(bat *result, const bat *ibl_bid, const str *name)
 	const int ibl_len = BATcount(ibl_bat);
 	BATiter ibl_iter = bat_iterator(ibl_bat);
 
-	bat *iba_bid = BLnames(ibl_bid);
+	bat *iba_bid = BLatr(ibl_bid);
 	BAT *iba_bat = BATdescriptor(*iba_bid);
 	const int iba_len = BATcount(iba_bat);
 	BATiter iba_iter = bat_iterator(iba_bat);
@@ -2431,7 +2431,7 @@ fetch_from_batlist(bat *result, const bat *ibl_bid, const str *name)
 	for (int i = 0; i < iba_len; ++i) {
 		const str n = BUNtail(iba_iter, i);
 		if (strcmp(n, *name) == 0) {
-			bat *rbid = (bat*)BUNtail(ibl_iter, i + 1);
+			bat *rbid = (bat*)BUNtail(ibl_iter, i + BL_HEADER);
 			BAT *rbat = BATdescriptor(*rbid);
 			BBPkeepref(*result = rbat->batCacheid);
 			return MAL_SUCCEED;
@@ -2454,7 +2454,7 @@ DELTAproject_batlist(bat *result, const bat *sub, const bat *ibl_bid)
 	if ((s = BATdescriptor(*sub)) == NULL)
 		throw(MAL, "sql.delta_batlist", RUNTIME_OBJECT_MISSING);
 
-	bat *abid = BLnames(ibl_bid);
+	bat *abid = BLatr(ibl_bid);
 	BAT *abat = BATdescriptor(*abid);
 	const int ibl_len = BATcount(abat);
 
@@ -2777,11 +2777,25 @@ mvc_result_set_wrap( Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		return msg;
 	if ((msg = checkSQLContext(cntxt)) != NULL)
 		return msg;
+
+	int count = 0;
+	for (i = 6; i < pci->argc; ++i) {
+		bid = *getArgReference_bat(stk,pci,i);
+		b = BATdescriptor(bid);
+		if (BATttype(b) == TYPE_bat) {
+			bid = *BLatr(&bid);
+			b = BATdescriptor(bid);
+			count += BATcount(b);
+		} else {
+			++count;
+		}
+	}
+
 	bid = *getArgReference_bat(stk,pci,6);
 	b = BATdescriptor(bid);
 	if ( b == NULL)
 		throw(MAL,"sql.resultset","Failed to access order column");
-	res = *res_id = mvc_result_table(m, pci->argc - (pci->retc + 5), 1, b);
+	res = *res_id = mvc_result_table(m, count, 1, b);
 	if (res < 0)
 		msg = createException(SQL, "sql.resultSet", "failed");
 	BBPunfix(b->batCacheid);
@@ -2806,13 +2820,27 @@ mvc_result_set_wrap( Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		colname = BUNtail(iteratr,o);
 		tpename = BUNtail(itertpe,o);
 		b = BATdescriptor(bid);
-		if ( b == NULL)
-			msg= createException(MAL,"sql.resultset","Failed to access result column");
-		else if (mvc_result_column(m, tblname, colname, tpename, *digits++, *scaledigits++, b))
-			msg = createException(SQL, "sql.resultset", "mvc_result_column failed");
-		if( b)
-			BBPunfix(bid);
+		if (BATttype(b) == TYPE_bat && strcmp(tpename, "table") == 0 && strcmp(colname, "batlist") == 0) {
+			bat *iba_bid = BLatr(&bid);
+			BAT *iba_bat = BATdescriptor(*iba_bid);
+			BATiter iteriba = bat_iterator(iba_bat);
+			for (int j = 0; j < BATcount(b) - BL_HEADER; ++j) {
+				str iba = BUNtail(iteriba, j);
+				bat *ibl_bid = BLget(&bid, j);
+				BAT *ibl_bat = BATdescriptor(*ibl_bid);
+				if (mvc_result_column(m, tblname, iba, "int", 32, 0, ibl_bat))
+					msg = createException(SQL, "sql.resultset", "mvc_result_column failed (batlist)");
+			}
+		} else {
+			if ( b == NULL)
+				msg= createException(MAL,"sql.resultset","Failed to access result column");
+			else if (mvc_result_column(m, tblname, colname, tpename, *digits++, *scaledigits++, b))
+				msg = createException(SQL, "sql.resultset", "mvc_result_column failed");
+			if( b)
+				BBPunfix(bid);
+		}
 	}
+
 	/* now sent it to the channel cntxt->fdout */
 	if (mvc_export_result(cntxt->sqlcontext, cntxt->fdout, res))
 		msg = createException(SQL, "sql.resultset", "failed");
@@ -3152,88 +3180,6 @@ mvc_table_result_wrap(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		res = createException(SQL, "sql.resultSet", "failed");
 	BBPunfix(order->batCacheid);
 	return res;
-}
-
-str
-mvc_table_result_wrap_batlist(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
-{
-	int *res_id = getArgReference_int(stk, pci, 0);
-	bat tblId = *getArgReference_bat(stk, pci, 1);
-	bat atrId = *getArgReference_bat(stk, pci, 2);
-	bat tpeId = *getArgReference_bat(stk, pci, 3);
-	bat lenId = *getArgReference_bat(stk, pci, 4);
-	bat scaleId = *getArgReference_bat(stk, pci, 5);
-	bat iblId;
-
-	BAT *tbl, *atr, *tpe, *len, *scale, *ibl, *a, *b;
-
-	char name[IDLENGTH];
-	int i, res;
-	oid o = 0;
-	str tblname, colname, tpename, msg = MAL_SUCCEED;
-	int *digits, *scaledigits;
-	BATiter itertbl, iteratr, itertpe;
-	mvc *m = NULL;
-
-	if ((msg = getSQLContext(cntxt, mb, &m, NULL)) != NULL)
-		return msg;
-	if ((msg = checkSQLContext(cntxt)) != NULL)
-		return msg;
-	iblId = *getArgReference_bat(stk,pci,6);
-	ibl = BATdescriptor(iblId);
-	const int ibl_len = BATcount(ibl);
-	const bat *ibl_val = (const bat*) Tloc(ibl, BUNfirst(ibl));
-
-	snprintf(name, IDLENGTH, BL_FORMAT, ibl_val[0]);
-	a = BATdescriptor(BBPindex(name));
-	atrId = a->batCacheid;
-
-	if (a == NULL)
-		throw(MAL,"sql.resultset","Failed to access order column");
-	res = *res_id = mvc_result_table(m, ibl_len - 1, 1, a);
-	if (res < 0)
-		msg = createException(SQL, "sql.resultSet", "failed");
-	BBPunfix(atrId);
-
-	tbl = BATdescriptor(tblId);
-	atr = BATdescriptor(atrId);
-	tpe = BATdescriptor(tpeId);
-	len = BATdescriptor(lenId);
-	scale = BATdescriptor(scaleId);
-	if (msg || tbl == NULL || atr == NULL || tpe == NULL || len == NULL || scale == NULL)
-		goto wrapup_result_set;
-	/* mimick the old rsColumn approach; */
-	itertbl = bat_iterator(tbl);
-	iteratr = bat_iterator(atr);
-	itertpe = bat_iterator(tpe);
-	digits = (int*) Tloc(len,BUNfirst(len));
-	scaledigits = (int*) Tloc(scale,BUNfirst(scale));
-
-	tblname = BUNtail(itertbl, o);
-	tpename = BUNtail(itertpe, o);
-
-	for (i = 1; msg == MAL_SUCCEED && i < ibl_len; i++, o++) {
-		colname = BUNtail(iteratr, o);
-		snprintf(name, IDLENGTH, BL_FORMAT, ibl_val[i]);
-		b = BATdescriptor(BBPindex(name));
-		if (b == NULL)
-			msg = createException(MAL, "sql.resultset", "Failed to access result column");
-		else if (mvc_result_column(m, tblname, colname, tpename, *digits, *scaledigits, b))
-			msg = createException(SQL, "sql.resultset", "mvc_result_column failed");
-		if (b)
-			BBPunfix(ibl_val[i]);
-	}
-
-	/* now sent it to the channel cntxt->fdout */
-	if (mvc_export_result(cntxt->sqlcontext, cntxt->fdout, res))
-		msg = createException(SQL, "sql.resultset", "failed");
-  wrapup_result_set:
-	if( tbl) BBPunfix(tblId);
-	// if( atr) BBPunfix(atrId);
-	if( tpe) BBPunfix(tpeId);
-	if( len) BBPunfix(lenId);
-	if( scale) BBPunfix(scaleId);
-	return msg;
 }
 
 /* str mvc_declared_table_wrap(int *res_id, str *name); */

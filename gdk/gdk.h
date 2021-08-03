@@ -3101,6 +3101,6 @@ BLget(const bat *ibl_bid, int index)
 	return result != NULL ? &result->batCacheid : NULL;
 }
 
-#define BLnames(ibl_bid) BLget(ibl_bid, 0 - BL_HEADER);
+#define BLatr(ibl_bid) BLget(ibl_bid, 0 - BL_HEADER);
 
 #endif /* _GDK_H_ */

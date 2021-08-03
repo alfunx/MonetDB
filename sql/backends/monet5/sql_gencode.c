@@ -157,12 +157,7 @@ dump_header(mvc *sql, MalBlkPtr mb, stmt *s, list *l)
 	list = newInstruction(mb,ASSIGNsymbol);
 	getArg(list,0) = newTmpVariable(mb,TYPE_int);
 	setModuleId(list, sqlRef);
-	if (((stmt*)s->op1->op4.lval->h->data)->op1->type == st_tra)
-		setFunctionId(list, resultSetBatlistRef);
-	else if (((stmt*)s->op1->op4.lval->h->data)->op1->type == st_projectdelta_batlist)
-		setFunctionId(list, resultSetBatlistRef);
-	else
-		setFunctionId(list, resultSetRef);
+	setFunctionId(list, resultSetRef);
 	k = list->argc;
 	meta(tblId,TYPE_str);
 	meta(nmeId,TYPE_str);

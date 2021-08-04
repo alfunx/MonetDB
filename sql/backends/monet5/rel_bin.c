@@ -2649,6 +2649,16 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	s->nrcols = 1;
 	list_append(l, s);
 
+	// create schema stmt
+	s = stmt_atom_string(sql->sa, "");
+	s = stmt_temp(sql->sa, tail_type(s));
+	for (n = la->h; n; n = n->next) {
+		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
+		s = stmt_append(sql->sa, s, t);
+	}
+	s = stmt_alias(sql->sa, s, "", column_name(sql->sa, oa->h->data));
+	list_append(l, s);
+
 	return stmt_list(sql->sa, l);
 }
 
@@ -3987,19 +3997,16 @@ rel2bin_select( mvc *sql, sql_rel *rel, list *refs)
 	/* construct relation */
 	l = sa_list(sql->sa);
 	if (sub && sel) {
-		if (strcmp(((stmt*)sub->op4.lval->h->data)->tname, "batlist") == 0) {
-			stmt *proj = stmt_projectdelta_batlist(sql->sa, sel, sub->op4.lval->h->data);
-			list_append(l, proj);
-		} else {
-			for( n = sub->op4.lval->h; n; n = n->next ) {
-				stmt *col = n->data;
+		for( n = sub->op4.lval->h; n; n = n->next ) {
+			stmt *col = n->data;
 
-				if (col->nrcols == 0) /* constant */
-					col = stmt_const(sql->sa, sel, col);
-				else
-					col = stmt_project(sql->sa, sel, col);
-				list_append(l, col);
-			}
+			if (strcmp(col->tname, "batlist") == 0)
+				col = stmt_projectdelta_batlist(sql->sa, sel, col);
+			else if (col->nrcols == 0) /* constant */
+				col = stmt_const(sql->sa, sel, col);
+			else
+				col = stmt_project(sql->sa, sel, col);
+			list_append(l, col);
 		}
 	}
 	return stmt_list(sql->sa, l);

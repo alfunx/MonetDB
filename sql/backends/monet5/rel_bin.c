@@ -2623,6 +2623,9 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	// order specification columns
 	list *oa;
 
+	// ordered application part columns (desc part is directly appended to l)
+	list *loa, *ooa;
+
 	// iterators
 	node *n, *m;
 	int i;
@@ -2634,29 +2637,38 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	stmt *left = subrel_bin(sql, rel->l, refs);
 	assert(left);
 
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+
 	// construct list of statements
 	l = sa_list(sql->sa);
 	la = sa_list(sql->sa);
 	oa = sa_list(sql->sa);
+	loa = sa_list(sql->sa);
+	ooa = sa_list(sql->sa);
 
 	// split into application and descriptive part lists
 	assert(rel->lexps);
 	partition_appl_desc(sql, left, rel->lexps, la, NULL);
 	partition_appl_desc(sql, left, rel->rexps, oa, NULL);
 
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsl, oa, ooa);
+
 	// create tra stmt, represents first output BAT
-	s = stmt_tra(sql->sa, oa->h->data, la);
+	s = stmt_tra(sql->sa, ooa->h->data, loa);
 	s->nrcols = 1;
 	list_append(l, s);
 
 	// create schema stmt
 	s = stmt_atom_string(sql->sa, "");
 	s = stmt_temp(sql->sa, tail_type(s));
-	for (n = la->h; n; n = n->next) {
+	for (n = loa->h; n; n = n->next) {
 		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
 		s = stmt_append(sql->sa, s, t);
 	}
-	s = stmt_alias(sql->sa, s, "", column_name(sql->sa, oa->h->data));
+	s = stmt_alias(sql->sa, s, "", column_name(sql->sa, ooa->h->data));
 	list_append(l, s);
 
 	return stmt_list(sql->sa, l);

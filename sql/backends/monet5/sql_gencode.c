@@ -1972,14 +1972,18 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			break;
 		case st_fetch_from_batlist:{
 			int l;
-			char *n = atom2string(sql->mvc->sa, s->op2->op4.aval);
-
-			l = _dumpstmt(sql, mb, s->op1);
-			assert(l >= 0);
+			char *name = atom2string(sql->mvc->sa, s->op1->op4.aval);
 
 			q = newStmt(mb, sqlRef, "fetchFromBatlist");
-			q = pushArgument(mb, q, l);
-			q = pushStr(mb, q, n);
+			q = pushStr(mb, q, name);
+
+			// push input BAT-lists
+			for (n = s->op4.lval->h; n; n = n->next) {
+				l = _dumpstmt(sql, mb, n->data);
+				assert (l >= 0);
+				q  = pushArgument(mb, q, l);
+			}
+
 			s->nr = getDestVar(q);
 		}
 			break;

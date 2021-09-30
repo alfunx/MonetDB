@@ -2415,26 +2415,37 @@ DELTAsub(bat *result, const bat *col, const bat *cid, const bat *uid, const bat 
 }
 
 str
-fetch_from_batlist(bat *result, const bat *ibl_bid, const str *cname)
+fetch_from_batlist(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 {
-	BAT *ibl_bat = BATdescriptor(*ibl_bid);
-	BATiter ibl_iter = bat_iterator(ibl_bat);
-	const int ibl_len = BATcount(ibl_bat) - BL_HEADER;
+	int argc = pci->argc;
+	int i, bl;
 
-	BAT *iba_bat = BLatr(ibl_bat);
-	BATiter iba_iter = bat_iterator(iba_bat);
+	bat *obl_bid = getArgReference_bat(stk, pci, 0);
+	str *cname = getArgReference_str(stk, pci, 1);
 
-	for (int i = 0; i < ibl_len; ++i) {
-		const str name = BUNtail(iba_iter, i);
-		if (strcmp(name, *cname) == 0) {
-			bat *r_bid = (bat*)BUNtail(ibl_iter, i + BL_HEADER);
-			BAT *r_bat = BATdescriptor(*r_bid);
-			BBPkeepref(*result = r_bat->batCacheid);
-			return MAL_SUCCEED;
+	for (bl = 2; bl < argc; ++bl) {
+		bat *ibl_bid = getArgReference_bat(stk, pci, 2);
+
+		BAT *ibl_bat = BATdescriptor(*ibl_bid);
+		BATiter ibl_iter = bat_iterator(ibl_bat);
+		const int ibl_len = BATcount(ibl_bat) - BL_HEADER;
+
+		BAT *iba_bat = BLatr(ibl_bat);
+		BATiter iba_iter = bat_iterator(iba_bat);
+
+		for (i = 0; i < ibl_len; ++i) {
+			const str name = BUNtail(iba_iter, i);
+			fprintf(stderr, "name: %s\n", name);
+			if (strcmp(name, *cname) == 0) {
+				bat *r_bid = (bat*)BUNtail(ibl_iter, i + BL_HEADER);
+				BAT *r_bat = BATdescriptor(*r_bid);
+				BBPkeepref(*obl_bid = r_bat->batCacheid);
+				return MAL_SUCCEED;
+			}
 		}
 	}
 
-	throw(SQL, "mvc", "BAT not found in BAT-List");
+	throw(SQL, "mvc", "BAT %s not found in BAT-List", *cname);
 }
 
 str

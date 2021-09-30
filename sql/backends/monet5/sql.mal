@@ -235,7 +235,7 @@ comment "Bind the 'schema.table.column' BAT with access kind:
 	1 - inserts
 	2 - updates";
 
-command fetchFromBatlist(batlist:bat[:bat], name:str) :bat[:int]
+pattern fetchFromBatlist(name:str, batlist:bat[:bat]...) :bat[:int]
 address fetch_from_batlist
 comment "Return bat from bat-list.";
 

@@ -933,18 +933,19 @@ stmt_tra(sql_allocator *sa, stmt *op1, list *l)
 	s->op2 = stmt_list(sa, l);
 	s->op4.lval = l;
 	s->nrcols = 1;
-	s->tname = BL_NAME;
+	s->tname = op1->tname;
 	s->cname = BL_NAME;
 	return s;
 }
 
 stmt *
-stmt_fetch_from_batlist(sql_allocator *sa, stmt *batlist, const char *name)
+stmt_fetch_from_batlist(sql_allocator *sa, const char *name, list *l)
 {
 	stmt *s = stmt_create(sa, st_fetch_from_batlist);
 
-	s->op1 = batlist;
-	s->op2 = stmt_atom_string(sa, strdup(name));
+	s->op1 = stmt_atom_string(sa, strdup(name));
+	s->op2 = stmt_list(sa, l);
+	s->op4.lval = l;
 	s->nrcols = 1;
 	s->tname = BL_NAME;
 	s->cname = strdup(name);
@@ -959,7 +960,7 @@ stmt_projectdelta_batlist(sql_allocator *sa, stmt *op1, stmt *op2)
 	s->op1 = op1;
 	s->op2 = op2;
 	s->nrcols = 1;
-	s->tname = BL_NAME;
+	s->tname = op2->tname;
 	s->cname = BL_NAME;
 	return s;
 }

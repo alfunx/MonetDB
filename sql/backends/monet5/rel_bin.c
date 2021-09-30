@@ -538,11 +538,17 @@ exp_bin(mvc *sql, sql_exp *e, stmt *left, stmt *right, stmt *grp, stmt *ext, stm
 			s = bin_find_column(sql->sa, right, e->l, e->r);
 		if (!s && left) 
 			s = bin_find_column(sql->sa, left, e->l, e->r);
-		if (!s && left) {
+		if (!s) {
 			// if there is a BAT-list, we assume the column is part of it
-			stmt *t = bin_find_column(sql->sa, left, NULL, BL_NAME);
-			if (t)
-				s = stmt_fetch_from_batlist(sql->sa, t, e->name);
+			list *l = sa_list(sql->sa);
+
+			if (left)
+				list_merge_destroy(l, bin_find_columns(sql, left, BL_NAME), NULL);
+			if (right)
+				list_merge_destroy(l, bin_find_columns(sql, right, BL_NAME), NULL);
+
+			if (!list_empty(l))
+				s = stmt_fetch_from_batlist(sql->sa, e->name, l);
 		}
 		if (s && grp)
 			s = stmt_project(sql->sa, ext, s);
@@ -2662,6 +2668,7 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 
 	// create tra stmt, represents first output BAT
 	s = stmt_tra(sql->sa, ooa->h->data, loa);
+	s = stmt_alias(sql->sa, s, table_name(sql->sa, loa->h->data), BL_NAME);
 	s->nrcols = 1;
 	list_append(l, s);
 
@@ -2672,7 +2679,7 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
 		s = stmt_append(sql->sa, s, t);
 	}
-	s = stmt_alias(sql->sa, s, "", column_name(sql->sa, ooa->h->data));
+	s = stmt_alias(sql->sa, s, table_name(sql->sa, ooa->h->data), column_name(sql->sa, ooa->h->data));
 	list_append(l, s);
 
 	return stmt_list(sql->sa, l);

@@ -203,7 +203,7 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 		if (!r || !rel_issubquery(right)) {
 			*p = rel;
 			l = rel_bind_column_(sql, p, rel->l, cname);
-			if (l && r && !rel_issubquery(r)) {
+			if (l && r && !rel_issubquery(r) && !is_matrixtra(((sql_rel*)r->l)->op)) {
 				(void) sql_error(sql, ERR_AMBIGUOUS, "SELECT: identifier '%s' ambiguous", cname);
 				return NULL;
 			}

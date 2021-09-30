@@ -911,7 +911,6 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
-	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -932,6 +931,14 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 		exps = rel_projections(sql, rel->l, tname, settname, intern);
 		rexps = rel_projections(sql, rel->r, tname, settname, intern);
 		exps = list_merge(exps, rexps, (fdup)NULL);
+		return exps;
+
+	// projections are not known yet, we add placeholder for BAT-list
+	case op_matrixtra:
+		exps = new_exp_list(sql->sa);
+		sql_exp* e = rel->rexps->h->data;
+		append(exps, exp_column(sql->sa, tname, BL_NAME, exp_subtype(e), 0, 0, 0));
+		append(exps, exp_alias_or_copy(sql, tname, exp_name(e), rel, e));
 		return exps;
 
 	default:
@@ -982,6 +989,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 		found = rel_bind_path_(rel->l, e, path);
 		break;
 
+	// we assume the e_column is part of BAT-list
 	case op_matrixtra:
 		found = 1;
 		break;
@@ -1004,7 +1012,8 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 			found = 1;
 		if (!found && !e->l && exps_bind_column(rel->exps, e->r, NULL))
 			found = 1;
-		if (is_matrixtra(((sql_rel*)rel->l)->op))
+		// if there is a BAT-list, we assume the column is part of it
+		if (!found && exps_bind_column(rel->exps, BL_NAME, NULL))
 			found = 1;
 		break;
 	case op_insert:

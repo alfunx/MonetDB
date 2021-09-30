@@ -2812,7 +2812,7 @@ mvc_result_set_wrap( Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		colname = BUNtail(iteratr,o);
 		tpename = BUNtail(itertpe,o);
 		b = BATdescriptor(bid);
-		if (BATttype(b) == TYPE_bat && strcmp(tpename, "table") == 0 && strcmp(colname, "batlist") == 0) {
+		if (BATttype(b) == TYPE_bat && strcmp(tpename, "table") == 0 && strcmp(colname, BL_NAME) == 0) {
 			BATiter iba_iter = bat_iterator(BLatr(b));
 			for (int j = 0; j < BATcount(b) - BL_HEADER; ++j) {
 				if (mvc_result_column(m, tblname, BUNtail(iba_iter, j), "int", 32, 0, BLget(b, j)))

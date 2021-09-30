@@ -8115,8 +8115,8 @@ _rel_optimizer(mvc *sql, sql_rel *rel, int level)
 	if (gp.cnt[op_matrixinv])
 		rel = rewrite(sql, rel, &use_triangular_inv, &changes);
 
-	if (gp.cnt[op_project])
-		rel = rewrite(sql, rel, &push_project_to_matrix_tra, &changes);
+	// if (gp.cnt[op_project])
+	// 	rel = rewrite(sql, rel, &push_project_to_matrix_tra, &changes);
 
 	/* Remove unused expressions */
 	if (level <= 0)

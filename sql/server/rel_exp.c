@@ -1446,6 +1446,16 @@ exps_bind_column( list *exps, const char *cname, int *ambiguous )
 				e = ce;
 			}
 		}
+		if (!e) {
+			for (en = exps->h; en; en = en->next ) {
+				sql_exp *ce = en->data;
+				if (ce->name && strcmp(ce->name, BL_NAME) == 0) {
+					ce->used = 1;
+					e = exp_column(exps->sa, BL_NAME, cname, exp_subtype(ce), 0, 0, 0);
+					break;
+				}
+			}
+		}
 	}
 	return e;
 }

@@ -5685,8 +5685,8 @@ rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_exp *el = rel->lexps->h->data;
 	sql_exp *er = rel->rexps->h->data;
 
-	append(exps, exp_column(sql->sa, NULL, "batlist", exp_subtype(el), 0, 0, 0));
-	append(exps, exp_column(sql->sa, NULL,       nme, exp_subtype(er), 0, 0, 0));
+	append(exps, exp_column(sql->sa, NULL, BL_NAME, exp_subtype(el), 0, 0, 0));
+	append(exps, exp_column(sql->sa, NULL,     nme, exp_subtype(er), 0, 0, 0));
 
 	// set number of attributes in the result relation
 	rel->nrcols = 1;

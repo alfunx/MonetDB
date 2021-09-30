@@ -3087,6 +3087,7 @@ gdk_export BAT *BATsample(BAT *b, BUN n);
 
 #include <string.h>
 
+#define BL_NAME "__BATLIST__"
 #define BL_FORMAT "batlist_%d"
 #define BL_HEADER 1
 

@@ -933,8 +933,8 @@ stmt_tra(sql_allocator *sa, stmt *op1, list *l)
 	s->op2 = stmt_list(sa, l);
 	s->op4.lval = l;
 	s->nrcols = 1;
-	s->tname = "batlist";
-	s->cname = "batlist";
+	s->tname = BL_NAME;
+	s->cname = BL_NAME;
 	return s;
 }
 
@@ -946,7 +946,7 @@ stmt_fetch_from_batlist(sql_allocator *sa, stmt *batlist, const char *name)
 	s->op1 = batlist;
 	s->op2 = stmt_atom_string(sa, strdup(name));
 	s->nrcols = 1;
-	s->tname = "batlist";
+	s->tname = BL_NAME;
 	s->cname = strdup(name);
 	return s;
 }
@@ -959,8 +959,8 @@ stmt_projectdelta_batlist(sql_allocator *sa, stmt *op1, stmt *op2)
 	s->op1 = op1;
 	s->op2 = op2;
 	s->nrcols = 1;
-	s->tname = "batlist";
-	s->cname = "batlist";
+	s->tname = BL_NAME;
+	s->cname = BL_NAME;
 	return s;
 }
 
@@ -1141,6 +1141,9 @@ stmt_join(sql_allocator *sa, stmt *op1, stmt *op2, comp_type cmptype)
 stmt *
 stmt_project(sql_allocator *sa, stmt *op1, stmt *op2)
 {
+	// if op2 is a BAT-list, we use stmt_projectdelta_batlist
+	if (op2 && op2->cname && strcmp(op2->cname, BL_NAME) == 0)
+		return stmt_projectdelta_batlist(sa, op1, op2);
 	return stmt_join(sa, op1, op2, cmp_project);
 }
 

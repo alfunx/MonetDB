@@ -88,7 +88,8 @@ sql5_export str DELTAbat2(bat *result, const bat *col, const bat *uid, const bat
 sql5_export str DELTAsub2(bat *result, const bat *col, const bat *cid, const bat *uid, const bat *uval);
 sql5_export str DELTAproject2(bat *result, const bat *subselect, const bat *col, const bat *uid, const bat *uval);
 
-sql5_export str fetch_from_batlist(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci);
+sql5_export str get_from_batlist_by_index(bat *result, const int *index, const bat *ibl_bid);
+sql5_export str get_from_batlist_by_name(bat *result, const str *name, const bat *ibl_bid);
 sql5_export str DELTAproject_batlist(bat *result, const bat *sub, const bat *ibl_bid);
 
 sql5_export str BATleftproject(bat *result, const bat *col, const bat *l, const bat *r);

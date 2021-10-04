@@ -317,7 +317,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 				s->optimized = -1;
 			switch (s->type) {
 			case st_tra:
-			case st_fetch_from_batlist:
+			case st_get_from_batlist:
 			case st_projectdelta_batlist:
 			case st_list:
 				list_deps(dep_list, s->op4.lval, depend_type, dir);
@@ -722,6 +722,10 @@ stmt_gen_group(sql_allocator *sa, stmt *gids, stmt *cnts)
 stmt *
 stmt_mirror(sql_allocator *sa, stmt *s)
 {
+	// if s is a BAT-list, we use stmt_get_from_batlist to extract one BAT
+	if (s && s->cname && strcmp(s->cname, BL_NAME) == 0)
+		s = stmt_get_by_index_from_batlist(sa, 0, s);
+
 	stmt *ns = stmt_create(sa, st_mirror);
 
 	ns->op1 = s;
@@ -939,13 +943,25 @@ stmt_tra(sql_allocator *sa, stmt *op1, list *l)
 }
 
 stmt *
-stmt_fetch_from_batlist(sql_allocator *sa, const char *name, list *l)
+stmt_get_by_index_from_batlist(sql_allocator *sa, const int index, stmt *op1)
 {
-	stmt *s = stmt_create(sa, st_fetch_from_batlist);
+	stmt *s = stmt_create(sa, st_get_from_batlist);
+
+	s->op1 = stmt_atom_int(sa, index);
+	s->op2 = op1;
+	s->nrcols = 1;
+	s->tname = BL_NAME;
+	s->cname = NULL;
+	return s;
+}
+
+stmt *
+stmt_get_by_name_from_batlist(sql_allocator *sa, const char *name, stmt *op1)
+{
+	stmt *s = stmt_create(sa, st_get_from_batlist);
 
 	s->op1 = stmt_atom_string(sa, strdup(name));
-	s->op2 = stmt_list(sa, l);
-	s->op4.lval = l;
+	s->op2 = op1;
 	s->nrcols = 1;
 	s->tname = BL_NAME;
 	s->cname = strdup(name);
@@ -1554,7 +1570,7 @@ tail_type(stmt *st)
 	case st_tra:
 	case st_projectdelta_batlist:
 		return sql_bind_localtype("bat");
-	case st_fetch_from_batlist:
+	case st_get_from_batlist:
 		return sql_bind_localtype("int");
 	default:
 		fprintf(stderr, "missing tail type %u: %s\n", st->type, st_type2string(st->type));
@@ -1652,7 +1668,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_convert:
 	case st_logreg:
-	case st_fetch_from_batlist:
+	case st_get_from_batlist:
 	case st_projectdelta_batlist:
 	case st_mmu:
 	case st_cpd:
@@ -1744,7 +1760,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_aggr:
 	case st_logreg:
-	case st_fetch_from_batlist:
+	case st_get_from_batlist:
 	case st_projectdelta_batlist:
 	case st_mmu:
 	case st_cpd:
@@ -1852,7 +1868,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_single:
 		return NULL;
 	case st_tra:
-	case st_fetch_from_batlist:
+	case st_get_from_batlist:
 	case st_projectdelta_batlist:
 	case st_list:
 		if (list_length(st->op4.lval))

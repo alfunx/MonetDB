@@ -1836,6 +1836,7 @@ CMDbatTRAbatlistsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		fprintf(stderr, "Memory for output BAT-pointer array is not allocated.");
 		return NULL;
 	}
+
 	for (i = 0; i < a_len; ++i) {
 		o_bat = BATnew(TYPE_void, TYPE_int, o_len, TRANSIENT);
 		o_val[i] = (int*) Tloc(o_bat, BUNfirst(o_bat));
@@ -1845,9 +1846,11 @@ CMDbatTRAbatlistsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		o_bat->T->sorted = 0;
 		o_bat->T->revsorted = 0;
 		o_bat->T->key = 0;
+
 		BBPfix(o_bat->batCacheid);
 		snprintf(name, 20, BL_FORMAT, o_bat->batCacheid);
 		BBPrename(o_bat->batCacheid, name);
+
 		obl_val[i + BL_HEADER] = o_bat->batCacheid;
 		BBPkeepref(o_bat->batCacheid);
 	}

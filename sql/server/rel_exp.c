@@ -1446,16 +1446,6 @@ exps_bind_column( list *exps, const char *cname, int *ambiguous )
 				e = ce;
 			}
 		}
-		if (!e) {
-			for (en = exps->h; en; en = en->next ) {
-				sql_exp *ce = en->data;
-				if (ce->name && strcmp(ce->name, BL_NAME) == 0) {
-					ce->used = 1;
-					e = exp_column(exps->sa, BL_NAME, cname, exp_subtype(ce), 0, 0, 0);
-					break;
-				}
-			}
-		}
 	}
 	return e;
 }
@@ -1506,6 +1496,22 @@ exps_bind_column2( list *exps, const char *rname, const char *cname )
 			if (e && e->type == e_column && e->name && !e->rname && e->l && strcmp(e->name, cname) == 0 && strcmp(e->l, rname) == 0)
 				return e;
 		}
+		sql_exp *e, *res = NULL;
+		for (en = exps->h; en; en = en->next) {
+			e = en->data;
+			if (e && is_column(e->type) && e->name && e->rname && strcmp(e->name, BL_NAME) == 0 && strcmp(e->rname, rname) == 0) {
+				e->used = 1;
+				if (!res)
+					res = exp_column(exps->sa, rname, cname, exp_subtype(e), 0, 0, 0);
+			}
+			if (e && e->type == e_column && e->name && !e->rname && e->l && strcmp(e->name, BL_NAME) == 0 && strcmp(e->l, rname) == 0) {
+				e->used = 1;
+				if (!res)
+					res = exp_column(exps->sa, rname, cname, exp_subtype(e), 0, 0, 0);
+			}
+		}
+		if (res)
+			return res;
 	}
 	return NULL;
 }

@@ -305,7 +305,8 @@ rel_bind_column( mvc *sql, sql_rel *rel, const char *cname, int f )
 			return exp_alias_or_copy(sql, e->rname, cname, rel, e);
 	}
 	if (is_matrixtra(rel->op)) {
-		return exp_column(sql->sa, NULL, cname, exp_subtype(rel->lexps->h->data), 3, 0, 0);
+		sql_exp *e = rel->lexps->t->data;
+		return exp_column(sql->sa, e->rname, cname, exp_subtype(e), 3, 0, 0);
 	}
 	return NULL;
 }
@@ -338,6 +339,10 @@ rel_bind_column2( mvc *sql, sql_rel *rel, const char *tname, const char *cname, 
 		   is_select(rel->op)) {
 		if (rel->l)
 			return rel_bind_column2(sql, rel->l, tname, cname, f);
+	}
+	if (is_matrixtra(rel->op)) {
+		sql_exp *e = rel->lexps->t->data;
+		return exp_column(sql->sa, tname, cname, exp_subtype(e), 3, 0, 0);
 	}
 	return NULL;
 }
@@ -937,8 +942,8 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_matrixtra:
 		exps = new_exp_list(sql->sa);
 		sql_exp* e = rel->rexps->h->data;
-		append(exps, exp_column(sql->sa, tname, BL_NAME, exp_subtype(e), 0, 0, 0));
-		append(exps, exp_alias_or_copy(sql, tname, exp_name(e), rel, e));
+		append(exps, exp_alias_or_copy(sql, exp_relname(e), exp_name(e), rel, e));
+		append(exps, exp_column(sql->sa, exp_relname(e), BL_NAME, exp_subtype(e), 0, 0, 0));
 		return exps;
 
 	default:
@@ -1013,7 +1018,7 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 		if (!found && !e->l && exps_bind_column(rel->exps, e->r, NULL))
 			found = 1;
 		// if there is a BAT-list, we assume the column is part of it
-		if (!found && exps_bind_column(rel->exps, BL_NAME, NULL))
+		if (!found && exps_bind_column2(rel->exps, e->l, BL_NAME))
 			found = 1;
 		break;
 	case op_insert:

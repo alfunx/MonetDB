@@ -235,9 +235,13 @@ comment "Bind the 'schema.table.column' BAT with access kind:
 	1 - inserts
 	2 - updates";
 
-pattern fetchFromBatlist(name:str, batlist:bat[:bat]...) :bat[:int]
-address fetch_from_batlist
-comment "Return bat from bat-list.";
+command getFromBatlist(index:int, batlist:bat[:bat]) :bat[:int]
+address get_from_batlist_by_index
+comment "Return bat from bat-list by index.";
+
+command getFromBatlist(name:str, batlist:bat[:bat]) :bat[:int]
+address get_from_batlist_by_name
+comment "Return bat from bat-list by name.";
 
 command projectdeltaBatlist(subselect:bat[:oid], col:bat[:bat]) :bat[:bat]
 address DELTAproject_batlist

@@ -540,13 +540,10 @@ exp_bin(mvc *sql, sql_exp *e, stmt *left, stmt *right, stmt *grp, stmt *ext, stm
 			s = bin_find_column(sql->sa, left, e->l, e->r);
 		if (!s) {
 			// if there is a BAT-list, we assume the column is part of it
-			list *l = sa_list(sql->sa);
-
 			if (right)
 				s = bin_find_column(sql->sa, right, e->l, BL_NAME);
 			if (!s && left)
 				s = bin_find_column(sql->sa, left, e->l, BL_NAME);
-
 			if (s)
 				s = stmt_get_by_name_from_batlist(sql->sa, e->name, s);
 		}

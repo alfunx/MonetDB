@@ -341,24 +341,57 @@ BKCappend_wrap_batlist(bat *r, const bat *ibl_bid, const bat *ubl_bid)
 	const int ibl_len = BATcount(ibl_bat) - BL_HEADER;
 	const int ubl_len = BATcount(ubl_bat) - BL_HEADER;
 	bat *ibl_val = (bat*) Tloc(ibl_bat, BUNfirst(ibl_bat));
+	bat *ubl_val = (bat*) Tloc(ubl_bat, BUNfirst(ubl_bat));
 
-	if (ibl_len <= 0 && ubl_len > 0) {
-		BBPkeepref(*r = ubl_bat->batCacheid);
-		return MAL_SUCCEED;
-	}
+	u = BLget(ubl_bat, 0);
+	if (u && BATcount(u) == 0)
+		ret = GDK_SUCCEED;
 
-	if (ubl_len <= 0 && ibl_len > 0) {
+	if (!u || ibl_len != -BL_HEADER && ibl_len != ubl_len) {
+		for (int i = 0; i < ibl_len; ++i) {
+			b = BLget(ibl_bat, i);
+			ret = BATappend(b, ubl_bat, FALSE);
+
+			BBPfix(b->batCacheid);
+			snprintf(name, 20, BL_FORMAT, b->batCacheid);
+			BBPrename(b->batCacheid, name);
+
+			ibl_val[i + BL_HEADER] = b->batCacheid;
+			BBPkeepref(b->batCacheid);
+		}
+
+		if(ibl_bat->batPersistence == PERSISTENT)
+			BATmsync(ibl_bat);
 		BBPkeepref(*r = ibl_bat->batCacheid);
 		return MAL_SUCCEED;
 	}
 
-	if (ibl_len != ubl_len)
-		throw(MAL, "bat.append", GDK_EXCEPTION);
+	if (ibl_len < 0) {
+		BATsetcapacity(ibl_bat, ubl_len + BL_HEADER);
+		BATsetcount(ibl_bat, ubl_len + BL_HEADER);
+		ibl_val[0] = ubl_val[0];
 
-	for (int i = 0; i < ibl_len; ++i) {
+		for (int i = 0; i < ubl_len; ++i) {
+			b = BATnew(TYPE_void, TYPE_int, 0, TRANSIENT);
+			BATsetcapacity(b, 0);
+			BATsetcount(b, 0);
+			BATseqbase(b, 0);
+			b->T->sorted = 0;
+			b->T->revsorted = 0;
+			b->T->key = 0;
+
+			BBPfix(b->batCacheid);
+			snprintf(name, 20, BL_FORMAT, b->batCacheid);
+			BBPrename(b->batCacheid, name);
+
+			ibl_val[i + BL_HEADER] = b->batCacheid;
+			BBPkeepref(b->batCacheid);
+		}
+	}
+
+	for (int i = 0; i < ubl_len; ++i) {
 		b = BLget(ibl_bat, i);
 		u = BLget(ubl_bat, i);
-
 		ret = BATappend(b, u, FALSE);
 
 		BBPfix(b->batCacheid);
@@ -467,12 +500,28 @@ BKCappend_force_wrap_batlist(bat *r, const bat *ibl_bid, const bat *ubl_bid, con
 	bat *ibl_val = (bat*) Tloc(ibl_bat, BUNfirst(ibl_bat));
 	bat *ubl_val = (bat*) Tloc(ubl_bat, BUNfirst(ubl_bat));
 
-	if (ibl_len != -BL_HEADER && ibl_len != ubl_len)
-		throw(MAL, "bat.append", GDK_EXCEPTION);
-
 	u = BLget(ubl_bat, 0);
 	if (u && BATcount(u) == 0)
 		ret = GDK_SUCCEED;
+
+	if (!u || ibl_len != -BL_HEADER && ibl_len != ubl_len) {
+		for (int i = 0; i < ibl_len; ++i) {
+			b = BLget(ibl_bat, i);
+			ret = BATappend(b, ubl_bat, *force);
+
+			BBPfix(b->batCacheid);
+			snprintf(name, 20, BL_FORMAT, b->batCacheid);
+			BBPrename(b->batCacheid, name);
+
+			ibl_val[i + BL_HEADER] = b->batCacheid;
+			BBPkeepref(b->batCacheid);
+		}
+
+		if(ibl_bat->batPersistence == PERSISTENT)
+			BATmsync(ibl_bat);
+		BBPkeepref(*r = ibl_bat->batCacheid);
+		return MAL_SUCCEED;
+	}
 
 	if (ibl_len < 0) {
 		BATsetcapacity(ibl_bat, ubl_len + BL_HEADER);
@@ -500,7 +549,6 @@ BKCappend_force_wrap_batlist(bat *r, const bat *ibl_bid, const bat *ubl_bid, con
 	for (int i = 0; i < ubl_len; ++i) {
 		b = BLget(ibl_bat, i);
 		u = BLget(ubl_bat, i);
-
 		ret = BATappend(b, u, *force);
 
 		BBPfix(b->batCacheid);

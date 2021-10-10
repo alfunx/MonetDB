@@ -5161,7 +5161,7 @@ rel_push_project_up(int *changes, mvc *sql, sql_rel *rel)
 				 is_matrixsub(((sql_rel*)l->l)->op) ||
 				 is_matrixtra(((sql_rel*)l->l)->op) ||
 				 is_matrixemul(((sql_rel*)l->l)->op))) {
-			fprintf(stderr, ">>> [rel_push_project_up] no action\n");
+			// fprintf(stderr, ">>> [rel_push_project_up] no action\n");
 			return rel;
 		}
 

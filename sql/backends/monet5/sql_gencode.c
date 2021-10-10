@@ -2001,6 +2001,16 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			s->nr = getDestVar(q);
 		}
 			break;
+		case st_oldschema:{
+			q = newStmt(mb, batcalcRef, "oldSchema");
+
+			for (n = s->op4.lval->h; n; n = n->next) {
+				q  = pushStr(mb, q, n->data);
+			}
+
+			s->nr = getDestVar(q);
+		}
+			break;
 		case st_mmu:{
 			int l;
 

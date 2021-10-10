@@ -358,6 +358,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_uselect:
 			case st_uselect2:
 			case st_logreg:
+			case st_oldschema:
 			case st_mmu:
 			case st_cpd:
 			case st_vectoradd:
@@ -982,6 +983,18 @@ stmt_projectdelta_batlist(sql_allocator *sa, stmt *op1, stmt *op2)
 }
 
 stmt *
+stmt_oldschema(sql_allocator *sa, stmt *op1, list *l)
+{
+	stmt *s = stmt_create(sa, st_oldschema);
+	s->op1 = op1;
+	s->op4.lval = l;
+	s->nrcols = 1;
+	s->tname = op1->tname;
+	s->cname = op1->cname;
+	return s;
+}
+
+stmt *
 stmt_mmu(sql_allocator *sa, stmt *op1, list *l)
 {
 	stmt *s = stmt_create(sa, st_mmu);
@@ -1493,6 +1506,7 @@ tail_type(stmt *st)
 	case st_gen_group:
 	case st_order:
 	case st_logreg:
+	case st_oldschema:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1670,6 +1684,7 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_logreg:
 	case st_get_from_batlist:
 	case st_projectdelta_batlist:
+	case st_oldschema:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1762,6 +1777,7 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_logreg:
 	case st_get_from_batlist:
 	case st_projectdelta_batlist:
+	case st_oldschema:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1838,6 +1854,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_Nop:
 	case st_aggr:
 	case st_logreg:
+	case st_oldschema:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:

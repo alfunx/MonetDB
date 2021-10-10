@@ -2581,8 +2581,7 @@ rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsr, ra, roa);
 
 	// create schema stmt
-	s = stmt_atom_string(sql->sa, "");
-	s = stmt_temp(sql->sa, tail_type(s));
+	s = stmt_temp(sql->sa, sql_bind_localtype("str"));
 	for (n = la->h; n; n = n->next) {
 		fprintf(stderr, ">>> %s\n", column_name(sql->sa, n->data));
 		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
@@ -2664,18 +2663,15 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, oa, ooa);
 
 	// create schema stmt
-	s = stmt_atom_string(sql->sa, "");
-	s = stmt_temp(sql->sa, tail_type(s));
+	list *schema = sa_list(sql->sa);
 	for (n = loa->h; n; n = n->next) {
-		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
-		s = stmt_append(sql->sa, s, t);
+		list_append(schema, strdup(column_name(sql->sa, n->data)));
 	}
-	s = stmt_alias(sql->sa, s, table_name(sql->sa, ooa->h->data), column_name(sql->sa, ooa->h->data));
+	s = stmt_oldschema(sql->sa, ooa->h->data, schema);
 	list_append(l, s);
 
 	// create tra stmt, represents first output BAT
 	s = stmt_tra(sql->sa, ooa->h->data, loa);
-	s = stmt_alias(sql->sa, s, table_name(sql->sa, loa->h->data), BL_NAME);
 	s->nrcols = 1;
 	list_append(l, s);
 

@@ -21137,6 +21137,10 @@ pattern traBatlist(a:bat[:any]...) :bat[:bat]
 address CMDbatTRAbatlistsignal
 comment "Return BAT after TRA, overflow causes NIL value";
 
+pattern oldSchema(:str...) :bat[:str]
+address CMDbatOldSchemasignal
+comment "Return BAT after TRA, overflow causes NIL value";
+
 pattern !(b1:bat[:flt],b2:bat[:flt]) :bat[:flt]
 address CMDbatGSQRTsignal
 comment "Return sqrt(B2), grouped by B1, signal error on overflow";

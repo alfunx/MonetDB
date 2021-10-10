@@ -1765,6 +1765,33 @@ CMDbatTRAsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 }
 
 str
+CMDbatOldSchemasignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int argc = pci->argc;
+	int tp;
+
+	// result BAT
+	bat *o_bid = getArgReference_bat(stk, pci, 0);
+	BAT *o_bat = BATnew(TYPE_void, TYPE_str, argc - 1, TRANSIENT);
+
+	// prepare result BAT
+	BATsetcapacity(o_bat, argc - 1);
+	BATseqbase(o_bat, o_bat->H->seq);
+	o_bat->T->sorted = 0;
+	o_bat->T->revsorted = 0;
+	o_bat->T->key = 0;
+	BBPkeepref(*o_bid = o_bat->batCacheid);
+
+	for (int i = 1; i < argc; ++i) {
+		tp = stk->stk[getArg(pci, i)].vtype;
+		assert(tp == TYPE_str);
+		BUNappend(o_bat, *getArgReference_str(stk, pci, i), FALSE);
+	}
+
+	return MAL_SUCCEED;
+}
+
+str
 CMDbatTRAbatlistsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 {
 	int argc = pci->argc;

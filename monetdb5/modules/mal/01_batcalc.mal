@@ -21135,11 +21135,23 @@ comment "Return BAT after TRA, overflow causes NIL value";
 
 pattern traBatlist(a:bat[:any]...) :bat[:bat]
 address CMDbatTRAbatlistsignal
-comment "Return BAT after TRA, overflow causes NIL value";
+comment "Return bat-list after TRA";
 
 pattern oldSchema(:str...) :bat[:str]
 address CMDbatOldSchemasignal
-comment "Return BAT after TRA, overflow causes NIL value";
+comment "Return bat with attribute names";
+
+command getFromBatlist(index:int, batlist:bat[:bat]) :bat[:int]
+address get_from_batlist_by_index
+comment "Return bat from bat-list by index";
+
+command getFromBatlist(name:str, batlist:bat[:bat]) :bat[:int]
+address get_from_batlist_by_name
+comment "Return bat from bat-list by name";
+
+command projectdeltaBatlist(subselect:bat[:oid], col:bat[:bat]) :bat[:bat]
+address DELTAproject_batlist
+comment "Return column bat with delta's applied";
 
 pattern !(b1:bat[:flt],b2:bat[:flt]) :bat[:flt]
 address CMDbatGSQRTsignal

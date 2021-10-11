@@ -1973,7 +1973,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 		case st_get_from_batlist:{
 			int l;
 
-			q = newStmt(mb, sqlRef, "getFromBatlist");
+			q = newStmt(mb, batcalcRef, "getFromBatlist");
 
 			// push argument
 			l = _dumpstmt(sql, mb, s->op1);
@@ -1995,7 +1995,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			r = _dumpstmt(sql, mb, s->op2);
 			assert(l >= 0 && r >= 0);
 
-			q = newStmt(mb, sqlRef, "projectdeltaBatlist");
+			q = newStmt(mb, batcalcRef, "projectdeltaBatlist");
 			q = pushArgument(mb, q, l);
 			q = pushArgument(mb, q, r);
 			s->nr = getDestVar(q);

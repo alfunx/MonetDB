@@ -4015,7 +4015,6 @@ rel2bin_select( mvc *sql, sql_rel *rel, list *refs)
 	if (sub && sel) {
 		for( n = sub->op4.lval->h; n; n = n->next ) {
 			stmt *col = n->data;
-
 			if (col->nrcols == 0) /* constant */
 				col = stmt_const(sql->sa, sel, col);
 			else

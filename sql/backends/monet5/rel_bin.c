@@ -2663,11 +2663,7 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsl, oa, ooa);
 
 	// create schema stmt
-	list *schema = sa_list(sql->sa);
-	for (n = loa->h; n; n = n->next) {
-		list_append(schema, strdup(column_name(sql->sa, n->data)));
-	}
-	s = stmt_oldschema(sql->sa, ooa->h->data, schema);
+	s = stmt_oldschema(sql->sa, ooa->h->data, loa);
 	list_append(l, s);
 
 	// create tra stmt, represents first output BAT

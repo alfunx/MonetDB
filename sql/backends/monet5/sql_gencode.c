@@ -2005,7 +2005,7 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 			q = newStmt(mb, batcalcRef, "oldSchema");
 
 			for (n = s->op4.lval->h; n; n = n->next) {
-				q  = pushStr(mb, q, n->data);
+				q = pushStr(mb, q, strdup(column_name(sql->mvc->sa, n->data)));
 			}
 
 			s->nr = getDestVar(q);

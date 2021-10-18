@@ -1459,6 +1459,7 @@ exps_bind_column( list *exps, const char *cname, int *ambiguous )
 						*ambiguous = 1;
 					return NULL;
 				}
+				ce->used = 1;
 				e = exp_column(exps->sa, ce->rname, cname, exp_subtype(ce), 0, 0, 0);
 			}
 		}

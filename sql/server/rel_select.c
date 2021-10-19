@@ -5685,42 +5685,11 @@ rel_matrixtraquery(mvc *sql, sql_rel *rel, symbol *q)
 	sql_exp *el = rel->lexps->h->data;
 	sql_exp *er = rel->rexps->h->data;
 
-	append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(er), 3, 0, 0));
-
-	if (tab4) {
-		// USING clause was provided
-		for (n = tab4->h; n; n = n->next) {
-			nme = n->data.sval;
-			append(rel->exps, nme);
-			append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(el), 3, 0, 0));
-		}
-	} else {
-		// use preprocessor
-		char cmd[PREPROCESS_BUFSIZE];
-		snprintf(cmd, PREPROCESS_BUFSIZE, "monetdb-tra-preprocessor '%s'", SQL_QUERY_FOR_PREPROCESSING);
-
-		char buf[PREPROCESS_BUFSIZE];
-		FILE *fp;
-
-		if ((fp = popen(cmd, "r")) == NULL) {
-			printf("Error: Opening pipe failed\n");
-			return NULL;
-		}
-
-		while (fgets(buf, PREPROCESS_BUFSIZE, fp) != NULL) {
-			nme = strtok(strdup(buf), "\n");
-			append(rel->exps, nme);
-			append(exps, exp_column(sql->sa, NULL, nme, exp_subtype(el), 3, 0, 0));
-		}
-
-		if (pclose(fp)) {
-			printf("Error: Command exited with error status\n");
-			return NULL;
-		}
-	}
+	append(exps, exp_column(sql->sa, strdup(er->rname),     nme, exp_subtype(er), 0, 0, 0));
+	append(exps, exp_column(sql->sa, strdup(el->rname), BL_NAME, exp_subtype(el), 0, 0, 0));
 
 	// set number of attributes in the result relation
-	rel->nrcols = list_length(exps);
+	rel->nrcols = 1;
 
 	rel = rel_project(sql->sa, rel, exps);
 	return rel;

@@ -1765,6 +1765,229 @@ CMDbatTRAsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 }
 
 str
+get_from_batlist_by_index(bat *result, const int *index, const bat *ibl_bid)
+{
+	BAT *ibl_bat = BATdescriptor(*ibl_bid);
+	BATiter ibl_iter = bat_iterator(ibl_bat);
+	const int ibl_len = BATcount(ibl_bat) - BL_HEADER;
+
+	if (*index > ibl_len)
+		throw(SQL, "mvc", "BAT #%i not found in BAT-List", *index);
+
+	bat *r_bid = (bat*)BUNtail(ibl_iter, *index + BL_HEADER);
+	BAT *r_bat = BATdescriptor(*r_bid);
+	BBPkeepref(*result = r_bat->batCacheid);
+	return MAL_SUCCEED;
+}
+
+str
+get_from_batlist_by_name(bat *result, const str *name, const bat *ibl_bid)
+{
+	BAT *ibl_bat = BATdescriptor(*ibl_bid);
+	BATiter ibl_iter = bat_iterator(ibl_bat);
+	const int ibl_len = BATcount(ibl_bat) - BL_HEADER;
+
+	BAT *iba_bat = BLatr(ibl_bat);
+	BATiter iba_iter = bat_iterator(iba_bat);
+
+	str cname;
+	for (int i = 0; i < ibl_len; ++i) {
+		cname = BUNtail(iba_iter, i);
+		if (strcmp(cname, *name) == 0) {
+			bat *r_bid = (bat*)BUNtail(ibl_iter, i + BL_HEADER);
+			BAT *r_bat = BATdescriptor(*r_bid);
+			BBPkeepref(*result = r_bat->batCacheid);
+			return MAL_SUCCEED;
+		}
+	}
+
+	throw(SQL, "mvc", "BAT %s not found in BAT-List", *name);
+}
+
+str
+DELTAproject_batlist(bat *result, const bat *sub, const bat *ibl_bid)
+{
+	char name[IDLENGTH];
+	BAT *s, *g, *p;
+
+	BAT *ibl_bat = BATdescriptor(*ibl_bid);
+	const int ibl_len = BATcount(ibl_bat) - BL_HEADER;
+	bat *ibl_val = (bat*) Tloc(ibl_bat, BUNfirst(ibl_bat));
+
+	// result BATlist
+	BAT *obl_bat = BATnew(TYPE_void, TYPE_bat, ibl_len + BL_HEADER, TRANSIENT);
+	bat *obl_val = (bat*) Tloc(obl_bat, BUNfirst(obl_bat));
+
+	// prepare result BATlist
+	BATsetcapacity(obl_bat, ibl_len + BL_HEADER);
+	BATsetcount(obl_bat, ibl_len + BL_HEADER);
+	BATseqbase(obl_bat, obl_bat->H->seq);
+	obl_bat->T->sorted = 0;
+	obl_bat->T->revsorted = 0;
+	obl_bat->T->key = 0;
+
+	if ((s = BATdescriptor(*sub)) == NULL)
+		throw(MAL, "sql.delta_batlist", RUNTIME_OBJECT_MISSING);
+
+	BAT *a_bat = BLatr(ibl_bat);
+	a_bat = COLcopy(a_bat, a_bat->ttype, FALSE, TRANSIENT);
+	BBPfix(a_bat->batCacheid);
+	snprintf(name, 20, BL_FORMAT, a_bat->batCacheid);
+	BBPrename(a_bat->batCacheid, name);
+
+	obl_val[0] = a_bat->batCacheid;
+	BBPkeepref(a_bat->batCacheid);
+
+	for (int i = 0; i < ibl_len; ++i) {
+		g = BLget(ibl_bat, i);
+		p = BATproject(s, g);
+		assert(p);
+		BBPunfix(g->batCacheid);
+
+		BBPfix(p->batCacheid);
+		snprintf(name, 20, BL_FORMAT, p->batCacheid);
+		BBPrename(p->batCacheid, name);
+
+		obl_val[i + BL_HEADER] = p->batCacheid;
+		BBPkeepref(p->batCacheid);
+	}
+
+	BBPunfix(s->batCacheid);
+	BBPkeepref(*result = obl_bat->batCacheid);
+	return MAL_SUCCEED;
+}
+
+str
+CMDbatOldSchemasignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int argc = pci->argc;
+	int tp;
+
+	// result BAT
+	bat *o_bid = getArgReference_bat(stk, pci, 0);
+	BAT *o_bat = BATnew(TYPE_void, TYPE_str, argc - 1, TRANSIENT);
+
+	// prepare result BAT
+	BATsetcapacity(o_bat, argc - 1);
+	BATseqbase(o_bat, o_bat->H->seq);
+	o_bat->T->sorted = 0;
+	o_bat->T->revsorted = 0;
+	o_bat->T->key = 0;
+	BBPkeepref(*o_bid = o_bat->batCacheid);
+
+	for (int i = 1; i < argc; ++i) {
+		tp = stk->stk[getArg(pci, i)].vtype;
+		assert(tp == TYPE_str);
+		BUNappend(o_bat, *getArgReference_str(stk, pci, i), FALSE);
+	}
+
+	return MAL_SUCCEED;
+}
+
+str
+CMDbatTRAbatlistsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
+{
+	int argc = pci->argc;
+	int tp;
+
+	// BATs
+	bat *obl_bid, *i_bid, *o_bid, *a_bid;
+	BAT *obl_bat, *i_bat, *o_bat, *a_bat;
+
+	// BAT tails
+	bat *obl_val;
+	int **o_val;
+	const int **i_val;
+
+	// BAT name
+	char name[IDLENGTH];
+
+	// iterators
+	int i, j, k;
+
+	// attribute BAT
+	tp = stk->stk[getArg(pci, 1)].vtype;
+	assert(tp == TYPE_bat || isaBatType(tp));
+	a_bid = getArgReference_bat(stk, pci, 1);
+	a_bat = BATdescriptor(*a_bid);
+	const int a_len = BATcount(a_bat);
+	const int o_len = argc - 2;
+
+	// A BATs (full left matrix)
+	i_val = malloc(o_len * sizeof (int*));
+	if (i_val == NULL) {
+		fprintf(stderr, "Memory for BAT-pointer array is not allocated.");
+		return NULL;
+	}
+	for (i = 2; i < argc; ++i) {
+		tp = stk->stk[getArg(pci, i)].vtype;
+		assert(tp == TYPE_bat || isaBatType(tp));
+		i_bid = getArgReference_bat(stk, pci, i);
+		i_bat = BATdescriptor(*i_bid);
+		i_val[i - 2] = (const int*) Tloc(i_bat, BUNfirst(i_bat));
+		assert(a_len == BATcount(i_bat));
+		assert(BAThdense(i_bat));
+	}
+
+	// result BATlist
+	obl_bid = getArgReference_bat(stk, pci, 0);
+	obl_bat = BATnew(TYPE_void, TYPE_bat, a_len + BL_HEADER, TRANSIENT);
+	obl_val = (bat*) Tloc(obl_bat, BUNfirst(obl_bat));
+
+	// prepare result BATlist
+	BATsetcapacity(obl_bat, a_len + BL_HEADER);
+	BATsetcount(obl_bat, a_len + BL_HEADER);
+	BATseqbase(obl_bat, obl_bat->H->seq);
+	obl_bat->T->sorted = 0;
+	obl_bat->T->revsorted = 0;
+	obl_bat->T->key = 0;
+	BBPkeepref(*obl_bid = obl_bat->batCacheid);
+
+	// store attribute BAT
+	BBPfix(a_bat->batCacheid);
+	snprintf(name, IDLENGTH, BL_FORMAT, a_bat->batCacheid);
+	BBPrename(a_bat->batCacheid, name);
+	obl_val[0] = a_bat->batCacheid;
+	BBPkeepref(a_bat->batCacheid);
+
+	// result BATs
+	o_val = malloc(a_len * sizeof (int*));
+	if (o_val == NULL) {
+		fprintf(stderr, "Memory for output BAT-pointer array is not allocated.");
+		return NULL;
+	}
+
+	for (i = 0; i < a_len; ++i) {
+		o_bat = BATnew(TYPE_void, TYPE_int, o_len, TRANSIENT);
+		o_val[i] = (int*) Tloc(o_bat, BUNfirst(o_bat));
+		BATsetcapacity(o_bat, o_len);
+		BATsetcount(o_bat, o_len);
+		BATseqbase(o_bat, 0);
+		o_bat->T->sorted = 0;
+		o_bat->T->revsorted = 0;
+		o_bat->T->key = 0;
+
+		BBPfix(o_bat->batCacheid);
+		snprintf(name, 20, BL_FORMAT, o_bat->batCacheid);
+		BBPrename(o_bat->batCacheid, name);
+
+		obl_val[i + BL_HEADER] = o_bat->batCacheid;
+		BBPkeepref(o_bat->batCacheid);
+	}
+
+	for (i = 0; i < a_len; ++i) {
+		for (j = 0; j < o_len; ++j) {
+			o_val[i][j] = i_val[j][i];
+		}
+	}
+
+	free(i_val);
+	free(o_val);
+
+	return MAL_SUCCEED;
+}
+
+str
 CMDbatMMUsignal(Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 {
 	int argc = pci->argc;

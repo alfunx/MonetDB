@@ -5161,7 +5161,7 @@ rel_push_project_up(int *changes, mvc *sql, sql_rel *rel)
 				 is_matrixsub(((sql_rel*)l->l)->op) ||
 				 is_matrixtra(((sql_rel*)l->l)->op) ||
 				 is_matrixemul(((sql_rel*)l->l)->op))) {
-			fprintf(stderr, ">>> [rel_push_project_up] no action\n");
+			// fprintf(stderr, ">>> [rel_push_project_up] no action\n");
 			return rel;
 		}
 
@@ -8115,8 +8115,8 @@ _rel_optimizer(mvc *sql, sql_rel *rel, int level)
 	if (gp.cnt[op_matrixinv])
 		rel = rewrite(sql, rel, &use_triangular_inv, &changes);
 
-	if (gp.cnt[op_project])
-		rel = rewrite(sql, rel, &push_project_to_matrix_tra, &changes);
+	// if (gp.cnt[op_project])
+	// 	rel = rewrite(sql, rel, &push_project_to_matrix_tra, &changes);
 
 	/* Remove unused expressions */
 	if (level <= 0)

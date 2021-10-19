@@ -1951,15 +1951,14 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 		}
 			break;
 		case st_tra:{
-			int l, i, res;
+			int l;
 
-			q = newStmt(mb, batcalcRef, "tra");
+			q = newStmt(mb, batcalcRef, "traBatlist");
 
-			// push return BATs
-			for (i = 1; i < s->rescols; ++i) {
-				l = newTmpVariable(mb, TYPE_any);
-				q = pushReturn(mb, q, l);
-			}
+			// push stmt with output attribute names
+			l = _dumpstmt(sql, mb, s->op1);
+			assert(l >= 0);
+			q  = pushArgument(mb, q, l);
 
 			// push input parameters and BATs
 			for (n = s->op4.lval->h; n; n = n->next) {
@@ -1968,18 +1967,48 @@ _dumpstmt(backend *sql, MalBlkPtr mb, stmt *s)
 				q  = pushArgument(mb, q, l);
 			}
 
-			// push stmt with output attribute names
+			s->nr = getDestVar(q);
+		}
+			break;
+		case st_get_from_batlist:{
+			int l;
+
+			q = newStmt(mb, batcalcRef, "getFromBatlist");
+
+			// push argument
 			l = _dumpstmt(sql, mb, s->op1);
-			assert(l >= 0);
+			assert (l >= 0);
+			q  = pushArgument(mb, q, l);
+
+			// push input BAT-list
+			l = _dumpstmt(sql, mb, s->op2);
+			assert (l >= 0);
 			q  = pushArgument(mb, q, l);
 
 			s->nr = getDestVar(q);
+		}
+			break;
+		case st_projectdelta_batlist:{
+			int l, r;
 
-			// rename output results
-			for (i = 1; i < s->rescols; ++i) {
-				res = getArg(q, i);
-				renameVariableExt(mb, res, "r%d_%d", i, s->nr);
+			l = _dumpstmt(sql, mb, s->op1);
+			r = _dumpstmt(sql, mb, s->op2);
+			assert(l >= 0 && r >= 0);
+
+			q = newStmt(mb, batcalcRef, "projectdeltaBatlist");
+			q = pushArgument(mb, q, l);
+			q = pushArgument(mb, q, r);
+			s->nr = getDestVar(q);
+		}
+			break;
+		case st_oldschema:{
+			q = newStmt(mb, batcalcRef, "oldSchema");
+
+			for (n = s->op4.lval->h; n; n = n->next) {
+				q = pushStr(mb, q, strdup(column_name(sql->mvc->sa, n->data)));
 			}
+
+			s->nr = getDestVar(q);
 		}
 			break;
 		case st_mmu:{

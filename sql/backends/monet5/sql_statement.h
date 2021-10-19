@@ -98,6 +98,9 @@ typedef enum stmt_type {
 
 	st_logreg,
 	st_tra,
+	st_get_from_batlist,
+	st_projectdelta_batlist,
+	st_oldschema,
 	st_mmu,
 	st_cpd,
 	st_vectoradd,
@@ -209,6 +212,10 @@ extern stmt *stmt_tinter(sql_allocator *sa, stmt *op1, stmt *op2);
 
 extern stmt *stmt_logreg(sql_allocator *sa, list *l);
 extern stmt *stmt_tra(sql_allocator *sa, stmt *op1, list *l);
+extern stmt *stmt_get_by_index_from_batlist(sql_allocator *sa, const int index, stmt *op1);
+extern stmt *stmt_get_by_name_from_batlist(sql_allocator *sa, const char *name, stmt *op1);
+extern stmt *stmt_projectdelta_batlist(sql_allocator *sa, stmt *op1, stmt *op2);
+extern stmt *stmt_oldschema(sql_allocator *sa, stmt *op1, list *l);
 extern stmt *stmt_mmu(sql_allocator *sa, stmt *op1, list *l);
 extern stmt *stmt_cpd(sql_allocator *sa, stmt *op1, list *l);
 extern stmt *stmt_vectoradd(sql_allocator *sa, stmt *op1, stmt *op2);

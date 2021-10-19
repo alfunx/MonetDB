@@ -2715,11 +2715,24 @@ mvc_result_set_wrap( Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		return msg;
 	if ((msg = checkSQLContext(cntxt)) != NULL)
 		return msg;
+
+	int count = 0;
+	for (i = 6; i < pci->argc; ++i) {
+		bid = *getArgReference_bat(stk,pci,i);
+		b = BATdescriptor(bid);
+		if (BATttype(b) == TYPE_bat) {
+			b = BLatr(b);
+			count += BATcount(b);
+		} else {
+			++count;
+		}
+	}
+
 	bid = *getArgReference_bat(stk,pci,6);
 	b = BATdescriptor(bid);
 	if ( b == NULL)
 		throw(MAL,"sql.resultset","Failed to access order column");
-	res = *res_id = mvc_result_table(m, pci->argc - (pci->retc + 5), 1, b);
+	res = *res_id = mvc_result_table(m, count, 1, b);
 	if (res < 0)
 		msg = createException(SQL, "sql.resultSet", "failed");
 	BBPunfix(b->batCacheid);
@@ -2744,13 +2757,22 @@ mvc_result_set_wrap( Client cntxt, MalBlkPtr mb, MalStkPtr stk, InstrPtr pci)
 		colname = BUNtail(iteratr,o);
 		tpename = BUNtail(itertpe,o);
 		b = BATdescriptor(bid);
-		if ( b == NULL)
-			msg= createException(MAL,"sql.resultset","Failed to access result column");
-		else if (mvc_result_column(m, tblname, colname, tpename, *digits++, *scaledigits++, b))
-			msg = createException(SQL, "sql.resultset", "mvc_result_column failed");
-		if( b)
+		if (BATttype(b) == TYPE_bat && strcmp(tpename, "table") == 0 && strcmp(colname, BL_NAME) == 0) {
+			BATiter iba_iter = bat_iterator(BLatr(b));
+			for (int j = 0; j < BATcount(b) - BL_HEADER; ++j) {
+				if (mvc_result_column(m, tblname, BUNtail(iba_iter, j), "int", 32, 0, BLget(b, j)))
+					msg = createException(SQL, "sql.resultset", "mvc_result_column failed (batlist)");
+			}
+		} else {
+			if (b == NULL)
+				msg= createException(MAL,"sql.resultset","Failed to access result column");
+			else if (mvc_result_column(m, tblname, colname, tpename, *digits++, *scaledigits++, b))
+				msg = createException(SQL, "sql.resultset", "mvc_result_column failed");
+		}
+		if (b)
 			BBPunfix(bid);
 	}
+
 	/* now sent it to the channel cntxt->fdout */
 	if (mvc_export_result(cntxt->sqlcontext, cntxt->fdout, res))
 		msg = createException(SQL, "sql.resultset", "failed");

@@ -538,6 +538,15 @@ exp_bin(mvc *sql, sql_exp *e, stmt *left, stmt *right, stmt *grp, stmt *ext, stm
 			s = bin_find_column(sql->sa, right, e->l, e->r);
 		if (!s && left) 
 			s = bin_find_column(sql->sa, left, e->l, e->r);
+		if (!s) {
+			// if there is a BAT-list, we assume the column is part of it
+			if (right)
+				s = bin_find_column(sql->sa, right, e->l, BL_NAME);
+			if (!s && left)
+				s = bin_find_column(sql->sa, left, e->l, BL_NAME);
+			if (s)
+				s = stmt_get_by_name_from_batlist(sql->sa, e->name, s);
+		}
 		if (s && grp)
 			s = stmt_project(sql->sa, ext, s);
 		if (!s && right) {
@@ -2572,8 +2581,7 @@ rel2bin_matrixcpd(mvc *sql, sql_rel *rel, list *refs)
 	align_by_ids(sql, orderby_idsr, ra, roa);
 
 	// create schema stmt
-	s = stmt_atom_string(sql->sa, "");
-	s = stmt_temp(sql->sa, tail_type(s));
+	s = stmt_temp(sql->sa, sql_bind_localtype("str"));
 	for (n = la->h; n; n = n->next) {
 		fprintf(stderr, ">>> %s\n", column_name(sql->sa, n->data));
 		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
@@ -2618,8 +2626,11 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	// application part columns
 	list *la;
 
+	// order specification columns
+	list *oa;
+
 	// ordered application part columns (desc part is directly appended to l)
-	list *loa;
+	list *loa, *ooa;
 
 	// iterators
 	node *n, *m;
@@ -2632,59 +2643,33 @@ rel2bin_matrixtra(mvc *sql, sql_rel *rel, list *refs)
 	stmt *left = subrel_bin(sql, rel->l, refs);
 	assert(left);
 
+	// generate the orderby ids
+	stmt *orderby_idsl = gen_orderby_ids(sql, left, rel->lord);
+
 	// construct list of statements
 	l = sa_list(sql->sa);
 	la = sa_list(sql->sa);
+	oa = sa_list(sql->sa);
 	loa = sa_list(sql->sa);
+	ooa = sa_list(sql->sa);
 
 	// split into application and descriptive part lists
 	assert(rel->lexps);
 	partition_appl_desc(sql, left, rel->lexps, la, NULL);
+	partition_appl_desc(sql, left, rel->rexps, oa, NULL);
+
+	// align lists according to the orderby ids
+	align_by_ids(sql, orderby_idsl, la, loa);
+	align_by_ids(sql, orderby_idsl, oa, ooa);
 
 	// create schema stmt
-	s = stmt_atom_string(sql->sa, "");
-	s = stmt_temp(sql->sa, tail_type(s));
-	for (n = la->h; n; n = n->next) {
-		fprintf(stderr, ">>> %s\n", column_name(sql->sa, n->data));
-		t = stmt_atom_string(sql->sa, column_name(sql->sa, n->data));
-		s = stmt_append(sql->sa, s, t);
-	}
-	s = stmt_alias(sql->sa, s, NULL, ((sql_exp*)rel->rexps->h->data)->name);
+	s = stmt_oldschema(sql->sa, ooa->h->data, loa);
 	list_append(l, s);
 
-	// create attribute stmt (based on input)
-	s = stmt_atom_string(sql->sa, "");
-	s = stmt_temp(sql->sa, tail_type(s));
-	for (n = rel->exps->h; n; n = n->next) {
-		t = stmt_atom_string(sql->sa, n->data);
-		s = stmt_append(sql->sa, s, t);
-	}
-
-	// join order specification with attribute stmt
-	for (n = left->op4.lval->h; n; n = n->next) {
-		const char *nme = column_name(sql->sa, n->data);
-		if (nme && strcmp(nme, ((sql_exp*)rel->rexps->h->data)->name) == 0) {
-			o = stmt_join(sql->sa, s, n->data, cmp_equal);
-			o = stmt_result(sql->sa, o, 1);
-			break;
-		}
-	}
-
-	// align application part attributes
-	align_by_ids(sql, o, la, loa);
-
 	// create tra stmt, represents first output BAT
-	s = stmt_tra(sql->sa, s, loa);
-	s->rescols = list_length(rel->exps);
-	s->nrcols = list_length(rel->exps);
-
-	// get the remaining output BATs
-	for (n = rel->exps->h, i = 0; n; n = n->next, ++i) {
-		t = stmt_result(sql->sa, s, i);
-		t = stmt_alias(sql->sa, t, NULL, n->data);
-		t = stmt_convert(sql->sa, t, tail_type(t), tail_type(loa->h->data));
-		list_append(l, t);
-	}
+	s = stmt_tra(sql->sa, ooa->h->data, loa);
+	s->nrcols = 1;
+	list_append(l, s);
 
 	return stmt_list(sql->sa, l);
 }
@@ -4026,7 +4011,6 @@ rel2bin_select( mvc *sql, sql_rel *rel, list *refs)
 	if (sub && sel) {
 		for( n = sub->op4.lval->h; n; n = n->next ) {
 			stmt *col = n->data;
-	
 			if (col->nrcols == 0) /* constant */
 				col = stmt_const(sql->sa, sel, col);
 			else

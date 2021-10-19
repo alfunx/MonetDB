@@ -316,6 +316,9 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			else
 				s->optimized = -1;
 			switch (s->type) {
+			case st_tra:
+			case st_get_from_batlist:
+			case st_projectdelta_batlist:
 			case st_list:
 				list_deps(dep_list, s->op4.lval, depend_type, dir);
 				break;
@@ -355,7 +358,7 @@ stmt_deps(list *dep_list, stmt *s, int depend_type, int dir)
 			case st_uselect:
 			case st_uselect2:
 			case st_logreg:
-			case st_tra:
+			case st_oldschema:
 			case st_mmu:
 			case st_cpd:
 			case st_vectoradd:
@@ -720,6 +723,10 @@ stmt_gen_group(sql_allocator *sa, stmt *gids, stmt *cnts)
 stmt *
 stmt_mirror(sql_allocator *sa, stmt *s)
 {
+	// if s is a BAT-list, we use stmt_get_from_batlist to extract one BAT
+	if (s && s->cname && strcmp(s->cname, BL_NAME) == 0)
+		s = stmt_get_by_index_from_batlist(sa, 0, s);
+
 	stmt *ns = stmt_create(sa, st_mirror);
 
 	ns->op1 = s;
@@ -930,7 +937,60 @@ stmt_tra(sql_allocator *sa, stmt *op1, list *l)
 	s->op1 = op1;
 	s->op2 = stmt_list(sa, l);
 	s->op4.lval = l;
-	s->nrcols = 0;
+	s->nrcols = 1;
+	s->tname = op1->tname;
+	s->cname = BL_NAME;
+	return s;
+}
+
+stmt *
+stmt_get_by_index_from_batlist(sql_allocator *sa, const int index, stmt *op1)
+{
+	stmt *s = stmt_create(sa, st_get_from_batlist);
+
+	s->op1 = stmt_atom_int(sa, index);
+	s->op2 = op1;
+	s->nrcols = 1;
+	s->tname = BL_NAME;
+	s->cname = NULL;
+	return s;
+}
+
+stmt *
+stmt_get_by_name_from_batlist(sql_allocator *sa, const char *name, stmt *op1)
+{
+	stmt *s = stmt_create(sa, st_get_from_batlist);
+
+	s->op1 = stmt_atom_string(sa, strdup(name));
+	s->op2 = op1;
+	s->nrcols = 1;
+	s->tname = BL_NAME;
+	s->cname = strdup(name);
+	return s;
+}
+
+stmt *
+stmt_projectdelta_batlist(sql_allocator *sa, stmt *op1, stmt *op2)
+{
+	stmt *s = stmt_create(sa, st_projectdelta_batlist);
+
+	s->op1 = op1;
+	s->op2 = op2;
+	s->nrcols = 1;
+	s->tname = op2->tname;
+	s->cname = BL_NAME;
+	return s;
+}
+
+stmt *
+stmt_oldschema(sql_allocator *sa, stmt *op1, list *l)
+{
+	stmt *s = stmt_create(sa, st_oldschema);
+	s->op1 = op1;
+	s->op4.lval = l;
+	s->nrcols = 1;
+	s->tname = op1->tname;
+	s->cname = op1->cname;
 	return s;
 }
 
@@ -1111,6 +1171,9 @@ stmt_join(sql_allocator *sa, stmt *op1, stmt *op2, comp_type cmptype)
 stmt *
 stmt_project(sql_allocator *sa, stmt *op1, stmt *op2)
 {
+	// if op2 is a BAT-list, we use stmt_projectdelta_batlist
+	if (op2 && op2->cname && strcmp(op2->cname, BL_NAME) == 0)
+		return stmt_projectdelta_batlist(sa, op1, op2);
 	return stmt_join(sa, op1, op2, cmp_project);
 }
 
@@ -1443,7 +1506,7 @@ tail_type(stmt *st)
 	case st_gen_group:
 	case st_order:
 	case st_logreg:
-	case st_tra:
+	case st_oldschema:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1518,7 +1581,11 @@ tail_type(stmt *st)
 	case st_exception:
 		return NULL;
 	case st_table:
+	case st_tra:
+	case st_projectdelta_batlist:
 		return sql_bind_localtype("bat");
+	case st_get_from_batlist:
+		return sql_bind_localtype("int");
 	default:
 		fprintf(stderr, "missing tail type %u: %s\n", st->type, st_type2string(st->type));
 		assert(0);
@@ -1615,7 +1682,9 @@ _column_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_convert:
 	case st_logreg:
-	case st_tra:
+	case st_get_from_batlist:
+	case st_projectdelta_batlist:
+	case st_oldschema:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1659,6 +1728,7 @@ _column_name(sql_allocator *sa, stmt *st)
 			return sa_strdup(sa, "single_value");
 		return "single_value";
 
+	case st_tra:
 	case st_list:
 		if (list_length(st->op4.lval))
 			return column_name(sa, st->op4.lval->h->data);
@@ -1705,7 +1775,9 @@ _table_name(sql_allocator *sa, stmt *st)
 	case st_tinter:
 	case st_aggr:
 	case st_logreg:
-	case st_tra:
+	case st_get_from_batlist:
+	case st_projectdelta_batlist:
+	case st_oldschema:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1742,6 +1814,7 @@ _table_name(sql_allocator *sa, stmt *st)
 			return st->op4.aval->data.val.sval;
 		return NULL;
 
+	case st_tra:
 	case st_list:
 		if (list_length(st->op4.lval) && st->op4.lval->h)
 			return table_name(sa, st->op4.lval->h->data);
@@ -1781,7 +1854,7 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_Nop:
 	case st_aggr:
 	case st_logreg:
-	case st_tra:
+	case st_oldschema:
 	case st_mmu:
 	case st_cpd:
 	case st_vectoradd:
@@ -1811,6 +1884,9 @@ schema_name(sql_allocator *sa, stmt *st)
 	case st_temp:
 	case st_single:
 		return NULL;
+	case st_tra:
+	case st_get_from_batlist:
+	case st_projectdelta_batlist:
 	case st_list:
 		if (list_length(st->op4.lval))
 			return schema_name(sa, st->op4.lval->h->data);

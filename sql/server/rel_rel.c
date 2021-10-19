@@ -204,6 +204,12 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 			*p = rel;
 			l = rel_bind_column_(sql, p, rel->l, cname);
 			if (l && r && !rel_issubquery(r)) {
+				sql_exp *le = exps_bind_column(l->exps, BL_NAME, NULL);
+				sql_exp *re = exps_bind_column(r->exps, BL_NAME, NULL);
+				if (le && !re)
+					return r;
+				if (re && !le)
+					return l;
 				(void) sql_error(sql, ERR_AMBIGUOUS, "SELECT: identifier '%s' ambiguous", cname);
 				return NULL;
 			}
@@ -247,7 +253,6 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
-	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixrqr:
 	case op_matrixadd:
@@ -279,6 +284,10 @@ rel_bind_column_(mvc *sql, sql_rel **p, sql_rel *rel, const char *cname )
 			return rel_bind_column_(sql, p, rel->r, cname);
 		break;
 
+	case op_matrixtra:
+		return rel;
+		break;
+
 	default:
 		return NULL;
 	}
@@ -300,6 +309,10 @@ rel_bind_column( mvc *sql, sql_rel *rel, const char *cname, int f )
 		sql_exp *e = exps_bind_column(rel->exps, cname, NULL);
 		if (e)
 			return exp_alias_or_copy(sql, e->rname, cname, rel, e);
+	}
+	if (is_matrixtra(rel->op)) {
+		sql_exp *e = rel->lexps->t->data;
+		return exp_column(sql->sa, e->rname, cname, exp_subtype(e), 3, 0, 0);
 	}
 	return NULL;
 }
@@ -332,6 +345,10 @@ rel_bind_column2( mvc *sql, sql_rel *rel, const char *tname, const char *cname, 
 		   is_select(rel->op)) {
 		if (rel->l)
 			return rel_bind_column2(sql, rel->l, tname, cname, f);
+	}
+	if (is_matrixtra(rel->op)) {
+		sql_exp *e = rel->lexps->t->data;
+		return exp_column(sql->sa, tname, cname, exp_subtype(e), 3, 0, 0);
 	}
 	return NULL;
 }
@@ -905,7 +922,6 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
-	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixsigmoid:
 	case op_matrixlogreg:
@@ -926,6 +942,14 @@ rel_projections(mvc *sql, sql_rel *rel, const char *tname, int settname, int int
 		exps = rel_projections(sql, rel->l, tname, settname, intern);
 		rexps = rel_projections(sql, rel->r, tname, settname, intern);
 		exps = list_merge(exps, rexps, (fdup)NULL);
+		return exps;
+
+	// projections are not known yet, we add placeholder for BAT-list
+	case op_matrixtra:
+		exps = new_exp_list(sql->sa);
+		sql_exp* e = rel->rexps->h->data;
+		append(exps, exp_alias_or_copy(sql, exp_relname(e), exp_name(e), rel, e));
+		append(exps, exp_column(sql->sa, exp_relname(e), BL_NAME, exp_subtype(e), 0, 0, 0));
 		return exps;
 
 	default:
@@ -962,7 +986,6 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_matrixsqrt:
 	case op_matrixinv:
 	case op_matrixinvtriangular:
-	case op_matrixtra:
 	case op_matrixqqr:
 	case op_matrixrqr:
 	case op_matrixadd:
@@ -975,6 +998,11 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 	case op_matrixlogreg:
 	case op_matrixyintercept:
 		found = rel_bind_path_(rel->l, e, path);
+		break;
+
+	// we assume the e_column is part of BAT-list
+	case op_matrixtra:
+		found = 1;
 		break;
 
 	case op_union:
@@ -994,6 +1022,9 @@ rel_bind_path_(sql_rel *rel, sql_exp *e, list *path )
 		if (!found && e->l && exps_bind_column2(rel->exps, e->l, e->r))
 			found = 1;
 		if (!found && !e->l && exps_bind_column(rel->exps, e->r, NULL))
+			found = 1;
+		// if there is a BAT-list, we assume the column is part of it
+		if (!found && exps_bind_column2(rel->exps, e->l, BL_NAME))
 			found = 1;
 		break;
 	case op_insert:

@@ -243,7 +243,7 @@ BATnew(int ht, int tt, BUN cap, int role)
 
 	assert(cap <= BUN_MAX);
 	assert(ht == TYPE_void);
-	assert(tt != TYPE_bat);
+	// assert(tt != TYPE_bat);
 	ERRORcheck((ht < 0) || (ht > GDKatomcnt), "BATnew:ht error\n", NULL);
 	ERRORcheck((tt < 0) || (tt > GDKatomcnt), "BATnew:tt error\n", NULL);
 	ERRORcheck(role < 0 || role >= 32, "BATnew:role error\n", NULL);

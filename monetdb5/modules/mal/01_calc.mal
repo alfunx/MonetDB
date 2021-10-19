@@ -4718,6 +4718,55 @@ address CMDvarCONVERT
 comment "Cast VALUE to oid";
 
 
+pattern bat(v:void) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:bit) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:bte) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:sht) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:int) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:wrd) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:lng) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:flt) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:dbl) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:oid) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:bat) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+pattern bat(v:str) :bat
+address CMDvarCONVERT
+comment "Cast VALUE to bat";
+
+
 pattern str(v:void) :str
 address CMDvarCONVERT
 comment "Cast VALUE to str";

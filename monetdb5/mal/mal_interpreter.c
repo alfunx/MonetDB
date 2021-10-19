@@ -657,7 +657,8 @@ str runMALsequence(Client cntxt, MalBlkPtr mb, int startpc,
 							assert(bid == 0 ||
 								   bid == bat_nil ||
 								   t == TYPE_any ||
-								   ATOMtype(_b->ttype) == ATOMtype(t));
+								   ATOMtype(_b->ttype) == ATOMtype(t) ||
+								   t == TYPE_bat);  // BAT of BAT-cache-ids
 							if(_b) BBPunfix(bid);
 						} else {
 							assert(t == stk->stk[a].vtype);
@@ -682,7 +683,8 @@ str runMALsequence(Client cntxt, MalBlkPtr mb, int startpc,
 						assert(bid == 0 ||
 							   bid == bat_nil ||
 							   t == TYPE_any ||
-							   ATOMtype(BBP_cache(bid)->ttype) == ATOMtype(t));
+							   ATOMtype(BBP_cache(bid)->ttype) == ATOMtype(t) ||
+							   t == TYPE_bat);  // BAT of BAT-cache-ids
 					} else {
 						assert(t == stk->stk[a].vtype);
 					}
